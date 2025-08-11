@@ -12,10 +12,10 @@
   to = "/apps/web/index.html"
   status = 200
 
-# React UI at /react
+# React UI at /react (production points to built assets)
 [[redirects]]
   from = "/react"
-  to = "/apps/web-react/index.html"
+  to = "/apps/web-react/dist/index.html"
   status = 200
 
 
