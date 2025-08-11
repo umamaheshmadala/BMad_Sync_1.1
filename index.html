@@ -27,6 +27,11 @@
     </section>
 
     <section class="row">
+      <button id="btnSeed">POST /api/tests/seed</button>
+      <small>(Seeds users, business, and a coupon. If env not injected, retries with body override.)</small>
+    </section>
+
+    <section class="row">
       <label>PUT /api/platform/config/runtime – key:value</label><br />
       <input id="keyInput" type="text" value="ads.carousel_slots" />
       <input id="valInput" type="text" value="5" />
@@ -62,6 +67,17 @@
 
       document.getElementById('btnRevenue').onclick = async () => {
         const r = await fetch(`${base}/api/platform/revenue`);
+        setOut(await r.json());
+      };
+
+      document.getElementById('btnSeed').onclick = async () => {
+        // Try simple POST first
+        let r = await fetch(`${base}/api/tests/seed`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        if (!r.ok) {
+          // Retry with body override if needed
+          const body = { supabase_url: window.SUPABASE_URL || '', service_key: window.SUPABASE_SERVICE_ROLE_KEY || '' };
+          r = await fetch(`${base}/api/tests/seed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        }
         setOut(await r.json());
       };
 
