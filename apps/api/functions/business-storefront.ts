@@ -6,6 +6,7 @@ export default async (req: Request) => {
   const supabase = createSupabaseClient(true);
   // Derive business by owner user id
   const ownerUserId = getUserIdFromRequest(req);
+  if (!ownerUserId) return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401 });
   let businessId = '';
   if (ownerUserId) {
     const { data: biz, error } = await supabase

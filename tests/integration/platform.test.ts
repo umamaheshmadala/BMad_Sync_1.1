@@ -28,4 +28,18 @@ it('gets platform revenue summary', async () => {
   expect(json).toHaveProperty('coupon_revenue');
 });
 
+it('persists runtime config and returns it from GET', async () => {
+  // Update value
+  const putRes = await configPut(makeReq(path('/api/platform/config/runtime'), 'PUT', { 'billing.threshold': { value: 12345 } })) as Response;
+  expect(putRes.status).toBe(200);
+  const putJson = await putRes.json();
+  expect(putJson.ok).toBe(true);
+
+  // Read back
+  const getRes = await configGet(makeReq(path('/api/platform/config'), 'GET')) as Response;
+  expect(getRes.status).toBe(200);
+  const cfg = await getRes.json();
+  expect(cfg['billing.threshold'].value).toBe(12345);
+});
+
 

@@ -1,4 +1,5 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
+import { getUserIdFromRequest } from '../../../packages/shared/auth';
 
 export default async (req: Request) => {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
@@ -9,6 +10,9 @@ export default async (req: Request) => {
   if (!userId || !shareId) return new Response(JSON.stringify({ ok: false, error: 'Invalid path' }), { status: 400 });
 
   const supabase = createSupabaseClient(true);
+  const callerId = getUserIdFromRequest(req);
+  if (!callerId) return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401 });
+  if (callerId !== userId) return new Response(JSON.stringify({ ok: false, error: 'Forbidden' }), { status: 403 });
 
   const { data: share, error: shareErr } = await supabase
     .from('coupon_shares')

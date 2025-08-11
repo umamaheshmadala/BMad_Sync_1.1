@@ -176,4 +176,20 @@ it('analytics endpoints return summaries', async () => {
   expect(jsonC.summary.total).toBe(2);
 });
 
+it('rejects unauthorized requests with 401', async () => {
+  const res = await wishlistPost(
+    makeReq(path(`/api/users/${TEST_USER_1}/wishlist`), 'POST', { item_name: 'X' })
+  );
+  expect(res.status).toBe(401);
+});
+
+it('rejects forbidden requests with 403 when caller != path user', async () => {
+  const res = await wishlistPost(
+    makeReq(path(`/api/users/${TEST_USER_1}/wishlist`), 'POST', { item_name: 'X' }, {
+      Authorization: bearer(TEST_USER_2),
+    })
+  );
+  expect(res.status).toBe(403);
+});
+
 

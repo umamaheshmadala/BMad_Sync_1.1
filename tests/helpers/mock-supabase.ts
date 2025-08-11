@@ -33,6 +33,7 @@ export class MockDb {
   public businesses = new Table();
   public storefronts = new Table();
   public business_reviews = new Table();
+  public platform_config = new Table();
 }
 
 function builder(table: Table) {

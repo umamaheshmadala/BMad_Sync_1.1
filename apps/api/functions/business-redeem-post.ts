@@ -1,4 +1,5 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
+import { isPlatformOwner, getUserIdFromRequest } from '../../../packages/shared/auth';
 
 export default async (req: Request) => {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
@@ -6,6 +7,8 @@ export default async (req: Request) => {
   const parts = url.pathname.split('/');
   const businessId = parts[3] || '';
   try {
+    const callerId = getUserIdFromRequest(req);
+    if (!callerId) return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401 });
     const body = await req.json();
     const { unique_code } = body || {};
     if (!businessId || typeof unique_code !== 'string') {
