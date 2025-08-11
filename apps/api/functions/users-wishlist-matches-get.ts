@@ -1,5 +1,6 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
 import { getUserIdFromRequest, isPlatformOwner } from '../../../packages/shared/auth';
+import { enqueueNotification } from '../../../packages/shared/notifications';
 
 export default async (req: Request) => {
   if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
@@ -16,19 +17,26 @@ export default async (req: Request) => {
 
   const supabase = createSupabaseClient(true) as any;
 
-  // For MVP, compute simple matches: wishlist category equals any storefront_product category for any business
-  // In real DB we'd do SQL joins; in tests our mock returns arrays filtered by .from().select().
+  // Compute matches: category or subcategory overlaps
   const { data: wishlist } = await supabase.from('wishlist_items').select('*').eq('user_id', userId);
   const { data: products } = await supabase.from('storefront_products').select('*');
 
   const matches: Array<any> = [];
   for (const w of (wishlist as any[]) || []) {
     for (const p of (products as any[]) || []) {
-      if (!w.category || !p.category) continue;
-      if (String(w.category).toLowerCase() === String(p.category).toLowerCase()) {
-        matches.push({ wishlist_item_id: w.id, storefront_product_id: p.id, category: w.category });
+      const wCats = [w.category, w.subcategory_l1, w.subcategory_l2].filter(Boolean).map((x: any) => String(x).toLowerCase());
+      const pCats = [p.category, p.subcategory_l1, p.subcategory_l2].filter(Boolean).map((x: any) => String(x).toLowerCase());
+      if (wCats.length === 0 || pCats.length === 0) continue;
+      const overlap = wCats.some((c: string) => pCats.includes(c));
+      if (overlap) {
+        matches.push({ wishlist_item_id: w.id, storefront_product_id: p.id, category: w.category, subcategory_l1: w.subcategory_l1, subcategory_l2: w.subcategory_l2 });
       }
     }
+  }
+
+  // MVP: enqueue a notification for the user when matches exist (best-effort, in-memory only)
+  if (matches.length > 0) {
+    enqueueNotification({ recipient_user_id: userId, message: `Found ${matches.length} wishlist matches`, type: 'wishlist_match' });
   }
 
   return new Response(

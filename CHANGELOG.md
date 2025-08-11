@@ -1,5 +1,13 @@
 ### Changelog
 
+### v0.1.4 — 2025-08-11
+
+- Added
+  - `GET /api/business/{businessId}/reviews` → extend `apps/api/functions/business-reviews-post.ts` for listing (owner/platform only).
+  - React UI `apps/web-react/src/ui/App.tsx`: add Reviews GET, Products POST form; bump version label to v0.1.4.
+- Improved
+  - Wishlist matches smarter overlap on subcategories; enqueue basic notification.
+
 ### v0.1.3 — 2025-08-11
 
 - Added

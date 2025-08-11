@@ -15,6 +15,7 @@ export default function App() {
 
   const [storefront, setStorefront] = useState<any>(null);
   const [reviewResult, setReviewResult] = useState<any>(null);
+  const [reviewsList, setReviewsList] = useState<any>(null);
   const [wishlistMatches, setWishlistMatches] = useState<any>(null);
   const [products, setProducts] = useState<any>(null);
 
@@ -41,6 +42,11 @@ export default function App() {
     setReviewResult(await res.json());
   }
 
+  async function getReviews(businessId: string) {
+    const res = await fetch(`/api/business/${businessId}/reviews`, { headers: { ...authHeaders } });
+    setReviewsList(await res.json());
+  }
+
   async function getWishlistMatches(userId: string) {
     const res = await fetch(`/api/users/${userId}/wishlist/matches`, { headers: { ...authHeaders } });
     setWishlistMatches(await res.json());
@@ -53,7 +59,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: 'system-ui, Arial, sans-serif', padding: 24, maxWidth: 900, margin: '0 auto' }}>
-      <h2>SynC React UI (v0.1.3)</h2>
+      <h2>SynC React UI (v0.1.4)</h2>
       <Section title="Auth">
         <label>
           Bearer token:
@@ -85,8 +91,17 @@ export default function App() {
           >
             POST review
           </button>
+          <button
+            onClick={() => {
+              const id = (document.getElementById('bizId') as HTMLInputElement)?.value;
+              if (id) getReviews(id);
+            }}
+          >
+            GET reviews
+          </button>
         </div>
         <pre>{JSON.stringify(reviewResult, null, 2)}</pre>
+        <pre>{JSON.stringify(reviewsList, null, 2)}</pre>
       </Section>
 
       <Section title="Wishlist Matches">
@@ -114,6 +129,27 @@ export default function App() {
             }}
           >
             GET products
+          </button>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <input id="prodName" placeholder="product_name" />
+          <input id="prodCat" placeholder="category" />
+          <button
+            onClick={async () => {
+              const sfId = (document.getElementById('sfId') as HTMLInputElement)?.value;
+              const name = (document.getElementById('prodName') as HTMLInputElement)?.value;
+              const cat = (document.getElementById('prodCat') as HTMLInputElement)?.value;
+              if (!sfId || !name) return;
+              const res = await fetch(`/api/storefronts/${sfId}/products`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHeaders },
+                body: JSON.stringify({ items: [{ product_name: name, category: cat || null }] }),
+              });
+              const j = await res.json();
+              setProducts(j);
+            }}
+          >
+            POST product
           </button>
         </div>
         <pre>{JSON.stringify(products, null, 2)}</pre>
