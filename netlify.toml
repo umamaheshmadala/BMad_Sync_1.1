@@ -6,4 +6,10 @@
   functions = "apps/api/functions"
   publish = "."
 
+# Route a simple mini UI at /web to apps/web
+[[redirects]]
+  from = "/web"
+  to = "/apps/web/index.html"
+  status = 200
+
 

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SynC v0.1.2 – Mini UI</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 24px; }
+      h2 { margin: 0 0 8px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+      section { padding: 16px; border: 1px solid rgba(128,128,128,0.3); border-radius: 10px; }
+      button { padding: 8px 12px; margin-right: 8px; }
+      pre { background: rgba(128,128,128,0.15); padding: 12px; border-radius: 8px; overflow: auto; }
+      input[type="text"], input[type="number"] { padding: 6px 8px; min-width: 220px; }
+      small { opacity: 0.7; }
+      nav a { margin-right: 12px; }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="/">Dev Console</a>
+      <strong>Mini UI</strong>
+    </nav>
+    <h2>SynC v0.1.2 – Mini UI</h2>
+    <small>Simple, no-build UI to view config, revenue and manage storefront.</small>
+
+    <div class="grid">
+      <section>
+        <h3>Platform Config</h3>
+        <div>
+          <button id="cfgGet">GET Config</button>
+        </div>
+        <div style="margin-top:8px;">
+          <input id="cfgKey" type="text" value="ads.carousel_slots" />
+          <input id="cfgVal" type="number" value="6" />
+          <button id="cfgPut">PUT Runtime</button>
+        </div>
+        <pre id="cfgOut">Ready</pre>
+      </section>
+
+      <section>
+        <h3>Revenue</h3>
+        <button id="revGet">GET Revenue</button>
+        <pre id="revOut">Ready</pre>
+      </section>
+
+      <section>
+        <h3>Storefront (Owner)</h3>
+        <div style="margin-bottom:6px;">
+          <button id="seedBtn">Seed</button>
+          <small>Seeds users, business, coupon</small>
+        </div>
+        <div style="margin-bottom:6px;">
+          <button id="sfPost">POST Upsert</button>
+          <button id="sfGet">GET Storefront</button>
+        </div>
+        <pre id="sfOut">Ready</pre>
+      </section>
+    </div>
+
+    <script>
+      const base = location.origin;
+      let bizId = '';
+      const out = (id, data) => {
+        document.getElementById(id).textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      };
+      const bearer = (sub, role) => {
+        const h = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
+        const p = btoa(JSON.stringify(role ? { sub, role } : { sub }));
+        return `Bearer ${h}.${p}.`;
+      };
+
+      document.getElementById('cfgGet').onclick = async () => {
+        const r = await fetch(`${base}/api/platform/config`);
+        out('cfgOut', await r.json());
+      };
+      document.getElementById('cfgPut').onclick = async () => {
+        const key = document.getElementById('cfgKey').value.trim();
+        const val = document.getElementById('cfgVal').value.trim();
+        const body = { [key]: { value: isNaN(Number(val)) ? val : Number(val) } };
+        const r = await fetch(`${base}/api/platform/config/runtime`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        out('cfgOut', await r.json());
+      };
+
+      document.getElementById('revGet').onclick = async () => {
+        const r = await fetch(`${base}/api/platform/revenue`);
+        out('revOut', await r.json());
+      };
+
+      document.getElementById('seedBtn').onclick = async () => {
+        let r = await fetch(`${base}/api/tests/seed`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        const js = await r.json().catch(() => ({}));
+        if (!js?.ok) {
+          // retry with body override if Netlify didn't inject env
+          const body = { supabase_url: window.SUPABASE_URL || '', service_key: window.SUPABASE_SERVICE_ROLE_KEY || '' };
+          r = await fetch(`${base}/api/tests/seed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        }
+        const resp = await r.json();
+        if (resp?.business_id) bizId = resp.business_id;
+        out('sfOut', resp);
+      };
+
+      document.getElementById('sfPost').onclick = async () => {
+        const headers = { 'Content-Type': 'application/json', Authorization: bearer('11111111-1111-1111-1111-111111111111', 'owner') };
+        if (bizId) headers['x-business-id'] = bizId;
+        const body = { description: 'Great store', theme: 'light', is_open: true };
+        const r = await fetch(`${base}/api/business/storefront`, { method: 'POST', headers, body: JSON.stringify(body) });
+        out('sfOut', await r.json());
+      };
+      document.getElementById('sfGet').onclick = async () => {
+        const headers = { Authorization: bearer('11111111-1111-1111-1111-111111111111', 'owner') };
+        if (bizId) headers['x-business-id'] = bizId;
+        const r = await fetch(`${base}/api/business/storefront`, { headers });
+        out('sfOut', await r.json());
+      };
+    </script>
+  </body>
+  </html>
+
+
