@@ -2,6 +2,10 @@
   directory = "apps/api/functions"
   node_bundler = "esbuild"
 
+[build]
+  command = "npm run build:web"
+  publish = "."
+
 [dev]
   functions = "apps/api/functions"
   publish = "."
