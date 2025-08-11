@@ -1,5 +1,17 @@
 ### Changelog
 
+### v0.1.1 — 2025-08-11
+
+- Added
+  - Persist platform config to DB via `platform_config` with defaults fallback.
+  - Auth hardening: consistent 401/403 checks across user and business endpoints.
+  - Simple dev console `index.html` to call local API endpoints from the browser.
+- Tests
+  - Round-trip config test (PUT then GET).
+  - Negative tests for unauthorized/forbidden flows.
+- Status
+  - All integration tests pass locally.
+
 ### v0.1.0 — 2025-08-11
 
 Initial SynC MVP scaffold.
