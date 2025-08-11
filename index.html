@@ -49,6 +49,7 @@
     <script>
       const out = document.getElementById('out');
       const base = location.origin;
+      let seededBiz = '';
 
       function setOut(obj) {
         out.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
@@ -78,7 +79,9 @@
           const body = { supabase_url: window.SUPABASE_URL || '', service_key: window.SUPABASE_SERVICE_ROLE_KEY || '' };
           r = await fetch(`${base}/api/tests/seed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         }
-        setOut(await r.json());
+        const js = await r.json();
+        if (js && js.business_id) seededBiz = js.business_id;
+        setOut(js);
       };
 
       document.getElementById('btnPutCfg').onclick = async () => {
@@ -91,12 +94,14 @@
 
       document.getElementById('btnStoreGet').onclick = async () => {
         const headers = { Authorization: bearer('11111111-1111-1111-1111-111111111111', 'owner') };
+        if (seededBiz) headers['x-business-id'] = seededBiz;
         const r = await fetch(`${base}/api/business/storefront`, { headers });
         setOut(await r.json());
       };
 
       document.getElementById('btnStorePost').onclick = async () => {
         const headers = { 'Content-Type': 'application/json', Authorization: bearer('11111111-1111-1111-1111-111111111111', 'owner') };
+        if (seededBiz) headers['x-business-id'] = seededBiz;
         const body = { description: 'Great store', theme: 'light', is_open: true };
         const r = await fetch(`${base}/api/business/storefront`, { method: 'POST', headers, body: JSON.stringify(body) });
         setOut(await r.json());
