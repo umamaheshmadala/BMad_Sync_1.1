@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "country": "IN",
+  "tiers": {
+    "tier1": [
+      "Mumbai",
+      "Delhi",
+      "Bengaluru",
+      "Hyderabad",
+      "Chennai",
+      "Kolkata",
+      "Pune",
+      "Ahmedabad"
+    ],
+    "tier2": [
+      "Surat",
+      "Jaipur",
+      "Lucknow",
+      "Kanpur",
+      "Nagpur",
+      "Indore",
+      "Bhopal",
+      "Patna",
+      "Vadodara",
+      "Ghaziabad",
+      "Coimbatore",
+      "Kochi",
+      "Visakhapatnam",
+      "Thiruvananthapuram",
+      "Noida"
+    ],
+    "tier3": [
+      "Guwahati",
+      "Rajkot",
+      "Ranchi",
+      "Jodhpur",
+      "Vijayawada",
+      "Madurai",
+      "Mysuru",
+      "Varanasi",
+      "Dehradun",
+      "Amritsar",
+      "Chandigarh",
+      "Aurangabad",
+      "Jabalpur",
+      "Nashik",
+      "Mangalore"
+    ]
+  }
+}

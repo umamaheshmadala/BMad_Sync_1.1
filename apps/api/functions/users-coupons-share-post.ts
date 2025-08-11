@@ -1,0 +1,72 @@
+import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
+
+export default async (req: Request) => {
+  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  const url = new URL(req.url);
+  const segments = url.pathname.split('/');
+  const userId = segments[3] || '';
+  const couponId = segments[5] || '';
+  try {
+    const body = await req.json();
+    const { receiver_user_id } = body || {};
+    if (!userId || !couponId || typeof receiver_user_id !== 'string') {
+      return new Response(JSON.stringify({ ok: false, error: 'Invalid payload' }), { status: 400 });
+    }
+    const supabase = createSupabaseClient(true);
+
+    // Validate original ownership
+    const { data: originalUC, error: origErr } = await supabase
+      .from('user_coupons')
+      .select('id, is_redeemed, transfer_count')
+      .eq('coupon_id', couponId)
+      .eq('current_owner_id', userId)
+      .limit(1)
+      .maybeSingle();
+    if (origErr || !originalUC) {
+      return new Response(JSON.stringify({ ok: false, error: 'Original coupon not owned by user' }), { status: 403 });
+    }
+    if (originalUC.is_redeemed) {
+      return new Response(JSON.stringify({ ok: false, error: 'Already redeemed; cannot share' }), { status: 409 });
+    }
+
+    // Create new instance for receiver
+    const unique_code = `UC-${couponId}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const { data: newUC, error: insErr } = await supabase
+      .from('user_coupons')
+      .insert({ coupon_id: couponId, user_id: receiver_user_id, unique_code, current_owner_id: receiver_user_id })
+      .select('id')
+      .single();
+    if (insErr) return new Response(JSON.stringify({ ok: false, error: insErr.message }), { status: 500 });
+
+    // Record share row
+    const { data: shareRow, error: shareErr } = await supabase
+      .from('coupon_shares')
+      .insert({
+        original_user_coupon_id: originalUC.id,
+        sharer_user_id: userId,
+        receiver_user_id,
+        shared_coupon_instance_id: newUC.id,
+      })
+      .select('id')
+      .single();
+    if (shareErr) return new Response(JSON.stringify({ ok: false, error: shareErr.message }), { status: 500 });
+
+    // Update original transfer_count and nullify current ownership
+    const { error: updErr } = await supabase
+      .from('user_coupons')
+      .update({ current_owner_id: null, transfer_count: (originalUC.transfer_count || 0) + 1 })
+      .eq('id', originalUC.id);
+    if (updErr) return new Response(JSON.stringify({ ok: false, error: updErr.message }), { status: 500 });
+
+    return new Response(
+      JSON.stringify({ ok: true, share_id: shareRow.id, new_user_coupon_id: newUC.id, unique_code }),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (e: any) {
+    return new Response(JSON.stringify({ ok: false, error: e?.message || 'Bad Request' }), { status: 400 });
+  }
+};
+
+export const config = {
+  path: '/api/users/:userId/coupons/:couponId/share',
+};

@@ -1,0 +1,456 @@
+openapi: 3.0.3
+info:
+  title: SynC API (MVP Skeleton)
+  version: 0.1.0
+  description: REST-ish endpoints to be implemented via Netlify/Supabase Edge Functions. Auth via Supabase.
+servers:
+  - url: https://example.com
+    description: Placeholder
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        full_name: { type: string }
+        city: { type: string }
+        interests:
+          type: array
+          items: { type: string }
+    Business:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        business_name: { type: string }
+        address: { type: string }
+        google_location_url: { type: string }
+    StorefrontProduct:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        product_name: { type: string }
+        product_description: { type: string }
+        product_image_url: { type: string }
+        category: { type: string }
+        subcategory_l1: { type: string }
+        subcategory_l2: { type: string }
+    Coupon:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        terms_and_conditions: { type: string }
+        value: { type: number }
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+    UserCoupon:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        coupon_id: { type: string, format: uuid }
+        unique_code: { type: string }
+        is_redeemed: { type: boolean }
+    Ad:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        image_url: { type: string }
+        cost_per_day: { type: number }
+    RevenueSummary:
+      type: object
+      properties:
+        coupon_revenue: { type: number }
+        banner_revenue: { type: number }
+        search_revenue: { type: number }
+        push_revenue: { type: number }
+paths:
+  /api/auth/signup:
+    post:
+      summary: User signup (proxy to Supabase)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: OK }
+  /api/auth/login:
+    post:
+      summary: User login (proxy to Supabase)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: OK }
+  /api/users/{userId}/profile/interests:
+    put:
+      security: [ { bearerAuth: [] } ]
+      summary: Update user interests and city
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                city: { type: string }
+                interests:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200': { description: OK }
+  /api/users/{userId}/dashboard:
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: Get personalized dashboard data
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+  /api/users/{userId}/favorites/business:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Add business to favorites
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                business_id: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+  /api/users/{userId}/wishlist:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Add wishlist item (auto-categorized)
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                item_name: { type: string }
+                item_description: { type: string }
+      responses:
+        '201': { description: Created }
+  /api/users/{userId}/coupons/collect:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Collect coupon to wallet
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                coupon_id: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+  /api/users/{userId}/coupons/{couponId}/share:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Share a coupon to a friend
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: couponId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                receiver_user_id: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+  /api/users/{userId}/coupons/shared/{shareId}/cancel:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Cancel a pending share
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: shareId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+  /api/users/{userId}/checkin/gps:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Record a GPS check-in
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                business_id: { type: string, format: uuid }
+                lat: { type: number }
+                lng: { type: number }
+      responses:
+        '200': { description: OK }
+  /api/business/signup:
+    post:
+      summary: Business owner signup (proxy to Supabase)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: OK }
+  /api/business/login:
+    post:
+      summary: Business owner login (proxy to Supabase)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: OK }
+  /api/business/storefront:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Create or update storefront
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description: { type: string }
+                theme: { type: string }
+                is_open: { type: boolean }
+      responses:
+        '200': { description: OK }
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: Get storefront for authenticated business
+      responses:
+        '200': { description: OK }
+  /api/storefronts/{storefrontId}/products:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Add products to a storefront
+      parameters:
+        - in: path
+          name: storefrontId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/StorefrontProduct'
+      responses:
+        '200': { description: OK }
+  /api/business/offers:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Create an offer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+      responses:
+        '201': { description: Created }
+  /api/business/offers/{offerId}/coupons:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Generate coupons for an offer
+      parameters:
+        - in: path
+          name: offerId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                total_quantity: { type: integer }
+                terms_and_conditions: { type: string }
+      responses:
+        '201': { description: Created }
+  /api/business/{businessId}/redeem:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Redeem a coupon at a business
+      parameters:
+        - in: path
+          name: businessId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                unique_code: { type: string }
+      responses:
+        '200': { description: OK }
+  /api/business/{businessId}/analytics/reviews:
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: Review summaries
+      parameters:
+        - in: path
+          name: businessId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+  /api/business/{businessId}/analytics/coupons:
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: Coupon utilization summaries
+      parameters:
+        - in: path
+          name: businessId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+  /api/business/analytics/trends:
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: Peer and marketing trends
+      responses:
+        '200': { description: OK }
+  /api/business/coupons/issue-targeted:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Issue targeted coupons based on parameters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target_parameters: { type: object }
+      responses:
+        '200': { description: OK }
+  /api/business/ads:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Create a banner ad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Ad'
+      responses:
+        '201': { description: Created }
+  /api/platform/revenue:
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: Platform revenue summary
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevenueSummary'
+  /api/platform/config/pricing:
+    put:
+      security: [ { bearerAuth: [] } ]
+      summary: Update pricing configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200': { description: OK }

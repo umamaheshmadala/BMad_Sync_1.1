@@ -1,0 +1,9 @@
+[functions]
+  directory = "apps/api/functions"
+  node_bundler = "esbuild"
+
+[dev]
+  functions = "apps/api/functions"
+  publish = "."
+
+
