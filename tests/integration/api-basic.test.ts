@@ -10,8 +10,11 @@ import sharePost from '../../apps/api/functions/users-coupons-share-post';
 import cancelSharePost from '../../apps/api/functions/users-coupons-shared-cancel-post';
 import redeemPost from '../../apps/api/functions/business-redeem-post';
 import storefront from '../../apps/api/functions/business-storefront';
+import storefrontProducts from '../../apps/api/functions/storefronts-products-post';
 import analyticsReviews from '../../apps/api/functions/business-analytics-reviews-get';
+import reviewsPost from '../../apps/api/functions/business-reviews-post';
 import analyticsCoupons from '../../apps/api/functions/business-analytics-coupons-get';
+import wishlistMatchesGet from '../../apps/api/functions/users-wishlist-matches-get';
 
 const TEST_USER_1 = 'test-user-1';
 const TEST_USER_2 = 'test-user-2';
@@ -150,6 +153,38 @@ it('storefront upsert and get', async () => {
   expect(getJson.storefront).toBeTruthy();
 });
 
+it('storefront products post and get', async () => {
+  // Seed storefront record
+  db.storefronts.insert({ id: 'sf-test', business_id: TEST_BIZ_1 });
+
+  // Add products
+  const postRes = await storefrontProducts(
+    makeReq(path(`/api/storefronts/sf-test/products`), 'POST', {
+      items: [
+        { product_name: 'Item A', category: 'Shopping' },
+        { product_name: 'Item B', category: 'Food' },
+      ],
+    }, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(postRes.status).toBe(200);
+  const postJson = await postRes.json();
+  expect(postJson.ok).toBe(true);
+  expect(postJson.count).toBe(2);
+
+  // Get products
+  const getRes = await storefrontProducts(
+    makeReq(path(`/api/storefronts/sf-test/products`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(getRes.status).toBe(200);
+  const getJson = await getRes.json();
+  expect(getJson.ok).toBe(true);
+  expect(getJson.items.length).toBe(2);
+});
+
 it('analytics endpoints return summaries', async () => {
   // Ensure some coupon activity exists
   db.user_coupons.insert({ id: 'uc1', coupon_id: TEST_COUPON_1, is_redeemed: false });
@@ -174,6 +209,44 @@ it('analytics endpoints return summaries', async () => {
   const jsonC = await resCoupons.json();
   expect(jsonC.ok).toBe(true);
   expect(jsonC.summary.total).toBe(2);
+});
+
+it('creates a business review and reflects in analytics', async () => {
+  // Add positive review
+  const resPost = await reviewsPost(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/reviews`), 'POST', { recommend_status: true, review_text: 'Nice!' }, {
+      Authorization: bearer(TEST_USER_2),
+    })
+  );
+  expect(resPost.status).toBe(200);
+  const rj = await resPost.json();
+  expect(rj.ok).toBe(true);
+
+  const resReviews = await analyticsReviews(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/analytics/reviews`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  const json = await resReviews.json();
+  expect(json.ok).toBe(true);
+  expect(json.summary.recommend + json.summary.not_recommend).toBe(3);
+});
+
+it('returns wishlist matches by category', async () => {
+  // Ensure a wishlist item exists and a product with same category
+  db.wishlist_items.insert({ id: 'w1', user_id: TEST_USER_1, item_name: 'Sneakers', category: 'Shopping' });
+  db.storefronts.insert({ id: 'sf1', business_id: TEST_BIZ_1 });
+  db.storefront_products.insert({ id: 'p1', storefront_id: 'sf1', category: 'Shopping' });
+
+  const res = await wishlistMatchesGet(
+    makeReq(path(`/api/users/${TEST_USER_1}/wishlist/matches`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1),
+    })
+  );
+  expect(res.status).toBe(200);
+  const json = await res.json();
+  expect(json.ok).toBe(true);
+  expect(json.count).toBeGreaterThan(0);
 });
 
 it('rejects unauthorized requests with 401', async () => {

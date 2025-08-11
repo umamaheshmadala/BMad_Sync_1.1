@@ -12,4 +12,10 @@
   to = "/apps/web/index.html"
   status = 200
 
+# React UI at /react
+[[redirects]]
+  from = "/react"
+  to = "/apps/web-react/index.html"
+  status = 200
+
 

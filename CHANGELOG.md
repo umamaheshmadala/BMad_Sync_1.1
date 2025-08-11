@@ -1,5 +1,16 @@
 ### Changelog
 
+### v0.1.3 — 2025-08-11
+
+- Added
+  - `POST /api/business/{businessId}/reviews` → `apps/api/functions/business-reviews-post.ts`.
+  - `POST /api/storefronts/{storefrontId}/products` → `apps/api/functions/storefronts-products-post.ts`.
+  - `GET /api/users/{userId}/wishlist/matches` → `apps/api/functions/users-wishlist-matches-get.ts`.
+- Docs
+  - Updated `docs/api/openapi.yaml` and `docs/api/handlers.md` for new endpoints.
+- Tests
+  - Integration tests for review creation and wishlist matches.
+
 ### v0.1.1 — 2025-08-11
 
 - Added

@@ -32,6 +32,7 @@ export class MockDb {
   public coupon_shares = new Table();
   public businesses = new Table();
   public storefronts = new Table();
+  public storefront_products = new Table();
   public business_reviews = new Table();
   public platform_config = new Table();
 }

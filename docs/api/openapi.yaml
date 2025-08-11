@@ -173,6 +173,17 @@ paths:
                 item_description: { type: string }
       responses:
         '201': { description: Created }
+  /api/users/{userId}/wishlist/matches:
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: Get wishlist matches for a user
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
   /api/users/{userId}/coupons/collect:
     post:
       security: [ { bearerAuth: [] } ]
@@ -322,6 +333,16 @@ paths:
                     $ref: '#/components/schemas/StorefrontProduct'
       responses:
         '200': { description: OK }
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: List products for a storefront
+      parameters:
+        - in: path
+          name: storefrontId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
   /api/business/offers:
     post:
       security: [ { bearerAuth: [] } ]
@@ -387,6 +408,27 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         '200': { description: OK }
+  /api/business/{businessId}/reviews:
+    post:
+      security: [ { bearerAuth: [] } ]
+      summary: Create a review for a business
+      parameters:
+        - in: path
+          name: businessId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recommend_status: { type: boolean }
+                review_text: { type: string }
+                checked_in_at: { type: string, format: date-time }
+      responses:
+        '201': { description: Created }
   /api/business/{businessId}/analytics/coupons:
     get:
       security: [ { bearerAuth: [] } ]

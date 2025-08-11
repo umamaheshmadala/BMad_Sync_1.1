@@ -14,6 +14,7 @@ This maps `docs/api/openapi.yaml` routes to serverless function names and expect
 - GET /api/users/{userId}/dashboard → `users-dashboard-get.ts`
 - POST /api/users/{userId}/favorites/business → `users-favorites-business-post.ts`
 - POST /api/users/{userId}/wishlist → `users-wishlist-post.ts`
+- GET /api/users/{userId}/wishlist/matches → `users-wishlist-matches-get.ts`
 - POST /api/users/{userId}/coupons/collect → `users-coupons-collect-post.ts`
 - POST /api/users/{userId}/coupons/{couponId}/share → `users-coupons-share-post.ts`
 - POST /api/users/{userId}/coupons/shared/{shareId}/cancel → `users-coupons-shared-cancel-post.ts`
@@ -21,11 +22,12 @@ This maps `docs/api/openapi.yaml` routes to serverless function names and expect
 - POST /api/business/signup → `business-signup.ts`
 - POST /api/business/login → `business-login.ts`
 - POST/GET /api/business/storefront → `business-storefront.ts`
-- POST /api/storefronts/{storefrontId}/products → `storefronts-products-post.ts`
+- POST/GET /api/storefronts/{storefrontId}/products → `storefronts-products-post.ts`
 - POST /api/business/offers → `business-offers-post.ts`
 - POST /api/business/offers/{offerId}/coupons → `business-offers-coupons-post.ts`
 - POST /api/business/{businessId}/redeem → `business-redeem-post.ts`
 - GET /api/business/{businessId}/analytics/reviews → `business-analytics-reviews-get.ts`
+- POST /api/business/{businessId}/reviews → `business-reviews-post.ts`
 - GET /api/business/{businessId}/analytics/coupons → `business-analytics-coupons-get.ts`
 - GET /api/business/analytics/trends → `business-analytics-trends-get.ts`
 - POST /api/business/coupons/issue-targeted → `business-coupons-issue-targeted-post.ts`
