@@ -34,6 +34,8 @@ export default function App() {
   const [pricingResult, setPricingResult] = useState(null as any);
   const [offersResult, setOffersResult] = useState(null as any);
   const [redeemResult, setRedeemResult] = useState(null as any);
+  const [revenueResult, setRevenueResult] = useState(null as any);
+  const [couponAnalytics, setCouponAnalytics] = useState(null as any);
   const [authResult, setAuthResult] = useState(null as any);
   const initialSbUrl = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_URL || ''; } catch { return ''; } })();
   const initialSbAnon = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_ANON_KEY || ''; } catch { return ''; } })();
@@ -174,6 +176,20 @@ export default function App() {
     const j = await res.json();
     setRedeemResult(j);
     if (!j?.ok) showToast(j?.error || 'Redeem error');
+  }
+
+  async function getRevenue() {
+    const res = await fetch('/api/platform/revenue', { headers: { ...authHeaders } });
+    const j = await res.json();
+    setRevenueResult(j);
+  }
+
+  async function getCouponAnalytics() {
+    const biz = (document.getElementById('redeemBizId') as HTMLInputElement)?.value?.trim();
+    if (!biz) { showToast('businessId required'); return; }
+    const res = await fetch(`/api/business/${biz}/analytics/coupons`, { headers: { ...authHeaders } });
+    const j = await res.json();
+    setCouponAnalytics(j);
   }
 
   async function getTrends() {
@@ -658,8 +674,14 @@ export default function App() {
           <input id="redeemBizId" className="input" placeholder="businessId (owner)" />
           <button className="btn" onClick={redeemAtBusiness}>POST redeem</button>
         </div>
+        <div className="flex gap-2 mt-2">
+          <button className="btn" onClick={getRevenue}>GET revenue</button>
+          <button className="btn" onClick={getCouponAnalytics}>GET coupon analytics</button>
+        </div>
         <pre>{JSON.stringify(offersResult, null, 2)}</pre>
         <pre>{JSON.stringify(redeemResult, null, 2)}</pre>
+        <pre>{JSON.stringify(revenueResult, null, 2)}</pre>
+        <pre>{JSON.stringify(couponAnalytics, null, 2)}</pre>
         </>
         )}
       </Section>
