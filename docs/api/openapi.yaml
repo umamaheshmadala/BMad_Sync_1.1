@@ -457,6 +457,23 @@ paths:
           description: Optional filter to constrain results to a single business (owner or platform only).
       responses:
         '200': { description: OK }
+  /api/business/analytics/funnel:
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: Coupon conversion funnel
+      parameters:
+        - in: query
+          name: group
+          required: false
+          schema: { type: string, enum: [business] }
+          description: When set to `business`, returns `funnelByBusiness` map.
+        - in: query
+          name: businessId
+          required: false
+          schema: { type: string, format: uuid }
+          description: Optional filter to constrain to a single business (owner or platform only).
+      responses:
+        '200': { description: OK }
   /api/business/coupons/issue-targeted:
     post:
       security: [ { bearerAuth: [] } ]
