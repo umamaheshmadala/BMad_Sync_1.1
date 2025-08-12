@@ -19,6 +19,7 @@ export default function App() {
   const [wishlistMatches, setWishlistMatches] = useState(null as any);
   const [products, setProducts] = useState(null as any);
   const [notifications, setNotifications] = useState(null as any);
+  const [unreadCount, setUnreadCount] = useState(0 as any);
 
   async function postStorefront() {
     const res = await fetch('/api/business/storefront', {
@@ -45,7 +46,13 @@ export default function App() {
 
   async function getReviews(businessId: string) {
     const filter = (document.getElementById('revFilter') as HTMLSelectElement)?.value;
-    const qs = filter ? `?recommend=${encodeURIComponent(filter)}` : '';
+    const limit = (document.getElementById('revLimit') as HTMLInputElement)?.value || '10';
+    const offset = (document.getElementById('revOffset') as HTMLInputElement)?.value || '0';
+    const params = new URLSearchParams();
+    if (filter) params.set('recommend', filter);
+    if (limit) params.set('limit', String(limit));
+    if (offset) params.set('offset', String(offset));
+    const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/business/${businessId}/reviews${qs}`, { headers: { ...authHeaders } });
     setReviewsList(await res.json());
   }
@@ -62,19 +69,30 @@ export default function App() {
 
   async function getNotifications(userId: string) {
     const res = await fetch(`/api/users/${userId}/notifications`, { headers: { ...authHeaders } });
-    setNotifications(await res.json());
+    const j = await res.json();
+    setNotifications(j);
+    // Also refresh unread count
+    await refreshUnread(userId);
   }
 
   async function clearNotifications(userId: string) {
     const res = await fetch(`/api/users/${userId}/notifications`, { method: 'DELETE', headers: { ...authHeaders } });
     const j = await res.json();
     setNotifications(j);
+    await refreshUnread(userId);
   }
 
   async function markRead(userId: string) {
     const res = await fetch(`/api/users/${userId}/notifications/read`, { method: 'PUT', headers: { ...authHeaders } });
     const j = await res.json();
     setNotifications(j);
+    await refreshUnread(userId);
+  }
+
+  async function refreshUnread(userId: string) {
+    const res = await fetch(`/api/users/${userId}/notifications?unread=true&limit=100`, { headers: { ...authHeaders } });
+    const j = await res.json();
+    if (j && j.items) setUnreadCount((j.items as any[]).length);
   }
 
   return (
@@ -103,6 +121,8 @@ export default function App() {
       <Section title="Reviews">
         <div style={{ display: 'flex', gap: 8 }}>
           <input id="bizId" placeholder="businessId" />
+          <input id="revLimit" placeholder="limit" defaultValue={10 as any} style={{ width: 64 }} />
+          <input id="revOffset" placeholder="offset" defaultValue={0 as any} style={{ width: 72 }} />
           <button
             onClick={() => {
               const id = (document.getElementById('bizId') as HTMLInputElement)?.value;
@@ -144,7 +164,7 @@ export default function App() {
         <pre>{JSON.stringify(wishlistMatches, null, 2)}</pre>
       </Section>
 
-      <Section title="Notifications">
+      <Section title={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ''}`}>
         <div style={{ display: 'flex', gap: 8 }}>
           <input id="notifUserId" placeholder="userId" />
           <button
