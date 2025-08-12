@@ -33,6 +33,7 @@ export default function App() {
   const [trendsResult, setTrendsResult] = useState(null as any);
   const [pricingResult, setPricingResult] = useState(null as any);
   const [offersResult, setOffersResult] = useState(null as any);
+  const [redeemResult, setRedeemResult] = useState(null as any);
   const [authResult, setAuthResult] = useState(null as any);
   const initialSbUrl = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_URL || ''; } catch { return ''; } })();
   const initialSbAnon = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_ANON_KEY || ''; } catch { return ''; } })();
@@ -159,6 +160,20 @@ export default function App() {
     const j = await res.json();
     setOffersResult(j);
     if (!j?.ok) showToast(j?.error || 'Collect error');
+  }
+
+  async function redeemAtBusiness() {
+    const unique = (document.getElementById('redeemCode') as HTMLInputElement)?.value?.trim();
+    const biz = (document.getElementById('redeemBizId') as HTMLInputElement)?.value?.trim();
+    if (!unique || !biz) { showToast('unique_code and businessId required'); return; }
+    const res = await fetch(`/api/business/${biz}/redeem`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ unique_code: unique })
+    });
+    const j = await res.json();
+    setRedeemResult(j);
+    if (!j?.ok) showToast(j?.error || 'Redeem error');
   }
 
   async function getTrends() {
@@ -638,7 +653,13 @@ export default function App() {
           <div></div>
           <button className="btn" onClick={collectCoupon}>COLLECT to my wallet</button>
         </div>
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          <input id="redeemCode" className="input" placeholder="unique_code (from collect)" />
+          <input id="redeemBizId" className="input" placeholder="businessId (owner)" />
+          <button className="btn" onClick={redeemAtBusiness}>POST redeem</button>
+        </div>
         <pre>{JSON.stringify(offersResult, null, 2)}</pre>
+        <pre>{JSON.stringify(redeemResult, null, 2)}</pre>
         </>
         )}
       </Section>
