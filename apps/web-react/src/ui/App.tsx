@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: any }) {
   return (
     <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, marginBottom: 16 }}>
       <h3 style={{ marginTop: 0 }}>{title}</h3>
@@ -13,11 +13,12 @@ export default function App() {
   const [token, setToken] = useState('');
   const authHeaders = useMemo(() => (token ? { Authorization: token } : {}), [token]);
 
-  const [storefront, setStorefront] = useState<any>(null);
-  const [reviewResult, setReviewResult] = useState<any>(null);
-  const [reviewsList, setReviewsList] = useState<any>(null);
-  const [wishlistMatches, setWishlistMatches] = useState<any>(null);
-  const [products, setProducts] = useState<any>(null);
+  const [storefront, setStorefront] = useState(null as any);
+  const [reviewResult, setReviewResult] = useState(null as any);
+  const [reviewsList, setReviewsList] = useState(null as any);
+  const [wishlistMatches, setWishlistMatches] = useState(null as any);
+  const [products, setProducts] = useState(null as any);
+  const [notifications, setNotifications] = useState(null as any);
 
   async function postStorefront() {
     const res = await fetch('/api/business/storefront', {
@@ -57,6 +58,11 @@ export default function App() {
     setProducts(await res.json());
   }
 
+  async function getNotifications(userId: string) {
+    const res = await fetch(`/api/users/${userId}/notifications`, { headers: { ...authHeaders } });
+    setNotifications(await res.json());
+  }
+
   return (
     <div style={{ fontFamily: 'system-ui, Arial, sans-serif', padding: 24, maxWidth: 900, margin: '0 auto' }}>
       <h2>SynC React UI (v0.1.4)</h2>
@@ -67,7 +73,7 @@ export default function App() {
             style={{ width: '100%' }}
             placeholder="Bearer header value (e.g., Bearer <header>.<payload>.)"
             value={token}
-            onChange={(e) => setToken(e.target.value)}
+            onChange={(e: any) => setToken((e.target as HTMLInputElement).value)}
           />
         </label>
       </Section>
@@ -117,6 +123,21 @@ export default function App() {
           </button>
         </div>
         <pre>{JSON.stringify(wishlistMatches, null, 2)}</pre>
+      </Section>
+
+      <Section title="Notifications">
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input id="notifUserId" placeholder="userId" />
+          <button
+            onClick={() => {
+              const id = (document.getElementById('notifUserId') as HTMLInputElement)?.value;
+              if (id) getNotifications(id);
+            }}
+          >
+            GET notifications
+          </button>
+        </div>
+        <pre>{JSON.stringify(notifications, null, 2)}</pre>
       </Section>
 
       <Section title="Storefront Products">

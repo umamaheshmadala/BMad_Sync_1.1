@@ -15,6 +15,7 @@ import analyticsReviews from '../../apps/api/functions/business-analytics-review
 import reviewsPost from '../../apps/api/functions/business-reviews-post';
 import analyticsCoupons from '../../apps/api/functions/business-analytics-coupons-get';
 import wishlistMatchesGet from '../../apps/api/functions/users-wishlist-matches-get';
+import notificationsGet from '../../apps/api/functions/users-notifications-get';
 
 const TEST_USER_1 = 'test-user-1';
 const TEST_USER_2 = 'test-user-2';
@@ -247,6 +248,32 @@ it('returns wishlist matches by category', async () => {
   const json = await res.json();
   expect(json.ok).toBe(true);
   expect(json.count).toBeGreaterThan(0);
+});
+
+it('persists and returns notifications for wishlist matches', async () => {
+  // Ensure wishlist and product overlap
+  db.wishlist_items.insert({ id: 'w2', user_id: TEST_USER_1, item_name: 'Pasta', category: 'Food', subcategory_l1: 'Italian' });
+  db.storefronts.insert({ id: 'sf2', business_id: TEST_BIZ_1 });
+  db.storefront_products.insert({ id: 'p2', storefront_id: 'sf2', category: 'Food', subcategory_l1: 'Italian' });
+
+  // Trigger matches (which should persist a notification)
+  await wishlistMatchesGet(
+    makeReq(path(`/api/users/${TEST_USER_1}/wishlist/matches`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1),
+    })
+  );
+
+  // Retrieve notifications
+  const resN = await notificationsGet(
+    makeReq(path(`/api/users/${TEST_USER_1}/notifications`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1),
+    })
+  );
+  expect(resN.status).toBe(200);
+  const jsonN = await resN.json();
+  expect(jsonN.ok).toBe(true);
+  expect(Array.isArray(jsonN.items)).toBe(true);
+  expect(jsonN.items.length).toBeGreaterThan(0);
 });
 
 it('rejects unauthorized requests with 401', async () => {

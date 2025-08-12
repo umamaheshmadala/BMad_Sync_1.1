@@ -2,6 +2,15 @@
 
 ### v0.1.4 — 2025-08-11
 
+### v0.1.5 — WIP
+
+- Added
+  - `GET /api/users/{userId}/notifications` → `apps/api/functions/users-notifications-get.ts`.
+- Changed
+  - Persist notifications in `users-wishlist-matches-get.ts` when matches are found.
+- UI
+  - React UI: Notifications section to retrieve user notifications.
+
 - Added
   - `GET /api/business/{businessId}/reviews` → extend `apps/api/functions/business-reviews-post.ts` for listing (owner/platform only).
   - React UI `apps/web-react/src/ui/App.tsx`: add Reviews GET, Products POST form; bump version label to v0.1.4.

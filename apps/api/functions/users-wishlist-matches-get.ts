@@ -1,6 +1,5 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
 import { getUserIdFromRequest, isPlatformOwner } from '../../../packages/shared/auth';
-import { enqueueNotification } from '../../../packages/shared/notifications';
 
 export default async (req: Request) => {
   if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
@@ -34,9 +33,16 @@ export default async (req: Request) => {
     }
   }
 
-  // MVP: enqueue a notification for the user when matches exist (best-effort, in-memory only)
+  // Persist a notification for the user when matches exist
   if (matches.length > 0) {
-    enqueueNotification({ recipient_user_id: userId, message: `Found ${matches.length} wishlist matches`, type: 'wishlist_match' });
+    await (supabase as any)
+      .from('notifications')
+      .insert({
+        recipient_user_id: userId,
+        notification_type: 'wishlist_match',
+        message: `Found ${matches.length} wishlist matches`,
+        deep_link_url: null,
+      });
   }
 
   return new Response(
