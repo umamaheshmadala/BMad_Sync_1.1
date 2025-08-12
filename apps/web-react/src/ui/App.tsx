@@ -10,7 +10,9 @@ function Section({ title, children }: { title: string; children: any }) {
 }
 
 export default function App() {
-  const [token, setToken] = useState('');
+  const [token, setToken] = useState(() => {
+    try { return localStorage.getItem('sync_token') || ''; } catch { return ''; }
+  });
   const authHeaders = useMemo(() => (token ? { Authorization: token } : {}), [token]);
 
   const [storefront, setStorefront] = useState(null as any);
@@ -135,7 +137,11 @@ export default function App() {
             style={{ width: '100%' }}
             placeholder="Bearer header value (e.g., Bearer <header>.<payload>.)"
             value={token}
-            onChange={(e: any) => setToken((e.target as HTMLInputElement).value)}
+            onChange={(e: any) => {
+              const v = (e.target as HTMLInputElement).value;
+              setToken(v);
+              try { if (v) localStorage.setItem('sync_token', v); else localStorage.removeItem('sync_token'); } catch {}
+            }}
           />
         </label>
       </Section>
