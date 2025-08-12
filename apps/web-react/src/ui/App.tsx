@@ -256,22 +256,63 @@ export default function App() {
             GET products
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <input id="prodName" placeholder="product_name" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
+          <input id="prodName" placeholder="product_name (min 2 chars)" />
           <input id="prodCat" placeholder="category" />
+          <input id="prodDesc" placeholder="product_description (<= 200 chars)" />
+          <input id="prodImg" placeholder="product_image_url (http...)" />
+          <input id="prodSub1" placeholder="subcategory_l1" />
+          <input id="prodSub2" placeholder="subcategory_l2" />
+          <input id="prodOrder" placeholder="display_order (number)" />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <input type="checkbox" id="prodTrending" /> trending
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <input type="checkbox" id="prodSuggested" /> suggested
+          </label>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button
             onClick={async () => {
               const sfId = (document.getElementById('sfId') as HTMLInputElement)?.value;
-              const name = (document.getElementById('prodName') as HTMLInputElement)?.value;
-              const cat = (document.getElementById('prodCat') as HTMLInputElement)?.value;
+              const name = (document.getElementById('prodName') as HTMLInputElement)?.value?.trim();
+              const cat = (document.getElementById('prodCat') as HTMLInputElement)?.value?.trim();
+              const desc = (document.getElementById('prodDesc') as HTMLInputElement)?.value?.trim();
+              const img = (document.getElementById('prodImg') as HTMLInputElement)?.value?.trim();
+              const sub1 = (document.getElementById('prodSub1') as HTMLInputElement)?.value?.trim();
+              const sub2 = (document.getElementById('prodSub2') as HTMLInputElement)?.value?.trim();
+              const orderStr = (document.getElementById('prodOrder') as HTMLInputElement)?.value?.trim();
+              const trending = (document.getElementById('prodTrending') as HTMLInputElement)?.checked;
+              const suggested = (document.getElementById('prodSuggested') as HTMLInputElement)?.checked;
+
               if (!sfId) { alert('storefrontId required'); return; }
-              if (!name || name.trim().length < 2) { alert('product_name required (min 2 chars)'); return; }
+              if (!name || name.length < 2) { alert('product_name required (min 2 chars)'); return; }
+              if (desc && desc.length > 200) { alert('product_description must be <= 200 chars'); return; }
+              if (img && !/^https?:\/\//i.test(img)) { alert('product_image_url must start with http or https'); return; }
+              const display_order = orderStr && !Number.isNaN(Number(orderStr)) ? Number(orderStr) : undefined;
+
+              const payload: any = {
+                product_name: name,
+                product_description: desc || null,
+                product_image_url: img || null,
+                category: cat || null,
+                subcategory_l1: sub1 || null,
+                subcategory_l2: sub2 || null,
+                display_order,
+                is_trending: !!trending,
+                suggested: !!suggested,
+              };
+
               const res = await fetch(`/api/storefronts/${sfId}/products`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHeaders },
-                body: JSON.stringify({ items: [{ product_name: name, category: cat || null }] }),
+                body: JSON.stringify({ items: [payload] }),
               });
               const j = await res.json();
+              // Refresh list after successful post
+              if (j?.ok) {
+                await getProducts(sfId);
+              }
               setProducts(j);
             }}
           >
