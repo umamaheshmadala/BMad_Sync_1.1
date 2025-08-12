@@ -1,7 +1,8 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
+import { withRequestLogging } from '../../../packages/shared/logging';
 import { getUserIdFromRequest, isPlatformOwner } from '../../../packages/shared/auth';
 
-export default async (req: Request) => {
+export default withRequestLogging('users-notifications', async (req: Request) => {
   try {
     if (req.method !== 'GET' && req.method !== 'DELETE') return new Response('Method Not Allowed', { status: 405 });
     const url = new URL(req.url);
@@ -52,7 +53,7 @@ export default async (req: Request) => {
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
-};
+});
 
 export const config = {
   path: '/api/users/:userId/notifications',

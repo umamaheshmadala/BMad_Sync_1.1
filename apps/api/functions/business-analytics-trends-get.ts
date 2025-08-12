@@ -1,7 +1,8 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
 import { isPlatformOwner, getUserIdFromRequest } from '../../../packages/shared/auth';
+import { withRequestLogging } from '../../../packages/shared/logging';
 
-export default async (req: Request) => {
+export default withRequestLogging('business-analytics-trends', async (req: Request) => {
   if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
   const supabase = createSupabaseClient(true) as any;
 
@@ -55,7 +56,7 @@ export default async (req: Request) => {
     JSON.stringify({ ok: true, trends: { reviews: reviewTrend, coupons: couponTrend } }),
     { headers: { 'Content-Type': 'application/json' } }
   );
-};
+});
 
 export const config = {
   path: '/api/business/analytics/trends',
