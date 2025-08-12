@@ -233,6 +233,22 @@ it('creates a business review and reflects in analytics', async () => {
   expect(json.summary.recommend + json.summary.not_recommend).toBe(3);
 });
 
+it('filters reviews by recommend status for owner', async () => {
+  // Owner requests only positive reviews
+  const res = await reviewsPost(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/reviews?recommend=true`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(res.status).toBe(200);
+  const json = await res.json();
+  expect(json.ok).toBe(true);
+  expect(Array.isArray(json.items)).toBe(true);
+  for (const r of json.items) {
+    expect(r.recommend_status).toBe(true);
+  }
+});
+
 it('returns wishlist matches by category', async () => {
   // Ensure a wishlist item exists and a product with same category
   db.wishlist_items.insert({ id: 'w1', user_id: TEST_USER_1, item_name: 'Sneakers', category: 'Shopping' });

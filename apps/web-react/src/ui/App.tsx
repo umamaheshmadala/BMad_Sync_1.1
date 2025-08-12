@@ -44,7 +44,9 @@ export default function App() {
   }
 
   async function getReviews(businessId: string) {
-    const res = await fetch(`/api/business/${businessId}/reviews`, { headers: { ...authHeaders } });
+    const filter = (document.getElementById('revFilter') as HTMLSelectElement)?.value;
+    const qs = filter ? `?recommend=${encodeURIComponent(filter)}` : '';
+    const res = await fetch(`/api/business/${businessId}/reviews${qs}`, { headers: { ...authHeaders } });
     setReviewsList(await res.json());
   }
 
@@ -97,6 +99,11 @@ export default function App() {
           >
             POST review
           </button>
+          <select id="revFilter" defaultValue="">
+            <option value="">all</option>
+            <option value="true">recommend</option>
+            <option value="false">not recommend</option>
+          </select>
           <button
             onClick={() => {
               const id = (document.getElementById('bizId') as HTMLInputElement)?.value;
@@ -160,7 +167,8 @@ export default function App() {
               const sfId = (document.getElementById('sfId') as HTMLInputElement)?.value;
               const name = (document.getElementById('prodName') as HTMLInputElement)?.value;
               const cat = (document.getElementById('prodCat') as HTMLInputElement)?.value;
-              if (!sfId || !name) return;
+              if (!sfId) { alert('storefrontId required'); return; }
+              if (!name || name.trim().length < 2) { alert('product_name required (min 2 chars)'); return; }
               const res = await fetch(`/api/storefronts/${sfId}/products`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHeaders },

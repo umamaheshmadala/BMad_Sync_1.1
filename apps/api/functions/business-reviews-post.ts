@@ -25,12 +25,18 @@ export default async (req: Request) => {
     }
 
     const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || 50)));
-    const { data, error } = await supabase
+    const recommendParam = url.searchParams.get('recommend');
+    let query = supabase
       .from('business_reviews')
       .select('id, user_id, recommend_status, review_text, checked_in_at, created_at')
       .eq('business_id', businessId)
       .order('created_at', { ascending: false })
       .limit(limit);
+    if (recommendParam === 'true' || recommendParam === 'false') {
+      const recommend = recommendParam === 'true';
+      query = query.eq('recommend_status', recommend);
+    }
+    const { data, error } = await query;
     if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
     return new Response(
       JSON.stringify({ ok: true, items: (data as any[]) || [] }),
