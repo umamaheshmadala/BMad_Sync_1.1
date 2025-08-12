@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { createClient as createSupabaseBrowserClient } from '@supabase/supabase-js';
 
 function Section({ title, children }: { title: string; children: any }) {
   return (
@@ -26,6 +27,13 @@ export default function App() {
   const [adsResult, setAdsResult] = useState(null as any);
   const [trendsResult, setTrendsResult] = useState(null as any);
   const [pricingResult, setPricingResult] = useState(null as any);
+  const [authResult, setAuthResult] = useState(null as any);
+  const initialSbUrl = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_URL || ''; } catch { return ''; } })();
+  const initialSbAnon = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_ANON_KEY || ''; } catch { return ''; } })();
+  const [sbUrl, setSbUrl] = useState(initialSbUrl as string);
+  const [sbAnon, setSbAnon] = useState(initialSbAnon as string);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPwd, setLoginPwd] = useState('');
 
   async function postStorefront() {
     const res = await fetch('/api/business/storefront', {
@@ -34,6 +42,54 @@ export default function App() {
       body: JSON.stringify({ description: 'React SF', theme: 'light', is_open: true }),
     });
     setStorefront(await res.json());
+  }
+
+  async function signup() {
+    const email = (document.getElementById('authEmail') as HTMLInputElement)?.value?.trim();
+    const role = (document.getElementById('authRole') as HTMLInputElement)?.value?.trim();
+    if (!email) { alert('email required'); return; }
+    const res = await fetch('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, role }) });
+    const j = await res.json();
+    setAuthResult(j);
+    if (j?.bearer) {
+      setToken(j.bearer);
+      try { localStorage.setItem('sync_token', j.bearer); } catch {}
+    }
+  }
+
+  async function login() {
+    const email = (document.getElementById('authEmail') as HTMLInputElement)?.value?.trim();
+    const role = (document.getElementById('authRole') as HTMLInputElement)?.value?.trim();
+    if (!email) { alert('email required'); return; }
+    const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, role }) });
+    const j = await res.json();
+    setAuthResult(j);
+    if (j?.bearer) {
+      setToken(j.bearer);
+      try { localStorage.setItem('sync_token', j.bearer); } catch {}
+    }
+  }
+
+  async function loginSupabase() {
+    try {
+      const url = sbUrl?.trim();
+      const anon = sbAnon?.trim();
+      if (!url || !anon) { alert('Set Supabase URL and Anon key first'); return; }
+      const email = loginEmail.trim();
+      const password = loginPwd.trim();
+      if (!email || !password) { alert('Enter email and password'); return; }
+      const supa = createSupabaseBrowserClient(url, anon, { auth: { persistSession: false } });
+      const { data, error } = await supa.auth.signInWithPassword({ email, password });
+      if (error) { setAuthResult({ ok: false, error: error.message }); return; }
+      const access = data?.session?.access_token;
+      if (!access) { setAuthResult({ ok: false, error: 'No access_token' }); return; }
+      const bearer = `Bearer ${access}`;
+      setAuthResult({ ok: true, mode: 'supabase', user_id: data.user?.id });
+      setToken(bearer);
+      try { localStorage.setItem('sync_token', bearer); } catch {}
+    } catch (e: any) {
+      setAuthResult({ ok: false, error: e?.message || 'Login error' });
+    }
   }
 
   async function postAd() {
@@ -179,6 +235,30 @@ export default function App() {
             }}
           />
         </label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
+          <input id="authEmail" placeholder="email for signup/login" />
+          <input id="authRole" placeholder="role (optional, e.g., owner)" />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={signup}>signup</button>
+            <button onClick={login}>login</button>
+          </div>
+        </div>
+        <div style={{ marginTop: 8, padding: 8, border: '1px dashed #ccc', borderRadius: 6 }}>
+          <div style={{ marginBottom: 4, fontWeight: 600 }}>Real Supabase Auth (recommended)</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+            <input placeholder="VITE_SUPABASE_URL (or paste here)" value={sbUrl} onChange={(e) => setSbUrl((e.target as HTMLInputElement).value)} />
+            <input placeholder="VITE_SUPABASE_ANON_KEY (or paste here)" value={sbAnon} onChange={(e) => setSbAnon((e.target as HTMLInputElement).value)} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
+            <input placeholder="email" value={loginEmail} onChange={(e) => setLoginEmail((e.target as HTMLInputElement).value)} />
+            <input placeholder="password" type="password" value={loginPwd} onChange={(e) => setLoginPwd((e.target as HTMLInputElement).value)} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={loginSupabase}>login with Supabase</button>
+              <button onClick={() => { setToken(''); try { localStorage.removeItem('sync_token'); } catch {} }}>sign out</button>
+            </div>
+          </div>
+        </div>
+        <pre>{JSON.stringify(authResult, null, 2)}</pre>
       </Section>
 
       <Section title="Storefront (owner)">

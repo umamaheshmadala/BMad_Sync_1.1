@@ -1,0 +1,2 @@
+declare const importMetaEnv: any;
+
