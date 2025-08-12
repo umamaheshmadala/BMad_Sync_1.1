@@ -3,8 +3,8 @@ import { createClient as createSupabaseBrowserClient } from '@supabase/supabase-
 
 function Section({ title, children }: { title: string; children: any }) {
   return (
-    <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0 }}>{title}</h3>
+    <section className="card mb-4">
+      <h3 className="mt-0 mb-2 text-base font-semibold">{title}</h3>
       {children}
     </section>
   );
@@ -271,12 +271,12 @@ export default function App() {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui, Arial, sans-serif', padding: 24, maxWidth: 900, margin: '0 auto' }}>
-      <h2>SynC React UI (v0.1.5)</h2>
+    <div className="min-h-screen mx-auto max-w-5xl p-6">
+      <h2 className="text-xl font-semibold">SynC React UI (v0.1.5)</h2>
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+      <div className="flex flex-wrap gap-2 mb-3">
         {['auth','session','storefront','reviews','wishlist','notifications','products','ads','trends','pricing','health'].map((t) => (
-          <button key={t} onClick={() => setActiveTab(t as any)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #ddd', background: activeTab===t ? '#eef' : '#fff' }}>{t}</button>
+          <button key={t} onClick={() => setActiveTab(t as any)} className={`btn ${activeTab===t ? 'opacity-100' : 'opacity-70'}`}>{t}</button>
         ))}
       </div>
       {toast ? (
@@ -299,26 +299,26 @@ export default function App() {
             }}
           />
         </label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
-          <input id="authEmail" placeholder="email for signup/login" />
-          <input id="authRole" placeholder="role (optional, e.g., owner)" />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={signup}>signup</button>
-            <button onClick={login}>login</button>
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          <input id="authEmail" placeholder="email for signup/login" className="input" />
+          <input id="authRole" placeholder="role (optional, e.g., owner)" className="input" />
+          <div className="flex gap-2">
+            <button className="btn" onClick={signup}>signup</button>
+            <button className="btn" onClick={login}>login</button>
           </div>
         </div>
-        <div style={{ marginTop: 8, padding: 8, border: '1px dashed #ccc', borderRadius: 6 }}>
+        <div className="mt-2 p-2 border border-dashed border-[color:var(--border)] rounded-md">
           <div style={{ marginBottom: 4, fontWeight: 600 }}>Real Supabase Auth (recommended)</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-            <input placeholder="VITE_SUPABASE_URL (or paste here)" value={sbUrl} onChange={(e) => setSbUrl((e.target as HTMLInputElement).value)} />
-            <input placeholder="VITE_SUPABASE_ANON_KEY (or paste here)" value={sbAnon} onChange={(e) => setSbAnon((e.target as HTMLInputElement).value)} />
+          <div className="grid grid-cols-2 gap-2">
+            <input className="input" placeholder="VITE_SUPABASE_URL (or paste here)" value={sbUrl} onChange={(e) => setSbUrl((e.target as HTMLInputElement).value)} />
+            <input className="input" placeholder="VITE_SUPABASE_ANON_KEY (or paste here)" value={sbAnon} onChange={(e) => setSbAnon((e.target as HTMLInputElement).value)} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
-            <input placeholder="email" value={loginEmail} onChange={(e) => setLoginEmail((e.target as HTMLInputElement).value)} />
-            <input placeholder="password" type="password" value={loginPwd} onChange={(e) => setLoginPwd((e.target as HTMLInputElement).value)} />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={loginSupabase}>login with Supabase</button>
-              <button onClick={() => { setToken(''); try { localStorage.removeItem('sync_token'); } catch {} }}>sign out</button>
+          <div className="grid grid-cols-3 gap-2 mt-2">
+            <input className="input" placeholder="email" value={loginEmail} onChange={(e) => setLoginEmail((e.target as HTMLInputElement).value)} />
+            <input className="input" placeholder="password" type="password" value={loginPwd} onChange={(e) => setLoginPwd((e.target as HTMLInputElement).value)} />
+            <div className="flex gap-2">
+              <button className="btn" onClick={loginSupabase}>login with Supabase</button>
+              <button className="btn" onClick={() => { setToken(''); try { localStorage.removeItem('sync_token'); } catch {} }}>sign out</button>
             </div>
           </div>
         </div>
