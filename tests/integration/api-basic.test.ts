@@ -216,6 +216,45 @@ it('rejects invalid products payloads', async () => {
   expect(resShort.status).toBe(400);
 });
 
+it('rejects products with invalid image url or too long description', async () => {
+  db.storefronts.insert({ id: 'sf-validate', business_id: TEST_BIZ_1 });
+  // Bad URL
+  const badUrl = await storefrontProducts(
+    makeReq(path(`/api/storefronts/sf-validate/products`), 'POST', { items: [{ product_name: 'Valid', product_image_url: 'ftp://bad' }] }, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(badUrl.status).toBe(400);
+
+  // Too long description
+  const longDesc = 'x'.repeat(201);
+  const tooLong = await storefrontProducts(
+    makeReq(path(`/api/storefronts/sf-validate/products`), 'POST', { items: [{ product_name: 'Valid', product_description: longDesc }] }, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(tooLong.status).toBe(400);
+});
+
+it('rejects review payloads with invalid types or too long text', async () => {
+  // recommend_status must be boolean
+  const badType = await reviewsPost(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/reviews`), 'POST', { recommend_status: 'yes' }, {
+      Authorization: bearer(TEST_USER_2),
+    })
+  );
+  expect(badType.status).toBe(400);
+
+  // review_text too long
+  const long = 'y'.repeat(201);
+  const tooLong = await reviewsPost(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/reviews`), 'POST', { recommend_status: true, review_text: long }, {
+      Authorization: bearer(TEST_USER_2),
+    })
+  );
+  expect(tooLong.status).toBe(400);
+});
+
 it('analytics endpoints return summaries', async () => {
   // Ensure some coupon activity exists
   db.user_coupons.insert({ id: 'uc1', coupon_id: TEST_COUPON_1, is_redeemed: false });
