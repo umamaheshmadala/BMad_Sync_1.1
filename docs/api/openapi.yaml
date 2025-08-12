@@ -346,7 +346,7 @@ paths:
   /api/business/offers:
     post:
       security: [ { bearerAuth: [] } ]
-      summary: Create an offer
+      summary: Create an offer (coupon template)
       requestBody:
         required: true
         content:
@@ -356,6 +356,12 @@ paths:
               properties:
                 title: { type: string }
                 description: { type: string }
+                terms_and_conditions: { type: string }
+                value: { type: number }
+                total_quantity: { type: integer }
+                cost_per_coupon: { type: number }
+                start_date: { type: string, format: date }
+                end_date: { type: string, format: date }
       responses:
         '201': { description: Created }
   /api/business/offers/{offerId}/coupons:
