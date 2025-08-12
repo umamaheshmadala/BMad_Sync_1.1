@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { createClient as createSupabaseBrowserClient } from '@supabase/supabase-js';
 
 function Section({ title, children }: { title: string; children: any }) {
@@ -17,6 +17,11 @@ export default function App() {
   const authHeaders = useMemo(() => (token ? { Authorization: token } : {}), [token]);
 
   const [storefront, setStorefront] = useState(null as any);
+  const [activeTab, setActiveTab] = useState('auth');
+  const [toast, setToast] = useState('');
+  const toastTimerRef = useRef(null as any);
+  const [sessionUserId, setSessionUserId] = useState('');
+  const [sessionBusinessId, setSessionBusinessId] = useState('');
   const [reviewResult, setReviewResult] = useState(null as any);
   const [reviewsList, setReviewsList] = useState(null as any);
   const [wishlistMatches, setWishlistMatches] = useState(null as any);
@@ -41,7 +46,10 @@ export default function App() {
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ description: 'React SF', theme: 'light', is_open: true }),
     });
-    setStorefront(await res.json());
+    const j = await res.json();
+    setStorefront(j);
+    if (j?.storefront?.business_id) setSessionBusinessId(String(j.storefront.business_id));
+    if (!j?.ok) showToast(j?.error || 'Storefront error');
   }
 
   async function signup() {
@@ -85,10 +93,12 @@ export default function App() {
       if (!access) { setAuthResult({ ok: false, error: 'No access_token' }); return; }
       const bearer = `Bearer ${access}`;
       setAuthResult({ ok: true, mode: 'supabase', user_id: data.user?.id });
+      if (data?.user?.id) setSessionUserId(String(data.user.id));
       setToken(bearer);
       try { localStorage.setItem('sync_token', bearer); } catch {}
     } catch (e: any) {
       setAuthResult({ ok: false, error: e?.message || 'Login error' });
+      showToast(e?.message || 'Login error');
     }
   }
 
@@ -107,9 +117,15 @@ export default function App() {
 
   async function getTrends() {
     const bizId = (document.getElementById('trendBizId') as HTMLInputElement)?.value?.trim();
-    const qs = bizId ? `?businessId=${encodeURIComponent(bizId)}` : '';
+    const group = (document.getElementById('trendGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
+    const params = new URLSearchParams();
+    if (bizId) params.set('businessId', bizId);
+    if (group) params.set('group', group);
+    const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/business/analytics/trends${qs}`, { headers: { ...authHeaders } });
-    setTrendsResult(await res.json());
+    const j = await res.json();
+    setTrendsResult(j);
+    if (!j?.ok) showToast(j?.error || 'Trends fetch error');
   }
 
   async function putPricing() {
@@ -121,12 +137,17 @@ export default function App() {
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify(payload),
     });
-    setPricingResult(await res.json());
+    const j = await res.json();
+    setPricingResult(j);
+    if (!j?.ok) showToast(j?.error || 'Pricing error');
   }
 
   async function getStorefront() {
     const res = await fetch('/api/business/storefront', { headers: { ...authHeaders } });
-    setStorefront(await res.json());
+    const j = await res.json();
+    setStorefront(j);
+    if (j?.storefront?.business_id) setSessionBusinessId(String(j.storefront.business_id));
+    if (!j?.ok) showToast(j?.error || 'Storefront fetch error');
   }
 
   async function postReview(businessId: string) {
@@ -135,7 +156,9 @@ export default function App() {
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ recommend_status: true, review_text: 'Great place!' }),
     });
-    setReviewResult(await res.json());
+    const j = await res.json();
+    setReviewResult(j);
+    if (!j?.ok) showToast(j?.error || 'Review error');
   }
 
   async function getReviews(businessId: string) {
@@ -148,7 +171,9 @@ export default function App() {
     if (offset) params.set('offset', String(offset));
     const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/business/${businessId}/reviews${qs}`, { headers: { ...authHeaders } });
-    setReviewsList(await res.json());
+    const list = await res.json();
+    setReviewsList(list);
+    if (!list?.ok) showToast(list?.error || 'Reviews fetch error');
     // Fetch summary
     const resSum = await fetch(`/api/business/${businessId}/analytics/reviews`, { headers: { ...authHeaders } });
     setReviewsSummary(await resSum.json());
@@ -156,12 +181,16 @@ export default function App() {
 
   async function getWishlistMatches(userId: string) {
     const res = await fetch(`/api/users/${userId}/wishlist/matches`, { headers: { ...authHeaders } });
-    setWishlistMatches(await res.json());
+    const j = await res.json();
+    setWishlistMatches(j);
+    if (!j?.ok) showToast(j?.error || 'Matches fetch error');
   }
 
   async function getProducts(storefrontId: string) {
     const res = await fetch(`/api/storefronts/${storefrontId}/products`, { headers: { ...authHeaders } });
-    setProducts(await res.json());
+    const j = await res.json();
+    setProducts(j);
+    if (!j?.ok) showToast(j?.error || 'Products fetch error');
   }
 
   async function getNotifications(userId: string) {
@@ -198,6 +227,7 @@ export default function App() {
     const j = await res.json();
     setNotifications(j);
     await refreshUnread(userId);
+    if (!j?.ok) showToast(j?.error || 'Mark read error');
   }
 
   async function markItemRead(userId: string, notificationId: string) {
@@ -205,6 +235,7 @@ export default function App() {
     const j = await res.json();
     setNotifications(j);
     await refreshUnread(userId);
+    if (!j?.ok) showToast(j?.error || 'Mark item read error');
   }
 
   async function refreshUnread(userId: string) {
@@ -218,10 +249,43 @@ export default function App() {
     try { return new Date(ts).toLocaleString(); } catch { return ts; }
   }
 
+  function showToast(message: string) {
+    try { if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current as any); } catch {}
+    setToast(message);
+    try {
+      const id = window.setTimeout(() => setToast(''), 3000);
+      // @ts-ignore
+      toastTimerRef.current = id as any;
+    } catch {}
+  }
+
+  function parseUserIdFromBearer(): string {
+    try {
+      const prefix = 'Bearer ';
+      if (!token || !token.startsWith(prefix)) return sessionUserId || '';
+      const parts = token.slice(prefix.length).split('.');
+      if (parts.length < 2) return sessionUserId || '';
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return String(payload?.sub || '') || sessionUserId || '';
+    } catch { return sessionUserId || ''; }
+  }
+
   return (
     <div style={{ fontFamily: 'system-ui, Arial, sans-serif', padding: 24, maxWidth: 900, margin: '0 auto' }}>
       <h2>SynC React UI (v0.1.5)</h2>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        {['auth','session','storefront','reviews','wishlist','notifications','products','ads','trends','pricing'].map((t) => (
+          <button key={t} onClick={() => setActiveTab(t as any)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #ddd', background: activeTab===t ? '#eef' : '#fff' }}>{t}</button>
+        ))}
+      </div>
+      {toast ? (
+        <div style={{ background:'#fee', color:'#900', padding: 8, border: '1px solid #f99', borderRadius: 6, marginBottom: 12 }}>{toast}</div>
+      ) : null}
+
       <Section title="Auth">
+        {activeTab !== 'auth' ? null : (
+        <>
         <label>
           Bearer token:
           <input
@@ -259,17 +323,36 @@ export default function App() {
           </div>
         </div>
         <pre>{JSON.stringify(authResult, null, 2)}</pre>
+        </>
+        )}
+      </Section>
+
+      <Section title="Session info">
+        {activeTab !== 'session' ? null : (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 6 }}>
+            <div><strong>userId</strong>: {parseUserIdFromBearer() || sessionUserId || '(not set)'}</div>
+            <div><strong>businessId</strong>: {sessionBusinessId || '(fetch storefront)'}</div>
+          </div>
+        </>
+        )}
       </Section>
 
       <Section title="Storefront (owner)">
+        {activeTab !== 'storefront' ? null : (
+        <>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={postStorefront}>POST upsert</button>
           <button onClick={getStorefront}>GET</button>
         </div>
         <pre>{JSON.stringify(storefront, null, 2)}</pre>
+        </>
+        )}
       </Section>
 
       <Section title="Reviews">
+        {activeTab !== 'reviews' ? null : (
+        <>
         <div style={{ display: 'flex', gap: 8 }}>
           <input id="bizId" placeholder="businessId" />
           <input id="revLimit" placeholder="limit" defaultValue={10 as any} style={{ width: 64 }} />
@@ -305,9 +388,13 @@ export default function App() {
             <span style={{ color: '#a22' }}>Not: {reviewsSummary.summary?.not_recommend ?? 0}</span>
           </div>
         )}
+        </>
+        )}
       </Section>
 
       <Section title="Wishlist Matches">
+        {activeTab !== 'wishlist' ? null : (
+        <>
         <div style={{ display: 'flex', gap: 8 }}>
           <input id="userId" placeholder="userId" />
           <button
@@ -320,9 +407,13 @@ export default function App() {
           </button>
         </div>
         <pre>{JSON.stringify(wishlistMatches, null, 2)}</pre>
+        </>
+        )}
       </Section>
 
       <Section title={`Notifications${unreadCount ? ` (${unreadCount} unread)` : ''}`}>
+        {activeTab !== 'notifications' ? null : (
+        <>
         <div style={{ display: 'flex', gap: 8 }}>
           <input id="notifUserId" placeholder="userId" />
           <button
@@ -381,9 +472,13 @@ export default function App() {
             <pre>{JSON.stringify(notifications, null, 2)}</pre>
           )}
         </div>
+        </>
+        )}
       </Section>
 
       <Section title="Storefront Products">
+        {activeTab !== 'products' ? null : (
+        <>
         <div style={{ display: 'flex', gap: 8 }}>
           <input id="sfId" placeholder="storefrontId" />
           <button
@@ -459,9 +554,13 @@ export default function App() {
           </button>
         </div>
         <pre>{JSON.stringify(products, null, 2)}</pre>
+        </>
+        )}
       </Section>
 
       <Section title="Ads (owner)">
+        {activeTab !== 'ads' ? null : (
+        <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           <input id="adTitle" placeholder="title" />
           <input id="adDesc" placeholder="description" />
@@ -471,22 +570,35 @@ export default function App() {
           <button onClick={postAd}>POST ad</button>
         </div>
         <pre>{JSON.stringify(adsResult, null, 2)}</pre>
+        </>
+        )}
       </Section>
 
       <Section title="Analytics Trends">
+        {activeTab !== 'trends' ? null : (
+        <>
         <div style={{ display: 'flex', gap: 8 }}>
           <input id="trendBizId" placeholder="businessId (optional)" />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input type="checkbox" id="trendGroupBiz" /> group by business
+          </label>
           <button onClick={getTrends}>GET trends</button>
         </div>
         <pre>{JSON.stringify(trendsResult, null, 2)}</pre>
+        </>
+        )}
       </Section>
 
       <Section title="Platform Pricing (owner)">
+        {activeTab !== 'pricing' ? null : (
+        <>
         <textarea id="pricingJson" style={{ width: '100%', height: 120 }} defaultValue={'{"tiers":[{"name":"basic","price":0},{"name":"pro","price":1000}]}' as any} />
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button onClick={putPricing}>PUT pricing</button>
         </div>
         <pre>{JSON.stringify(pricingResult, null, 2)}</pre>
+        </>
+        )}
       </Section>
     </div>
   );
