@@ -1,6 +1,7 @@
 import configGet from '../../apps/api/functions/platform-config-get';
 import configPut from '../../apps/api/functions/platform-config-runtime-put';
 import revenueGet from '../../apps/api/functions/platform-revenue-get';
+import healthGet from '../../apps/api/functions/platform-health-get';
 import { db } from '../setup';
 
 function path(base: string) { return `http://localhost${base}`; }
@@ -35,6 +36,16 @@ it('gets platform revenue summary', async () => {
   const json = await res.json();
   expect(json).toHaveProperty('coupon_revenue');
   expect(json.coupon_revenue).toBe(7); // 2 (c1 redeemed once) + 5 (c2 redeemed once)
+});
+
+it('returns platform health with flags and version', async () => {
+  const res = await healthGet(new Request('http://localhost/api/platform/health', { method: 'GET' })) as Response;
+  expect(res.status).toBe(200);
+  const json = await res.json();
+  expect(json.ok).toBe(true);
+  expect(typeof json.version).toBe('string');
+  expect(json.features).toHaveProperty('FEATURE_SUPABASE_AUTH');
+  expect(json.features).toHaveProperty('FEATURE_DEV_AUTH');
 });
 
 it('persists runtime config and returns it from GET', async () => {
