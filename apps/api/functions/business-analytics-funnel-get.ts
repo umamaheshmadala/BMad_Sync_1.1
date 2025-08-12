@@ -11,6 +11,10 @@ export default withRequestLogging('business-analytics-funnel', async (req: Reque
   const url = new URL(req.url);
   const businessIdFilter = url.searchParams.get('businessId') || '';
   const group = (url.searchParams.get('group') || '').toLowerCase();
+  const sinceDaysParam = url.searchParams.get('sinceDays');
+  // Align default with UI for snappier responses
+  const sinceDays = sinceDaysParam ? Math.max(1, Math.min(365, Number(sinceDaysParam))) : 7;
+  const sinceIso = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString();
   const callerId = getUserIdFromRequest(req);
 
   if (businessIdFilter) {
@@ -27,8 +31,8 @@ export default withRequestLogging('business-analytics-funnel', async (req: Reque
   // Fetch core tables
   const [{ data: coupons }, { data: userCoupons }, { data: shares }] = await Promise.all([
     supabase.from('coupons').select('id, business_id'),
-    supabase.from('user_coupons').select('id, coupon_id, is_redeemed'),
-    supabase.from('coupon_shares').select('original_user_coupon_id'),
+    supabase.from('user_coupons').select('id, coupon_id, is_redeemed, collected_at').gte('collected_at', sinceIso),
+    supabase.from('coupon_shares').select('original_user_coupon_id, shared_at').gte('shared_at', sinceIso),
   ]);
 
   const couponIdToBiz: Record<string, string> = {};
@@ -91,7 +95,13 @@ export default withRequestLogging('business-analytics-funnel', async (req: Reque
 
   const payload: any = { ok: true, funnel: totals };
   if (group === 'business') payload.funnelByBusiness = byBusiness;
-  return new Response(JSON.stringify(payload), { headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify(payload), {
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=120',
+      'Netlify-CDN-Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=120',
+    },
+  });
 });
 
 export const config = {

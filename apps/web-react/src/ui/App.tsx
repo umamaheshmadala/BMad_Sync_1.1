@@ -31,6 +31,7 @@ export default function App() {
   const [reviewsSummary, setReviewsSummary] = useState(null as any);
   const [adsResult, setAdsResult] = useState(null as any);
   const [trendsResult, setTrendsResult] = useState(null as any);
+  const [funnelResult, setFunnelResult] = useState(null as any);
   const [pricingResult, setPricingResult] = useState(null as any);
   const [offersResult, setOffersResult] = useState(null as any);
   const [redeemResult, setRedeemResult] = useState(null as any);
@@ -43,6 +44,9 @@ export default function App() {
   const [sbAnon, setSbAnon] = useState(initialSbAnon as string);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPwd, setLoginPwd] = useState('');
+  const [theme, setTheme] = useState<'cosmic' | 'daylight' | 'ocean'>(() => {
+    try { return (localStorage.getItem('sync_theme') as any) || 'cosmic'; } catch { return 'cosmic'; }
+  });
 
   async function postStorefront() {
     const res = await fetch('/api/business/storefront', {
@@ -198,11 +202,28 @@ export default function App() {
     const params = new URLSearchParams();
     if (bizId) params.set('businessId', bizId);
     if (group) params.set('group', group);
+    // Default to 7 days for better responsiveness
+    if (!params.has('sinceDays')) params.set('sinceDays', '7');
     const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/business/analytics/trends${qs}`, { headers: { ...authHeaders } });
     const j = await res.json();
     setTrendsResult(j);
     if (!j?.ok) showToast(j?.error || 'Trends fetch error');
+  }
+
+  async function getFunnel() {
+    const bizId = (document.getElementById('funnelBizId') as HTMLInputElement)?.value?.trim();
+    const group = (document.getElementById('funnelGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
+    const params = new URLSearchParams();
+    if (bizId) params.set('businessId', bizId);
+    if (group) params.set('group', group);
+    // Default to 7 days for better responsiveness
+    if (!params.has('sinceDays')) params.set('sinceDays', '7');
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`/api/business/analytics/funnel${qs}`, { headers: { ...authHeaders } });
+    const j = await res.json();
+    setFunnelResult(j);
+    if (!j?.ok) showToast(j?.error || 'Funnel fetch error');
   }
 
   async function putPricing() {
@@ -348,14 +369,35 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen mx-auto max-w-5xl p-6">
-      <h2 className="text-xl font-semibold">SynC React UI (v0.1.5)</h2>
+    <div className={`min-h-screen mx-auto max-w-5xl p-6 theme-${theme}`}
+      data-build="funnel-theme"
+    >
+      <h2 className="text-xl font-semibold">SynC React UI (v0.1.6+funnel+theme)</h2>
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-3">
-        {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','pricing','health'].map((t) => (
+        {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','funnel','pricing','health'].map((t) => (
           <button key={t} onClick={() => setActiveTab(t as any)} className={`btn ${activeTab===t ? 'opacity-100' : 'opacity-70'}`}>{t}</button>
         ))}
       </div>
+      {/* Theme selector */}
+      <div className="mb-3" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <span className="muted text-sm">Theme</span>
+        <select
+          className="input"
+          style={{ maxWidth: 180 }}
+          value={theme}
+          onChange={(e) => {
+            const next = (e.target as HTMLSelectElement).value as any;
+            setTheme(next);
+            try { localStorage.setItem('sync_theme', next); } catch {}
+          }}
+        >
+          <option value="cosmic">Cosmic</option>
+          <option value="daylight">Daylight</option>
+          <option value="ocean">Ocean</option>
+        </select>
+      </div>
+
       {toast ? (
         <div style={{ background:'#fee', color:'#900', padding: 8, border: '1px solid #f99', borderRadius: 6, marginBottom: 12 }}>{toast}</div>
       ) : null}
@@ -697,6 +739,77 @@ export default function App() {
           <button onClick={getTrends}>GET trends</button>
         </div>
         <pre>{JSON.stringify(trendsResult, null, 2)}</pre>
+        </>
+        )}
+      </Section>
+
+      <Section title="Analytics Funnel">
+        {activeTab !== 'funnel' ? null : (
+        <>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input id="funnelBizId" className="input" placeholder="businessId (optional)" />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input type="checkbox" id="funnelGroupBiz" /> group by business
+          </label>
+          <button className="btn" onClick={getFunnel}>GET funnel</button>
+        </div>
+        {funnelResult?.ok ? (
+          <div style={{ marginTop: 12 }}>
+            <div className="grid grid-cols-4 gap-3">
+              <div className="kpi"><div className="kpi-label">Issued</div><div className="kpi-value">{funnelResult?.funnel?.issued ?? 0}</div></div>
+              <div className="kpi"><div className="kpi-label">Collected</div><div className="kpi-value">{funnelResult?.funnel?.collected ?? 0}</div></div>
+              <div className="kpi"><div className="kpi-label">Shared</div><div className="kpi-value">{funnelResult?.funnel?.shared ?? 0}</div></div>
+              <div className="kpi"><div className="kpi-label">Redeemed</div><div className="kpi-value">{funnelResult?.funnel?.redeemed ?? 0}</div></div>
+            </div>
+            {/* Rates */}
+            <div style={{ marginTop: 12 }}>
+              {(() => {
+                const c = Number(funnelResult?.funnel?.collected || 0);
+                const r = Number(funnelResult?.funnel?.redeemed || 0);
+                const s = Number(funnelResult?.funnel?.shared || 0);
+                const redemptionRate = c > 0 ? Math.round((r / c) * 1000) / 10 : 0;
+                const shareRate = c > 0 ? Math.round((s / c) * 1000) / 10 : 0;
+                return (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="muted text-sm mb-1">Redemption rate</div>
+                      <div className="progress"><div className="progress-bar" style={{ width: `${redemptionRate}%` }}></div></div>
+                      <div className="muted text-xs mt-1">{redemptionRate}% of collected</div>
+                    </div>
+                    <div>
+                      <div className="muted text-sm mb-1">Share rate</div>
+                      <div className="progress"><div className="progress-bar" style={{ width: `${shareRate}%` }}></div></div>
+                      <div className="muted text-xs mt-1">{shareRate}% of collected</div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            {funnelResult?.funnelByBusiness ? (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>By business</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6, fontSize: 14, opacity: 0.9 }}>
+                  <div className="badge">Business</div>
+                  <div className="badge">Collected</div>
+                  <div className="badge">Shared</div>
+                  <div className="badge">Redeemed</div>
+                </div>
+                <div style={{ marginTop: 6 }}>
+                  {Object.entries(funnelResult.funnelByBusiness as Record<string, any>).map(([bizId, c]) => (
+                    <div key={bizId} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6, alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                      <div style={{ fontFamily: 'monospace' }}>{bizId}</div>
+                      <div>{(c as any).collected ?? 0}</div>
+                      <div>{(c as any).shared ?? 0}</div>
+                      <div>{(c as any).redeemed ?? 0}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <pre>{typeof funnelResult === 'object' ? JSON.stringify(funnelResult, null, 2) : (funnelResult ?? '')}</pre>
+        )}
         </>
         )}
       </Section>

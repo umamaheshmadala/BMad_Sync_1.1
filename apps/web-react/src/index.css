@@ -3,11 +3,33 @@
 @tailwind utilities;
 
 :root {
-  /* cosmic-night palette */
+  /* default values (overridden by theme- classes) */
   --bg: #0b0f14;
   --fg: #e6e7eb;
   --card: #10151c;
   --border: #1e2632;
+}
+
+/* Theme palettes */
+.theme-cosmic {
+  --bg: #0b0f14;
+  --fg: #e6e7eb;
+  --card: #10151c;
+  --border: #1e2632;
+}
+
+.theme-daylight {
+  --bg: #f7f8fb;
+  --fg: #0b0f14;
+  --card: #ffffff;
+  --border: #e2e8f0;
+}
+
+.theme-ocean {
+  --bg: #06141f;
+  --fg: #e3f2fd;
+  --card: #0b2230;
+  --border: #1b3a4b;
 }
 
 html, body, #root {
@@ -20,15 +42,48 @@ body {
 }
 
 .card {
-  @apply bg-[color:var(--card)] border border-[color:var(--border)] rounded-lg p-4;
+  @apply bg-[color:var(--card)] border border-[color:var(--border)] p-4;
+  border-radius: 8px;
 }
 
 .btn {
-  @apply inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground shadow-glow hover:opacity-90 transition;
+  @apply inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground shadow-glow hover:opacity-90 transition;
+  border-radius: 6px;
 }
 
 .input {
-  @apply w-full bg-transparent border border-[color:var(--border)] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50;
+  @apply w-full bg-transparent border border-[color:var(--border)] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50;
+  border-radius: 6px;
+}
+
+/* Simple UI utilities for analytics */
+.kpi {
+  @apply card text-center;
+}
+.kpi-label {
+  @apply text-xs uppercase tracking-wide text-[color:var(--fg)]/70;
+}
+.kpi-value {
+  @apply text-2xl font-semibold text-primary;
+}
+.badge {
+  @apply inline-flex items-center justify-center border border-[color:var(--border)] px-2 py-1 text-xs bg-[color:var(--card)];
+  border-radius: 6px;
+}
+
+.muted {
+  color: color-mix(in oklab, var(--fg) 60%, transparent);
+}
+
+.progress {
+  @apply w-full bg-[color:var(--muted)] border border-[color:var(--border)];
+  height: 8px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.progress-bar {
+  @apply h-full bg-primary;
+  width: 0%;
 }
 
 

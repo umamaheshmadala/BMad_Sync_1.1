@@ -1,5 +1,16 @@
 ### Changelog
 
+### v0.1.6 — 2025-08-12
+
+- Added
+  - OpenAPI: notifications endpoints; platform config (GET/runtime PUT); `sinceDays` for trends/funnel.
+  - API: stubs for dashboard, favorites, GPS check-in, business signup/login, targeted coupon issue.
+- Changed
+  - Trends/Funnel: default window set to 7 days to improve responsiveness; documented clamp 1–365.
+  - Handler mapping updated for notifications.
+- Tests
+  - Mock Supabase enhanced with `.gte()` to support analytics filters; all tests green (26/26).
+
 ### v0.1.5 — 2025-08-12
 
 - Added

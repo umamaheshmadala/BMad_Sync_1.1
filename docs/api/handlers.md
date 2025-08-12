@@ -38,6 +38,9 @@ This maps `docs/api/openapi.yaml` routes to serverless function names and expect
 - PUT /api/platform/config/pricing → `platform-config-pricing-put.ts`
 - (Add) GET /api/platform/config → `platform-config-get.ts`
 - (Add) PUT /api/platform/config/runtime → `platform-config-runtime-put.ts`
+- (Add) GET/DELETE /api/users/{userId}/notifications → `users-notifications-get.ts`
+- (Add) PUT /api/users/{userId}/notifications/read → `users-notifications-put.ts`
+- (Add) PUT /api/users/{userId}/notifications/{notificationId}/read → `users-notifications-read-item-put.ts`
 
 ## Shared Utilities (packages/shared)
 - supabaseClient.ts: factory by service role / anon

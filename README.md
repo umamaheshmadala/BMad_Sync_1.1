@@ -10,7 +10,7 @@ SynC MVP scaffold with Netlify Functions, Supabase schema/RLS, and integration t
 
 - Site: `tiny-bombolone-8f8acf`
 - UI: `https://tiny-bombolone-8f8acf.netlify.app/react`
-- Current tag: `v0.1.5`
+- Current tag: `v0.1.6`
 
 ### Local run
 

@@ -29,4 +29,21 @@
   to = "/index.html"
   status = 200
 
+# Alternate route to bypass any CDN path caching for troubleshooting
+[[redirects]]
+  from = "/react2"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/react2/*"
+  to = "/index.html"
+  status = 200
+
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Netlify-CDN-Cache-Control = "public, max-age=0, must-revalidate"
 

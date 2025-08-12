@@ -10,6 +10,10 @@ export default withRequestLogging('business-analytics-trends', async (req: Reque
   const url = new URL(req.url);
   const businessId = url.searchParams.get('businessId') || '';
   const group = (url.searchParams.get('group') || '').toLowerCase();
+  const sinceDaysParam = url.searchParams.get('sinceDays');
+  // Align default with UI for snappier responses
+  const sinceDays = sinceDaysParam ? Math.max(1, Math.min(365, Number(sinceDaysParam))) : 7;
+  const sinceIso = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString();
   const callerId = getUserIdFromRequest(req);
   if (businessId) {
     // Validate ownership unless platform owner
@@ -25,10 +29,12 @@ export default withRequestLogging('business-analytics-trends', async (req: Reque
   // Simple trends: counts over time buckets
   const { data: reviews } = await supabase
     .from('business_reviews')
-    .select('created_at, recommend_status, business_id');
+    .select('created_at, recommend_status, business_id')
+    .gte('created_at', sinceIso);
   const { data: coupons } = await supabase
     .from('user_coupons')
-    .select('collected_at, is_redeemed, coupon_id');
+    .select('collected_at, is_redeemed, coupon_id')
+    .gte('collected_at', sinceIso);
   const { data: couponsTable } = await supabase
     .from('coupons')
     .select('id, business_id');
@@ -83,7 +89,14 @@ export default withRequestLogging('business-analytics-trends', async (req: Reque
   if (group === 'business') {
     payload.trendsByBusiness = { reviews: reviewByBusiness, coupons: couponByBusiness };
   }
-  return new Response(JSON.stringify(payload), { headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify(payload), {
+    headers: {
+      'Content-Type': 'application/json',
+      // Enable short CDN caching to improve p95
+      'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=120',
+      'Netlify-CDN-Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=120',
+    },
+  });
 });
 
 export const config = {

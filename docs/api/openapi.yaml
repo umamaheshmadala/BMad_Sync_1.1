@@ -461,6 +461,14 @@ paths:
           required: false
           schema: { type: string, format: uuid }
           description: Optional filter to constrain results to a single business (owner or platform only).
+        - in: query
+          name: sinceDays
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+          description: Optional rolling window in days (default 7; clamped to 1–365).
       responses:
         '200': { description: OK }
   /api/business/analytics/funnel:
@@ -478,6 +486,14 @@ paths:
           required: false
           schema: { type: string, format: uuid }
           description: Optional filter to constrain to a single business (owner or platform only).
+        - in: query
+          name: sinceDays
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+          description: Optional rolling window in days (default 7; clamped to 1–365).
       responses:
         '200': { description: OK }
   /api/business/coupons/issue-targeted:
@@ -533,5 +549,93 @@ paths:
             schema:
               type: object
               additionalProperties: true
+      responses:
+        '200': { description: OK }
+
+  /api/platform/config:
+    get:
+      summary: Read platform configuration (merged with defaults)
+      responses:
+        '200': { description: OK }
+
+  /api/platform/config/runtime:
+    put:
+      security: [ { bearerAuth: [] } ]
+      summary: Update platform runtime configuration (whitelisted keys only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200': { description: OK }
+
+  /api/users/{userId}/notifications:
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: List notifications for a user
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          description: Max items to return (default 50; 1–100)
+        - in: query
+          name: offset
+          required: false
+          schema: { type: integer, minimum: 0 }
+          description: Offset for pagination (default 0)
+        - in: query
+          name: unread
+          required: false
+          schema: { type: boolean }
+          description: When true, returns only unread notifications
+      responses:
+        '200': { description: OK }
+    delete:
+      security: [ { bearerAuth: [] } ]
+      summary: Clear all notifications for a user
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+
+  /api/users/{userId}/notifications/read:
+    put:
+      security: [ { bearerAuth: [] } ]
+      summary: Mark all notifications as read for a user
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+
+  /api/users/{userId}/notifications/{notificationId}/read:
+    put:
+      security: [ { bearerAuth: [] } ]
+      summary: Mark a single notification as read
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: notificationId
+          required: true
+          schema: { type: string, format: uuid }
       responses:
         '200': { description: OK }

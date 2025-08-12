@@ -1,6 +1,6 @@
 {
   "name": "bmad_sync_1_1",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,8 @@
     "dev:api": "cross-env CHOKIDAR_USEPOLLING=1 netlify dev --port 8888 --no-open",
     "dev:web": "vite dev apps/web-react",
     "build:web": "vite build apps/web-react",
-    "preview:web": "vite preview apps/web-react --port 5173"
+    "preview:web": "vite preview apps/web-react --port 5173",
+    "load:test": "node scripts/load-test.mjs"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",
