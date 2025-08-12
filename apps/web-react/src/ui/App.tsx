@@ -32,6 +32,7 @@ export default function App() {
   const [adsResult, setAdsResult] = useState(null as any);
   const [trendsResult, setTrendsResult] = useState(null as any);
   const [pricingResult, setPricingResult] = useState(null as any);
+  const [offersResult, setOffersResult] = useState(null as any);
   const [authResult, setAuthResult] = useState(null as any);
   const initialSbUrl = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_URL || ''; } catch { return ''; } })();
   const initialSbAnon = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_ANON_KEY || ''; } catch { return ''; } })();
@@ -113,6 +114,36 @@ export default function App() {
       body: JSON.stringify({ title, description, image_url: image || null })
     });
     setAdsResult(await res.json());
+  }
+
+  async function createOffer() {
+    const title = (document.getElementById('offerTitle') as HTMLInputElement)?.value?.trim();
+    const qtyStr = (document.getElementById('offerQty') as HTMLInputElement)?.value?.trim();
+    if (!title) { showToast('title required'); return; }
+    const total_quantity = qtyStr && !Number.isNaN(Number(qtyStr)) ? Number(qtyStr) : undefined;
+    const res = await fetch('/api/business/offers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ title, total_quantity })
+    });
+    const j = await res.json();
+    setOffersResult(j);
+    if (!j?.ok) showToast(j?.error || 'Offer create error');
+  }
+
+  async function generateOfferCoupons() {
+    const offerId = (document.getElementById('offerId') as HTMLInputElement)?.value?.trim();
+    const qtyStr = (document.getElementById('offerGenQty') as HTMLInputElement)?.value?.trim();
+    if (!offerId) { showToast('offerId required'); return; }
+    const total_quantity = qtyStr && !Number.isNaN(Number(qtyStr)) ? Number(qtyStr) : undefined;
+    const res = await fetch(`/api/business/offers/${offerId}/coupons`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ total_quantity })
+    });
+    const j = await res.json();
+    setOffersResult(j);
+    if (!j?.ok) showToast(j?.error || 'Generate coupons error');
   }
 
   async function getTrends() {
@@ -275,7 +306,7 @@ export default function App() {
       <h2 className="text-xl font-semibold">SynC React UI (v0.1.5)</h2>
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-3">
-        {['auth','session','storefront','reviews','wishlist','notifications','products','ads','trends','pricing','health'].map((t) => (
+        {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','pricing','health'].map((t) => (
           <button key={t} onClick={() => setActiveTab(t as any)} className={`btn ${activeTab===t ? 'opacity-100' : 'opacity-70'}`}>{t}</button>
         ))}
       </div>
@@ -570,6 +601,24 @@ export default function App() {
           <button onClick={postAd}>POST ad</button>
         </div>
         <pre>{JSON.stringify(adsResult, null, 2)}</pre>
+        </>
+        )}
+      </Section>
+
+      <Section title="Offers (owner)">
+        {activeTab !== 'offers' ? null : (
+        <>
+        <div className="grid grid-cols-3 gap-2">
+          <input id="offerTitle" className="input" placeholder="offer title" />
+          <input id="offerQty" className="input" placeholder="total_quantity (optional)" />
+          <button className="btn" onClick={createOffer}>POST offer</button>
+        </div>
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          <input id="offerId" className="input" placeholder="offerId" />
+          <input id="offerGenQty" className="input" placeholder="generate total_quantity (optional)" />
+          <button className="btn" onClick={generateOfferCoupons}>POST generate coupons</button>
+        </div>
+        <pre>{JSON.stringify(offersResult, null, 2)}</pre>
         </>
         )}
       </Section>
