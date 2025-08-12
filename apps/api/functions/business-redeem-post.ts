@@ -1,13 +1,14 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
-import { isPlatformOwner, getUserIdFromRequest } from '../../../packages/shared/auth';
+import { isPlatformOwner, getUserIdFromRequest, getUserIdFromRequestAsync } from '../../../packages/shared/auth';
+import { withRequestLogging } from '../../../packages/shared/logging';
 
-export default async (req: Request) => {
+export default withRequestLogging('business-redeem-post', async (req: Request) => {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
   const url = new URL(req.url);
   const parts = url.pathname.split('/');
   const businessId = parts[3] || '';
   try {
-    const callerId = getUserIdFromRequest(req);
+    const callerId = await getUserIdFromRequestAsync(req);
     if (!callerId) return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401 });
     const body = await req.json();
     const { unique_code } = body || {};
@@ -41,7 +42,7 @@ export default async (req: Request) => {
   } catch (e: any) {
     return new Response(JSON.stringify({ ok: false, error: e?.message || 'Bad Request' }), { status: 400 });
   }
-};
+});
 
 export const config = {
   path: '/api/business/:businessId/redeem',
