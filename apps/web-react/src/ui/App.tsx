@@ -65,6 +65,12 @@ export default function App() {
     setNotifications(await res.json());
   }
 
+  async function clearNotifications(userId: string) {
+    const res = await fetch(`/api/users/${userId}/notifications`, { method: 'DELETE', headers: { ...authHeaders } });
+    const j = await res.json();
+    setNotifications(j);
+  }
+
   return (
     <div style={{ fontFamily: 'system-ui, Arial, sans-serif', padding: 24, maxWidth: 900, margin: '0 auto' }}>
       <h2>SynC React UI (v0.1.4)</h2>
@@ -142,6 +148,14 @@ export default function App() {
             }}
           >
             GET notifications
+          </button>
+          <button
+            onClick={() => {
+              const id = (document.getElementById('notifUserId') as HTMLInputElement)?.value;
+              if (id) clearNotifications(id);
+            }}
+          >
+            CLEAR notifications
           </button>
         </div>
         <pre>{JSON.stringify(notifications, null, 2)}</pre>

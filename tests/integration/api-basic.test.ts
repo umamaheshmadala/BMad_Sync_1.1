@@ -16,6 +16,7 @@ import reviewsPost from '../../apps/api/functions/business-reviews-post';
 import analyticsCoupons from '../../apps/api/functions/business-analytics-coupons-get';
 import wishlistMatchesGet from '../../apps/api/functions/users-wishlist-matches-get';
 import notificationsGet from '../../apps/api/functions/users-notifications-get';
+import notificationsDelete from '../../apps/api/functions/users-notifications-delete';
 
 const TEST_USER_1 = 'test-user-1';
 const TEST_USER_2 = 'test-user-2';
@@ -186,6 +187,34 @@ it('storefront products post and get', async () => {
   expect(getJson.items.length).toBe(2);
 });
 
+it('rejects invalid products payloads', async () => {
+  db.storefronts.insert({ id: 'sf-bad', business_id: TEST_BIZ_1 });
+  // Empty items
+  const resEmpty = await storefrontProducts(
+    makeReq(path(`/api/storefronts/sf-bad/products`), 'POST', { items: [] }, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(resEmpty.status).toBe(400);
+
+  // Too many items
+  const many = Array.from({ length: 101 }).map((_, i) => ({ product_name: `X${i}` }));
+  const resMany = await storefrontProducts(
+    makeReq(path(`/api/storefronts/sf-bad/products`), 'POST', { items: many }, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(resMany.status).toBe(400);
+
+  // Name too short
+  const resShort = await storefrontProducts(
+    makeReq(path(`/api/storefronts/sf-bad/products`), 'POST', { items: [{ product_name: 'X' }] }, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(resShort.status).toBe(400);
+});
+
 it('analytics endpoints return summaries', async () => {
   // Ensure some coupon activity exists
   db.user_coupons.insert({ id: 'uc1', coupon_id: TEST_COUPON_1, is_redeemed: false });
@@ -290,6 +319,28 @@ it('persists and returns notifications for wishlist matches', async () => {
   expect(jsonN.ok).toBe(true);
   expect(Array.isArray(jsonN.items)).toBe(true);
   expect(jsonN.items.length).toBeGreaterThan(0);
+});
+
+it('clears notifications for a user', async () => {
+  // Seed a notification
+  db.notifications.insert({ id: 'n1', recipient_user_id: TEST_USER_1, message: 'X', notification_type: 'wishlist_match' });
+  const resDel = await notificationsDelete(
+    makeReq(path(`/api/users/${TEST_USER_1}/notifications`), 'DELETE', undefined, {
+      Authorization: bearer(TEST_USER_1),
+    })
+  );
+  expect(resDel.status).toBe(200);
+  const jsonDel = await resDel.json();
+  expect(jsonDel.ok).toBe(true);
+
+  const resN = await notificationsGet(
+    makeReq(path(`/api/users/${TEST_USER_1}/notifications`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1),
+    })
+  );
+  const jsonN = await resN.json();
+  expect(jsonN.ok).toBe(true);
+  expect(jsonN.items.length).toBe(0);
 });
 
 it('rejects unauthorized requests with 401', async () => {

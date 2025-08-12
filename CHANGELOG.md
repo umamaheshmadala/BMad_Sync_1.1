@@ -6,10 +6,13 @@
 
 - Added
   - `GET /api/users/{userId}/notifications` → `apps/api/functions/users-notifications-get.ts`.
+  - `DELETE /api/users/{userId}/notifications` → `apps/api/functions/users-notifications-delete.ts`.
 - Changed
   - Persist notifications in `users-wishlist-matches-get.ts` when matches are found.
 - UI
   - React UI: Notifications section to retrieve user notifications.
+  - React UI: Clear notifications button.
+  - React UI: Reviews filter (recommend true/false) and product form validation.
 
 - Added
   - `GET /api/business/{businessId}/reviews` → extend `apps/api/functions/business-reviews-post.ts` for listing (owner/platform only).
