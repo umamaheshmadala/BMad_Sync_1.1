@@ -157,7 +157,8 @@ create table if not exists public.notifications (
   notification_type text,
   message text,
   deep_link_url text,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  read_at timestamptz
 );
 
 -- Ads / Promotions

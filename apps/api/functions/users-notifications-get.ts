@@ -25,7 +25,7 @@ export default async (req: Request) => {
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
   if (onlyUnread) {
-    query = query.eq('read_at', null);
+    query = query.is('read_at', null);
   }
   const { data, error } = await query;
   if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });

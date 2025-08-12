@@ -22,7 +22,7 @@ export default async (req: Request) => {
     .update({ read_at: now })
     .eq('recipient_user_id', userId)
     .eq('id', notificationId)
-    .eq('read_at', null);
+    .is('read_at', null);
   if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
 
   return new Response(
