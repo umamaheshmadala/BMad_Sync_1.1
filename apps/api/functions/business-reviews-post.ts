@@ -1,5 +1,6 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
 import { getUserIdFromRequest, isPlatformOwner } from '../../../packages/shared/auth';
+import { ReviewPayloadSchema } from '../../../packages/shared/validation';
 
 export default async (req: Request) => {
   const url = new URL(req.url);
@@ -49,10 +50,11 @@ export default async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { recommend_status, review_text, checked_in_at } = body || {};
-    if (typeof recommend_status !== 'boolean') {
-      return new Response(JSON.stringify({ ok: false, error: 'Invalid payload' }), { status: 400 });
+    const parsed = ReviewPayloadSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ ok: false, error: 'Invalid payload', details: parsed.error.flatten() }), { status: 400 });
     }
+    const { recommend_status, review_text, checked_in_at } = parsed.data as any;
 
     const { error } = await supabase
       .from('business_reviews')

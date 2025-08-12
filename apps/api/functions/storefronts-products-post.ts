@@ -1,5 +1,6 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
 import { getUserIdFromRequest, isPlatformOwner } from '../../../packages/shared/auth';
+import { StorefrontProductsPayloadSchema } from '../../../packages/shared/validation';
 
 export default async (req: Request) => {
   const url = new URL(req.url);
@@ -38,10 +39,11 @@ export default async (req: Request) => {
 
   try {
     const body = await req.json();
-    const items = Array.isArray(body?.items) ? body.items : [];
-    if (!items.length) {
-      return new Response(JSON.stringify({ ok: false, error: 'No items provided' }), { status: 400 });
+    const parsed = StorefrontProductsPayloadSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ ok: false, error: 'Invalid items', details: parsed.error.flatten() }), { status: 400 });
     }
+    const items = parsed.data.items as any[];
 
     const rows = items.map((p: any) => ({
       storefront_id: storefrontId,
@@ -55,6 +57,8 @@ export default async (req: Request) => {
       is_trending: !!p.is_trending,
       suggested: !!p.suggested,
     }));
+
+    // Zod validation already enforced
 
     const { error } = await supabase.from('storefront_products').insert(rows);
     if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
