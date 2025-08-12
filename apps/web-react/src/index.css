@@ -3,10 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --bg: theme('colors.background');
-  --fg: theme('colors.foreground');
-  --card: theme('colors.card');
-  --border: theme('colors.border');
+  /* cosmic-night palette */
+  --bg: #0b0f14;
+  --fg: #e6e7eb;
+  --card: #10151c;
+  --border: #1e2632;
 }
 
 html, body, #root {
