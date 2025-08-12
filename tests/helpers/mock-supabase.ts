@@ -57,6 +57,7 @@ function builder(table: Table) {
       return Promise.resolve({ data: null, error: null });
     },
     eq(field: string, value: any) { state._filters.push((r: Row) => r[field] === value); return api; },
+    is(field: string, value: any) { state._filters.push((r: Row) => r[field] === value); return api; },
     order(field: string, opts?: { ascending?: boolean }) {
       // For simplicity, we ignore ordering in mock select results; tests focus on presence not order
       return api;
