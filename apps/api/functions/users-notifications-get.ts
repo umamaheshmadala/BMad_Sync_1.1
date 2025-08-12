@@ -3,7 +3,7 @@ import { getUserIdFromRequest, isPlatformOwner } from '../../../packages/shared/
 
 export default async (req: Request) => {
   try {
-    if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+    if (req.method !== 'GET' && req.method !== 'DELETE') return new Response('Method Not Allowed', { status: 405 });
     const url = new URL(req.url);
     const parts = url.pathname.split('/');
     const userId = parts[3] || '';
@@ -16,6 +16,17 @@ export default async (req: Request) => {
     }
 
     const supabase = createSupabaseClient(true) as any;
+
+    if (req.method === 'DELETE') {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('recipient_user_id', userId);
+      if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
+      return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // GET
     const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || 50)));
     const offset = Math.max(0, Number(url.searchParams.get('offset') || 0));
     const onlyUnread = (url.searchParams.get('unread') || '').toLowerCase() === 'true';
