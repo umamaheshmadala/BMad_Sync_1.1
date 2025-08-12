@@ -146,6 +146,21 @@ export default function App() {
     if (!j?.ok) showToast(j?.error || 'Generate coupons error');
   }
 
+  async function collectCoupon() {
+    const couponId = (document.getElementById('collectCouponId') as HTMLInputElement)?.value?.trim();
+    const userId = parseUserIdFromBearer();
+    if (!userId) { showToast('Set a valid Bearer token (Auth tab)'); return; }
+    if (!couponId) { showToast('coupon_id required'); return; }
+    const res = await fetch(`/api/users/${userId}/coupons/collect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ coupon_id: couponId })
+    });
+    const j = await res.json();
+    setOffersResult(j);
+    if (!j?.ok) showToast(j?.error || 'Collect error');
+  }
+
   async function getTrends() {
     const bizId = (document.getElementById('trendBizId') as HTMLInputElement)?.value?.trim();
     const group = (document.getElementById('trendGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
@@ -617,6 +632,11 @@ export default function App() {
           <input id="offerId" className="input" placeholder="offerId" />
           <input id="offerGenQty" className="input" placeholder="generate total_quantity (optional)" />
           <button className="btn" onClick={generateOfferCoupons}>POST generate coupons</button>
+        </div>
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          <input id="collectCouponId" className="input" placeholder="coupon_id to collect (from offer)" />
+          <div></div>
+          <button className="btn" onClick={collectCoupon}>COLLECT to my wallet</button>
         </div>
         <pre>{JSON.stringify(offersResult, null, 2)}</pre>
         </>
