@@ -20,6 +20,7 @@ export default function App() {
   const [products, setProducts] = useState(null as any);
   const [notifications, setNotifications] = useState(null as any);
   const [unreadCount, setUnreadCount] = useState(0 as any);
+  const [reviewsSummary, setReviewsSummary] = useState(null as any);
 
   async function postStorefront() {
     const res = await fetch('/api/business/storefront', {
@@ -55,6 +56,9 @@ export default function App() {
     const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/business/${businessId}/reviews${qs}`, { headers: { ...authHeaders } });
     setReviewsList(await res.json());
+    // Fetch summary
+    const resSum = await fetch(`/api/business/${businessId}/analytics/reviews`, { headers: { ...authHeaders } });
+    setReviewsSummary(await resSum.json());
   }
 
   async function getWishlistMatches(userId: string) {
@@ -100,6 +104,11 @@ export default function App() {
     const res = await fetch(`/api/users/${userId}/notifications?unread=true&limit=100`, { headers: { ...authHeaders } });
     const j = await res.json();
     if (j && j.items) setUnreadCount((j.items as any[]).length);
+  }
+
+  function formatTs(ts?: string) {
+    if (!ts) return '';
+    try { return new Date(ts).toLocaleString(); } catch { return ts; }
   }
 
   return (
@@ -154,6 +163,13 @@ export default function App() {
         </div>
         <pre>{JSON.stringify(reviewResult, null, 2)}</pre>
         <pre>{JSON.stringify(reviewsList, null, 2)}</pre>
+        {reviewsSummary?.ok && (
+          <div style={{ marginTop: 8 }}>
+            <strong>Summary:</strong>{' '}
+            <span style={{ color: '#2a2' }}>Recommend: {reviewsSummary.summary?.recommend ?? 0}</span>{' '}
+            <span style={{ color: '#a22' }}>Not: {reviewsSummary.summary?.not_recommend ?? 0}</span>
+          </div>
+        )}
       </Section>
 
       <Section title="Wishlist Matches">
@@ -204,8 +220,9 @@ export default function App() {
             <ul>
               {(notifications.items as any[]).map((n: any) => (
                 <li key={n.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span>[{n.notification_type}]</span>
                   <span>{n.message}</span>
-                  <span style={{ fontSize: 12, color: '#666' }}>{n.notification_type}</span>
+                  <span style={{ fontSize: 12, color: '#666' }}>{formatTs(n.created_at)}</span>
                   {n.read_at ? (
                     <span style={{ fontSize: 12, color: '#2a2' }}>(read)</span>
                   ) : (
