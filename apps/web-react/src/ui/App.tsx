@@ -32,6 +32,9 @@ export default function App() {
   const [adsResult, setAdsResult] = useState(null as any);
   const [trendsResult, setTrendsResult] = useState(null as any);
   const [funnelResult, setFunnelResult] = useState(null as any);
+  const [analyticsSinceDays, setAnalyticsSinceDays] = useState(7 as number);
+  const [isLoadingTrends, setIsLoadingTrends] = useState(false as boolean);
+  const [isLoadingFunnel, setIsLoadingFunnel] = useState(false as boolean);
   const [pricingResult, setPricingResult] = useState(null as any);
   const [offersResult, setOffersResult] = useState(null as any);
   const [redeemResult, setRedeemResult] = useState(null as any);
@@ -197,33 +200,35 @@ export default function App() {
   }
 
   async function getTrends() {
+    setIsLoadingTrends(true);
     const bizId = (document.getElementById('trendBizId') as HTMLInputElement)?.value?.trim();
     const group = (document.getElementById('trendGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
     const params = new URLSearchParams();
     if (bizId) params.set('businessId', bizId);
     if (group) params.set('group', group);
-    // Default to 7 days for better responsiveness
-    if (!params.has('sinceDays')) params.set('sinceDays', '7');
+    if (!params.has('sinceDays')) params.set('sinceDays', String(analyticsSinceDays || 7));
     const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/business/analytics/trends${qs}`, { headers: { ...authHeaders } });
     const j = await res.json();
     setTrendsResult(j);
     if (!j?.ok) showToast(j?.error || 'Trends fetch error');
+    setIsLoadingTrends(false);
   }
 
   async function getFunnel() {
+    setIsLoadingFunnel(true);
     const bizId = (document.getElementById('funnelBizId') as HTMLInputElement)?.value?.trim();
     const group = (document.getElementById('funnelGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
     const params = new URLSearchParams();
     if (bizId) params.set('businessId', bizId);
     if (group) params.set('group', group);
-    // Default to 7 days for better responsiveness
-    if (!params.has('sinceDays')) params.set('sinceDays', '7');
+    if (!params.has('sinceDays')) params.set('sinceDays', String(analyticsSinceDays || 7));
     const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/business/analytics/funnel${qs}`, { headers: { ...authHeaders } });
     const j = await res.json();
     setFunnelResult(j);
     if (!j?.ok) showToast(j?.error || 'Funnel fetch error');
+    setIsLoadingFunnel(false);
   }
 
   async function putPricing() {
@@ -731,14 +736,30 @@ export default function App() {
       <Section title="Analytics Trends">
         {activeTab !== 'trends' ? null : (
         <>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <input id="trendBizId" placeholder="businessId (optional)" />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <input type="checkbox" id="trendGroupBiz" /> group by business
           </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="muted text-sm">sinceDays</span>
+            <input
+              type="number"
+              min={1 as any}
+              max={365 as any}
+              value={analyticsSinceDays as any}
+              onChange={(e) => setAnalyticsSinceDays(Math.max(1, Math.min(365, Number((e.target as HTMLInputElement).value || 7))))}
+              style={{ width: 90 }}
+              className="input"
+            />
+          </label>
           <button onClick={getTrends}>GET trends</button>
         </div>
-        <pre>{JSON.stringify(trendsResult, null, 2)}</pre>
+        {isLoadingTrends ? (
+          <div className="muted text-sm" style={{ marginTop: 8 }}>Loading trends…</div>
+        ) : (
+          <pre>{JSON.stringify(trendsResult, null, 2)}</pre>
+        )}
         </>
         )}
       </Section>
@@ -746,14 +767,28 @@ export default function App() {
       <Section title="Analytics Funnel">
         {activeTab !== 'funnel' ? null : (
         <>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <input id="funnelBizId" className="input" placeholder="businessId (optional)" />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <input type="checkbox" id="funnelGroupBiz" /> group by business
           </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="muted text-sm">sinceDays</span>
+            <input
+              type="number"
+              min={1 as any}
+              max={365 as any}
+              value={analyticsSinceDays as any}
+              onChange={(e) => setAnalyticsSinceDays(Math.max(1, Math.min(365, Number((e.target as HTMLInputElement).value || 7))))}
+              style={{ width: 90 }}
+              className="input"
+            />
+          </label>
           <button className="btn" onClick={getFunnel}>GET funnel</button>
         </div>
-        {funnelResult?.ok ? (
+        {isLoadingFunnel ? (
+          <div className="muted text-sm" style={{ marginTop: 8 }}>Loading funnel…</div>
+        ) : funnelResult?.ok ? (
           <div style={{ marginTop: 12 }}>
             <div className="grid grid-cols-4 gap-3">
               <div className="kpi"><div className="kpi-label">Issued</div><div className="kpi-value">{funnelResult?.funnel?.issued ?? 0}</div></div>
