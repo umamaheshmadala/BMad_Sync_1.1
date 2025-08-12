@@ -12,6 +12,7 @@ Date: 2025-08-11
 2) Paste and run (in order):
    - `docs/supabase_schema.sql`
    - `docs/rls_policies.sql`
+   - `supabase/migrations/20250811145000_perf_indexes.sql`
 3) Verify tables and policies in Table Editor
 4) (Optional) Seed lookup tables if needed again (already included in schema file)
 5) Create service role (dashboard → Settings → API) for serverless use later
@@ -28,6 +29,8 @@ Date: 2025-08-11
 supabase db query < docs/supabase_schema.sql
 # 2. Apply RLS policies
 supabase db query < docs/rls_policies.sql
+# 3. Apply performance indexes
+supabase db query < supabase/migrations/20250811145000_perf_indexes.sql
 ```
 
 ## Rollback safety
