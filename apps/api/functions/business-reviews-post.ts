@@ -1,5 +1,5 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
-import { getUserIdFromRequest, isPlatformOwner } from '../../../packages/shared/auth';
+import { getUserIdFromRequest, getUserIdFromRequestAsync, isPlatformOwner, isPlatformOwnerAsync } from '../../../packages/shared/auth';
 import { ReviewPayloadSchema } from '../../../packages/shared/validation';
 
 export default async (req: Request) => {
@@ -8,7 +8,7 @@ export default async (req: Request) => {
   const businessId = parts[3] || '';
   if (!businessId) return new Response(JSON.stringify({ ok: false, error: 'Missing businessId' }), { status: 400 });
 
-  const callerId = getUserIdFromRequest(req);
+  const callerId = await getUserIdFromRequestAsync(req);
   if (!callerId) return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401 });
 
   const supabase = createSupabaseClient(true) as any;
@@ -21,7 +21,7 @@ export default async (req: Request) => {
       .eq('id', businessId)
       .maybeSingle();
     const isOwner = biz && biz.owner_user_id === callerId;
-    if (!isOwner && !isPlatformOwner(req)) {
+    if (!isOwner && !(await isPlatformOwnerAsync(req))) {
       return new Response(JSON.stringify({ ok: false, error: 'Forbidden' }), { status: 403 });
     }
 

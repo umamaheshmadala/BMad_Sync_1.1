@@ -1,11 +1,11 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
-import { getUserIdFromRequest } from '../../../packages/shared/auth';
+import { getUserIdFromRequest, getUserIdFromRequestAsync } from '../../../packages/shared/auth';
 
 export default async (req: Request) => {
   const method = req.method || 'GET';
   const supabase = createSupabaseClient(true);
   // Derive business by owner user id
-  const ownerUserId = getUserIdFromRequest(req);
+  const ownerUserId = await getUserIdFromRequestAsync(req);
   if (!ownerUserId) return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401 });
   let businessId = '';
   if (ownerUserId) {
