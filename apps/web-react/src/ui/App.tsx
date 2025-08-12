@@ -217,27 +217,31 @@ export default function App() {
         </div>
         <div>
           {Array.isArray(notifications?.items) ? (
-            <ul>
-              {(notifications.items as any[]).map((n: any) => (
-                <li key={n.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span>[{n.notification_type}]</span>
-                  <span>{n.message}</span>
-                  <span style={{ fontSize: 12, color: '#666' }}>{formatTs(n.created_at)}</span>
-                  {n.read_at ? (
-                    <span style={{ fontSize: 12, color: '#2a2' }}>(read)</span>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        const id = (document.getElementById('notifUserId') as HTMLInputElement)?.value;
-                        if (id) markItemRead(id, n.id);
-                      }}
-                    >
-                      mark read
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
+            (notifications.items as any[]).length ? (
+              <ul>
+                {(notifications.items as any[]).map((n: any) => (
+                  <li key={n.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span>[{n.notification_type}]</span>
+                    <span>{n.message}</span>
+                    <span style={{ fontSize: 12, color: '#666' }}>{formatTs(n.created_at)}</span>
+                    {n.read_at ? (
+                      <span style={{ fontSize: 12, color: '#2a2' }}>(read)</span>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          const id = (document.getElementById('notifUserId') as HTMLInputElement)?.value;
+                          if (id) markItemRead(id, n.id);
+                        }}
+                      >
+                        mark read
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div style={{ color: '#666' }}>(no notifications)</div>
+            )
           ) : (
             <pre>{JSON.stringify(notifications, null, 2)}</pre>
           )}
