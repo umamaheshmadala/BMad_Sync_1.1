@@ -5,6 +5,8 @@ import { createMockSupabase, MockDb } from './helpers/mock-supabase';
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'http://localhost:54321';
 process.env.SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'anon-test';
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'service-test';
+// Enable dev auth endpoints for tests by default
+process.env.FEATURE_DEV_AUTH = process.env.FEATURE_DEV_AUTH || 'true';
 
 // Mock @supabase/supabase-js createClient to return our in-memory mock
 const db = new MockDb();

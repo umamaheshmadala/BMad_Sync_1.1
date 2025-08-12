@@ -1,4 +1,5 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
+import { isFeatureEnabled } from '../../../packages/shared/env';
 
 function makeUnsignedBearer(userId: string, role?: string): string {
   const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
@@ -8,6 +9,7 @@ function makeUnsignedBearer(userId: string, role?: string): string {
 
 export default async (req: Request) => {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  if (!isFeatureEnabled('FEATURE_DEV_AUTH')) return new Response('Not Found', { status: 404 });
   try {
     const body = await req.json();
     const email = (body?.email || '').trim();
