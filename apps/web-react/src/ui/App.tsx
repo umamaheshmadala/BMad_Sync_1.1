@@ -72,11 +72,18 @@ export default function App() {
   }
 
   async function getNotifications(userId: string) {
-    const res = await fetch(`/api/users/${userId}/notifications`, { headers: { ...authHeaders } });
-    const j = await res.json();
-    setNotifications(j);
-    // Also refresh unread count
-    await refreshUnread(userId);
+    try {
+      const res = await fetch(`/api/users/${userId}/notifications`, { headers: { ...authHeaders } });
+      const text = await res.text();
+      let j: any;
+      try { j = text ? JSON.parse(text) : { ok: false, error: 'Empty response', status: res.status }; }
+      catch { j = { ok: false, error: text || 'Non-JSON response', status: res.status }; }
+      setNotifications(j);
+      // Also refresh unread count
+      await refreshUnread(userId);
+    } catch (e: any) {
+      setNotifications({ ok: false, error: e?.message || 'Fetch error' });
+    }
   }
 
   async function clearNotifications(userId: string) {
