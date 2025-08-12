@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: SynC API (MVP Skeleton)
-  version: 0.1.0
-  description: REST-ish endpoints to be implemented via Netlify/Supabase Edge Functions. Auth via Supabase.
+  version: 0.1.5
+  description: REST-ish endpoints implemented via Netlify Functions with Supabase Auth.
 servers:
   - url: https://example.com
     description: Placeholder
@@ -444,6 +444,17 @@ paths:
     get:
       security: [ { bearerAuth: [] } ]
       summary: Peer and marketing trends
+      parameters:
+        - in: query
+          name: group
+          required: false
+          schema: { type: string, enum: [business] }
+          description: When set to `business`, returns trends bucketed by business in `trendsByBusiness`.
+        - in: query
+          name: businessId
+          required: false
+          schema: { type: string, format: uuid }
+          description: Optional filter to constrain results to a single business (owner or platform only).
       responses:
         '200': { description: OK }
   /api/business/coupons/issue-targeted:

@@ -1,26 +1,19 @@
 ### Changelog
 
-### v0.1.4 — 2025-08-11
-
-### v0.1.5 — WIP
+### v0.1.5 — 2025-08-12
 
 - Added
-  - `GET /api/users/{userId}/notifications` → `apps/api/functions/users-notifications-get.ts`.
-  - `DELETE /api/users/{userId}/notifications` → `apps/api/functions/users-notifications-delete.ts`.
+  - Notifications end-to-end: persist on wishlist matches; GET list; PUT mark-all-read; PUT item read; DELETE clear.
+  - Business analytics trends endpoint: `GET /api/business/analytics/trends` with optional `group=business` and `businessId` filtering; corresponding UI "Trends" tab toggle.
 - Changed
-  - Persist notifications in `users-wishlist-matches-get.ts` when matches are found.
-- UI
-  - React UI: Notifications section to retrieve user notifications.
-  - React UI: Clear notifications button.
-  - React UI: Reviews filter (recommend true/false) and product form validation.
-  - React UI: Mark-all-read button.
-  - API: Reviews GET now supports limit/offset pagination.
+  - Unified notifications route so GET and DELETE share the same path (`/api/users/:userId/notifications`) to avoid handler conflicts.
+  - Fixed unread filtering using `.is('read_at', null)` and added `read_at` to schema (`docs/supabase_schema.sql`).
+  - Netlify: publish `apps/web-react/dist`; SPA fallback scoped to `/react/*`.
+  - UI: better empty/error states in Notifications; label bump to v0.1.5.
+- Tests
+  - Extended mock Supabase with `.is()`; updated integration tests to use unified notifications route and trends endpoint. All tests green (25/25).
 
-- Added
-  - `GET /api/business/{businessId}/reviews` → extend `apps/api/functions/business-reviews-post.ts` for listing (owner/platform only).
-  - React UI `apps/web-react/src/ui/App.tsx`: add Reviews GET, Products POST form; bump version label to v0.1.4.
-- Improved
-  - Wishlist matches smarter overlap on subcategories; enqueue basic notification.
+### v0.1.4 — 2025-08-11
 
 ### v0.1.3 — 2025-08-11
 
