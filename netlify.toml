@@ -4,7 +4,7 @@
 
 [build]
   command = "npm run build:web"
-  publish = "dist"
+  publish = "apps/web-react/dist"
 
 [dev]
   functions = "apps/api/functions"
@@ -19,6 +19,13 @@
 # React UI at /react (production points to built assets)
 [[redirects]]
   from = "/react"
+  to = "/index.html"
+  status = 200
+
+
+# SPA fallback for React UI nested routes only (does not affect /api/*)
+[[redirects]]
+  from = "/react/*"
   to = "/index.html"
   status = 200
 
