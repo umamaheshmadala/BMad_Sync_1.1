@@ -127,7 +127,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: 'system-ui, Arial, sans-serif', padding: 24, maxWidth: 900, margin: '0 auto' }}>
-      <h2>SynC React UI (v0.1.4)</h2>
+      <h2>SynC React UI (v0.1.5)</h2>
       <Section title="Auth">
         <label>
           Bearer token:
