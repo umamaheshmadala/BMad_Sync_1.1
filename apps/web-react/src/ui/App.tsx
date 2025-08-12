@@ -275,7 +275,7 @@ export default function App() {
       <h2>SynC React UI (v0.1.5)</h2>
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-        {['auth','session','storefront','reviews','wishlist','notifications','products','ads','trends','pricing'].map((t) => (
+        {['auth','session','storefront','reviews','wishlist','notifications','products','ads','trends','pricing','health'].map((t) => (
           <button key={t} onClick={() => setActiveTab(t as any)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #ddd', background: activeTab===t ? '#eef' : '#fff' }}>{t}</button>
         ))}
       </div>
@@ -597,6 +597,19 @@ export default function App() {
           <button onClick={putPricing}>PUT pricing</button>
         </div>
         <pre>{JSON.stringify(pricingResult, null, 2)}</pre>
+        </>
+        )}
+      </Section>
+
+      <Section title="Platform Health">
+        {activeTab !== 'health' ? null : (
+        <>
+          <button onClick={async () => {
+            const res = await fetch('/api/platform/health');
+            const j = await res.json();
+            setPricingResult(j);
+          }}>GET health</button>
+          <pre>{JSON.stringify(pricingResult, null, 2)}</pre>
         </>
         )}
       </Section>
