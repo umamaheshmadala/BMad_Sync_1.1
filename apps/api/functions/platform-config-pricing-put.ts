@@ -1,10 +1,11 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
-import { isPlatformOwner } from '../../../packages/shared/auth';
+import { isPlatformOwner, isPlatformOwnerAsync } from '../../../packages/shared/auth';
 import { withRequestLogging } from '../../../packages/shared/logging';
 
 export default withRequestLogging('platform-config-pricing-put', async (req: Request) => {
   if (req.method !== 'PUT') return new Response('Method Not Allowed', { status: 405 });
-  if (!isPlatformOwner(req)) return new Response(JSON.stringify({ ok: false, error: 'Forbidden' }), { status: 403 });
+  const allow = (await isPlatformOwnerAsync(req)) || isPlatformOwner(req);
+  if (!allow) return new Response(JSON.stringify({ ok: false, error: 'Forbidden' }), { status: 403 });
   try {
     const body = await req.json();
     const pricing = typeof body === 'object' && body ? body : {};
