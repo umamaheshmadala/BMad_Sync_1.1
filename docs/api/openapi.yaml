@@ -494,6 +494,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RevenueSummary'
+  /api/platform/health:
+    get:
+      summary: Platform health and feature flags
+      responses:
+        '200': { description: OK }
   /api/platform/config/pricing:
     put:
       security: [ { bearerAuth: [] } ]
