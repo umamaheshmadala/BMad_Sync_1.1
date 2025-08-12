@@ -16,7 +16,6 @@ import reviewsPost from '../../apps/api/functions/business-reviews-post';
 import analyticsCoupons from '../../apps/api/functions/business-analytics-coupons-get';
 import wishlistMatchesGet from '../../apps/api/functions/users-wishlist-matches-get';
 import notificationsGet from '../../apps/api/functions/users-notifications-get';
-import notificationsDelete from '../../apps/api/functions/users-notifications-delete';
 import notificationReadItem from '../../apps/api/functions/users-notifications-read-item-put';
 
 const TEST_USER_1 = 'test-user-1';
@@ -364,7 +363,7 @@ it('persists and returns notifications for wishlist matches', async () => {
 it('clears notifications for a user', async () => {
   // Seed a notification
   db.notifications.insert({ id: 'n1', recipient_user_id: TEST_USER_1, message: 'X', notification_type: 'wishlist_match' });
-  const resDel = await notificationsDelete(
+  const resDel = await notificationsGet(
     makeReq(path(`/api/users/${TEST_USER_1}/notifications`), 'DELETE', undefined, {
       Authorization: bearer(TEST_USER_1),
     })
