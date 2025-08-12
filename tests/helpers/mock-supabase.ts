@@ -36,6 +36,7 @@ export class MockDb {
   public business_reviews = new Table();
   public platform_config = new Table();
   public notifications = new Table();
+  public ads = new Table();
 }
 
 function builder(table: Table) {

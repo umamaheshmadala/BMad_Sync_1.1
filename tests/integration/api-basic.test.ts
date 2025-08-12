@@ -17,6 +17,11 @@ import analyticsCoupons from '../../apps/api/functions/business-analytics-coupon
 import wishlistMatchesGet from '../../apps/api/functions/users-wishlist-matches-get';
 import notificationsGet from '../../apps/api/functions/users-notifications-get';
 import notificationReadItem from '../../apps/api/functions/users-notifications-read-item-put';
+import adsPost from '../../apps/api/functions/business-ads-post';
+import trendsGet from '../../apps/api/functions/business-analytics-trends-get';
+import pricingPut from '../../apps/api/functions/platform-config-pricing-put';
+import authSignup from '../../apps/api/functions/auth-signup';
+import authLogin from '../../apps/api/functions/auth-login';
 
 const TEST_USER_1 = 'test-user-1';
 const TEST_USER_2 = 'test-user-2';
@@ -392,6 +397,53 @@ it('marks a single notification as read', async () => {
   expect(res.status).toBe(200);
   const json = await res.json();
   expect(json.ok).toBe(true);
+});
+
+it('posts an ad for business owner', async () => {
+  const res = await adsPost(
+    makeReq(path(`/api/business/ads`), 'POST', { title: 'Sale' }, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(res.status).toBe(200);
+  const j = await res.json();
+  expect(j.ok).toBe(true);
+});
+
+it('returns analytics trends', async () => {
+  // Seed some data
+  db.business_reviews.insert({ business_id: TEST_BIZ_1, recommend_status: true, created_at: new Date().toISOString() });
+  db.user_coupons.insert({ coupon_id: TEST_COUPON_1, is_redeemed: false, collected_at: new Date().toISOString() });
+  const res = await trendsGet(makeReq(path(`/api/business/analytics/trends`), 'GET'));
+  expect(res.status).toBe(200);
+  const j = await res.json();
+  expect(j.ok).toBe(true);
+  expect(j.trends).toBeTruthy();
+});
+
+it('updates platform pricing (owner)', async () => {
+  const res = await pricingPut(
+    makeReq(path(`/api/platform/config/pricing`), 'PUT', { tiers: [{ name: 'basic', price: 0 }] }, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(res.status).toBe(200);
+  const j = await res.json();
+  expect(j.ok).toBe(true);
+});
+
+it('auth signup and login return unsigned bearer token', async () => {
+  const email = 'test@example.com';
+  const resSignup = await authSignup(makeReq(path(`/api/auth/signup`), 'POST', { email }));
+  expect(resSignup.status).toBe(200);
+  const sj = await resSignup.json();
+  expect(sj.ok).toBe(true);
+  expect(String(sj.bearer || '')).toContain('Bearer ');
+
+  const resLogin = await authLogin(makeReq(path(`/api/auth/login`), 'POST', { email }));
+  const lj = await resLogin.json();
+  expect(lj.ok).toBe(true);
+  expect(String(lj.bearer || '')).toContain('Bearer ');
 });
 
 it('rejects unauthorized requests with 401', async () => {
