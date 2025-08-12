@@ -13,6 +13,8 @@
   - React UI: Notifications section to retrieve user notifications.
   - React UI: Clear notifications button.
   - React UI: Reviews filter (recommend true/false) and product form validation.
+  - React UI: Mark-all-read button.
+  - API: Reviews GET now supports limit/offset pagination.
 
 - Added
   - `GET /api/business/{businessId}/reviews` → extend `apps/api/functions/business-reviews-post.ts` for listing (owner/platform only).

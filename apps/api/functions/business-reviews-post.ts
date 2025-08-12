@@ -25,13 +25,14 @@ export default async (req: Request) => {
     }
 
     const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || 50)));
+    const offset = Math.max(0, Number(url.searchParams.get('offset') || 0));
     const recommendParam = url.searchParams.get('recommend');
     let query = supabase
       .from('business_reviews')
       .select('id, user_id, recommend_status, review_text, checked_in_at, created_at')
       .eq('business_id', businessId)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
     if (recommendParam === 'true' || recommendParam === 'false') {
       const recommend = recommendParam === 'true';
       query = query.eq('recommend_status', recommend);

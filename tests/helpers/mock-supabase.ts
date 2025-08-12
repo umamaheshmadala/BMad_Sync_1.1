@@ -61,6 +61,7 @@ function builder(table: Table) {
       // For simplicity, we ignore ordering in mock select results; tests focus on presence not order
       return api;
     },
+    range(_from?: number, _to?: number) { return api; },
     limit(_n?: number) { return api; },
     maybeSingle() {
       const rows = table.find((r) => state._filters.every((f: any) => f(r)));

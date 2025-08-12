@@ -71,6 +71,12 @@ export default function App() {
     setNotifications(j);
   }
 
+  async function markRead(userId: string) {
+    const res = await fetch(`/api/users/${userId}/notifications/read`, { method: 'PUT', headers: { ...authHeaders } });
+    const j = await res.json();
+    setNotifications(j);
+  }
+
   return (
     <div style={{ fontFamily: 'system-ui, Arial, sans-serif', padding: 24, maxWidth: 900, margin: '0 auto' }}>
       <h2>SynC React UI (v0.1.4)</h2>
@@ -156,6 +162,14 @@ export default function App() {
             }}
           >
             CLEAR notifications
+          </button>
+          <button
+            onClick={() => {
+              const id = (document.getElementById('notifUserId') as HTMLInputElement)?.value;
+              if (id) markRead(id);
+            }}
+          >
+            MARK ALL READ
           </button>
         </div>
         <pre>{JSON.stringify(notifications, null, 2)}</pre>

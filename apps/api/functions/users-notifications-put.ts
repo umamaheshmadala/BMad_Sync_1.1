@@ -2,7 +2,7 @@ import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
 import { getUserIdFromRequest, isPlatformOwner } from '../../../packages/shared/auth';
 
 export default async (req: Request) => {
-  if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+  if (req.method !== 'PUT') return new Response('Method Not Allowed', { status: 405 });
   const url = new URL(req.url);
   const parts = url.pathname.split('/');
   const userId = parts[3] || '';
@@ -15,29 +15,22 @@ export default async (req: Request) => {
   }
 
   const supabase = createSupabaseClient(true) as any;
-  const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || 50)));
-  const offset = Math.max(0, Number(url.searchParams.get('offset') || 0));
-  const onlyUnread = (url.searchParams.get('unread') || '').toLowerCase() === 'true';
-  let query = supabase
+  const now = new Date().toISOString();
+  const { error } = await supabase
     .from('notifications')
-    .select('id, message, notification_type, created_at, deep_link_url, read_at')
+    .update({ read_at: now })
     .eq('recipient_user_id', userId)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
-  if (onlyUnread) {
-    query = query.eq('read_at', null);
-  }
-  const { data, error } = await query;
+    .eq('read_at', null);
   if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
 
   return new Response(
-    JSON.stringify({ ok: true, items: (data as any[]) || [] }),
+    JSON.stringify({ ok: true }),
     { headers: { 'Content-Type': 'application/json' } }
   );
 };
 
 export const config = {
-  path: '/api/users/:userId/notifications',
+  path: '/api/users/:userId/notifications/read',
 };
 
 

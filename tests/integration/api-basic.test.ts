@@ -265,7 +265,7 @@ it('creates a business review and reflects in analytics', async () => {
 it('filters reviews by recommend status for owner', async () => {
   // Owner requests only positive reviews
   const res = await reviewsPost(
-    makeReq(path(`/api/business/${TEST_BIZ_1}/reviews?recommend=true`), 'GET', undefined, {
+    makeReq(path(`/api/business/${TEST_BIZ_1}/reviews?recommend=true&limit=10&offset=0`), 'GET', undefined, {
       Authorization: bearer(TEST_USER_1, 'owner'),
     })
   );
