@@ -23,6 +23,9 @@ export default function App() {
   const [notifications, setNotifications] = useState(null as any);
   const [unreadCount, setUnreadCount] = useState(0 as any);
   const [reviewsSummary, setReviewsSummary] = useState(null as any);
+  const [adsResult, setAdsResult] = useState(null as any);
+  const [trendsResult, setTrendsResult] = useState(null as any);
+  const [pricingResult, setPricingResult] = useState(null as any);
 
   async function postStorefront() {
     const res = await fetch('/api/business/storefront', {
@@ -31,6 +34,38 @@ export default function App() {
       body: JSON.stringify({ description: 'React SF', theme: 'light', is_open: true }),
     });
     setStorefront(await res.json());
+  }
+
+  async function postAd() {
+    const title = (document.getElementById('adTitle') as HTMLInputElement)?.value?.trim();
+    const description = (document.getElementById('adDesc') as HTMLInputElement)?.value?.trim();
+    const image = (document.getElementById('adImg') as HTMLInputElement)?.value?.trim();
+    if (!title) { alert('title required'); return; }
+    const res = await fetch('/api/business/ads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ title, description, image_url: image || null })
+    });
+    setAdsResult(await res.json());
+  }
+
+  async function getTrends() {
+    const bizId = (document.getElementById('trendBizId') as HTMLInputElement)?.value?.trim();
+    const qs = bizId ? `?businessId=${encodeURIComponent(bizId)}` : '';
+    const res = await fetch(`/api/business/analytics/trends${qs}`, { headers: { ...authHeaders } });
+    setTrendsResult(await res.json());
+  }
+
+  async function putPricing() {
+    const txt = (document.getElementById('pricingJson') as HTMLTextAreaElement)?.value;
+    let payload: any;
+    try { payload = JSON.parse(txt || '{}'); } catch { alert('Invalid JSON'); return; }
+    const res = await fetch('/api/platform/config/pricing', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify(payload),
+    });
+    setPricingResult(await res.json());
   }
 
   async function getStorefront() {
@@ -344,6 +379,34 @@ export default function App() {
           </button>
         </div>
         <pre>{JSON.stringify(products, null, 2)}</pre>
+      </Section>
+
+      <Section title="Ads (owner)">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          <input id="adTitle" placeholder="title" />
+          <input id="adDesc" placeholder="description" />
+          <input id="adImg" placeholder="image_url (http...)" />
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button onClick={postAd}>POST ad</button>
+        </div>
+        <pre>{JSON.stringify(adsResult, null, 2)}</pre>
+      </Section>
+
+      <Section title="Analytics Trends">
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input id="trendBizId" placeholder="businessId (optional)" />
+          <button onClick={getTrends}>GET trends</button>
+        </div>
+        <pre>{JSON.stringify(trendsResult, null, 2)}</pre>
+      </Section>
+
+      <Section title="Platform Pricing (owner)">
+        <textarea id="pricingJson" style={{ width: '100%', height: 120 }} defaultValue={'{"tiers":[{"name":"basic","price":0},{"name":"pro","price":1000}]}' as any} />
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button onClick={putPricing}>PUT pricing</button>
+        </div>
+        <pre>{JSON.stringify(pricingResult, null, 2)}</pre>
       </Section>
     </div>
   );
