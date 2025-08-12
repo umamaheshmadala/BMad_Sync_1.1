@@ -17,6 +17,7 @@ import analyticsCoupons from '../../apps/api/functions/business-analytics-coupon
 import wishlistMatchesGet from '../../apps/api/functions/users-wishlist-matches-get';
 import notificationsGet from '../../apps/api/functions/users-notifications-get';
 import notificationsDelete from '../../apps/api/functions/users-notifications-delete';
+import notificationReadItem from '../../apps/api/functions/users-notifications-read-item-put';
 
 const TEST_USER_1 = 'test-user-1';
 const TEST_USER_2 = 'test-user-2';
@@ -341,6 +342,18 @@ it('clears notifications for a user', async () => {
   const jsonN = await resN.json();
   expect(jsonN.ok).toBe(true);
   expect(jsonN.items.length).toBe(0);
+});
+
+it('marks a single notification as read', async () => {
+  const n = db.notifications.insert({ recipient_user_id: TEST_USER_1, message: 'Y', notification_type: 'wishlist_match' });
+  const res = await notificationReadItem(
+    makeReq(path(`/api/users/${TEST_USER_1}/notifications/${n.id}/read`), 'PUT', undefined, {
+      Authorization: bearer(TEST_USER_1),
+    })
+  );
+  expect(res.status).toBe(200);
+  const json = await res.json();
+  expect(json.ok).toBe(true);
 });
 
 it('rejects unauthorized requests with 401', async () => {

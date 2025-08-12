@@ -89,6 +89,13 @@ export default function App() {
     await refreshUnread(userId);
   }
 
+  async function markItemRead(userId: string, notificationId: string) {
+    const res = await fetch(`/api/users/${userId}/notifications/${notificationId}/read`, { method: 'PUT', headers: { ...authHeaders } });
+    const j = await res.json();
+    setNotifications(j);
+    await refreshUnread(userId);
+  }
+
   async function refreshUnread(userId: string) {
     const res = await fetch(`/api/users/${userId}/notifications?unread=true&limit=100`, { headers: { ...authHeaders } });
     const j = await res.json();
@@ -192,7 +199,32 @@ export default function App() {
             MARK ALL READ
           </button>
         </div>
-        <pre>{JSON.stringify(notifications, null, 2)}</pre>
+        <div>
+          {Array.isArray(notifications?.items) ? (
+            <ul>
+              {(notifications.items as any[]).map((n: any) => (
+                <li key={n.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span>{n.message}</span>
+                  <span style={{ fontSize: 12, color: '#666' }}>{n.notification_type}</span>
+                  {n.read_at ? (
+                    <span style={{ fontSize: 12, color: '#2a2' }}>(read)</span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        const id = (document.getElementById('notifUserId') as HTMLInputElement)?.value;
+                        if (id) markItemRead(id, n.id);
+                      }}
+                    >
+                      mark read
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <pre>{JSON.stringify(notifications, null, 2)}</pre>
+          )}
+        </div>
       </Section>
 
       <Section title="Storefront Products">
