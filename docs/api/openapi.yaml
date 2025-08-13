@@ -651,10 +651,30 @@ paths:
           schema: { type: integer, minimum: 1, maximum: 100 }
           description: Max items to return (default 50)
         - in: query
+          name: page
+          required: false
+          schema: { type: integer, minimum: 1 }
+          description: Optional page number (1-based). When provided, `pageSize` controls size. Overrides `offset`.
+        - in: query
+          name: pageSize
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100 }
+          description: Optional page size (default 50; 1–100). When used with `page` returns `pages`.
+        - in: query
           name: offset
           required: false
           schema: { type: integer, minimum: 0 }
           description: Offset for pagination (default 0)
+        - in: query
+          name: created_gte
+          required: false
+          schema: { type: string, format: date-time }
+          description: Filter reviews with `created_at` greater than or equal to this timestamp.
+        - in: query
+          name: created_lte
+          required: false
+          schema: { type: string, format: date-time }
+          description: Filter reviews with `created_at` less than or equal to this timestamp.
       responses:
         '200':
           description: OK
@@ -677,6 +697,9 @@ paths:
                   total: { type: integer }
                   limit: { type: integer }
                   offset: { type: integer }
+                  page: { type: integer }
+                  pageSize: { type: integer }
+                  pages: { type: integer }
                   order: { type: string }
     post:
       security: [ { bearerAuth: [] } ]

@@ -28,8 +28,10 @@ export default withRateLimit('business-reviews', { limit: 120, windowMs: 60_000 
       return json({ ok: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || 50)));
-    const offset = Math.max(0, Number(url.searchParams.get('offset') || 0));
+    const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get('pageSize') || url.searchParams.get('limit') || 50)));
+    const page = Math.max(1, Number(url.searchParams.get('page') || 1));
+    const limit = pageSize;
+    const offset = (page - 1) * pageSize;
     const createdGte = (url.searchParams.get('created_gte') || '').trim();
     const createdLte = (url.searchParams.get('created_lte') || '').trim();
     const orderParam = (url.searchParams.get('order') || '').trim(); // e.g., created_at.desc or recommend_status.asc
@@ -58,7 +60,9 @@ export default withRateLimit('business-reviews', { limit: 120, windowMs: 60_000 
       .order(orderCol, { ascending: orderAsc } as any)
       .range(offset, Math.max(offset, offset + limit - 1));
     if (error) return json({ ok: false, error: error.message }, { status: 500 });
-    return json({ ok: true, items: (data as any[]) || [], total: count ?? ((data as any[])?.length || 0), limit, offset, order: `${orderCol}.${orderAsc ? 'asc' : 'desc'}` });
+    const total = count ?? ((data as any[])?.length || 0);
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    return json({ ok: true, items: (data as any[]) || [], total, limit, offset, page, pageSize, pages, order: `${orderCol}.${orderAsc ? 'asc' : 'desc'}` });
   }
 
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });

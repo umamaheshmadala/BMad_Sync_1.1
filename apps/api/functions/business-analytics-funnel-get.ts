@@ -86,8 +86,10 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
     ensureCounts(byBusiness, bizId).shared += 1;
   }
 
-  // Aggregate totals
+  // Aggregate totals and per-day buckets for collected/redeemed
   const totals: FunnelCounts = { issued: 0, collected: 0, shared: 0, redeemed: 0 };
+  const byDay: Record<string, { collected: number; redeemed: number }> = {};
+  const keyFor = (iso?: string) => { try { return (iso || '').slice(0, 10); } catch { return ''; } };
   for (const bizId of Object.keys(byBusiness)) {
     const c = byBusiness[bizId];
     totals.issued += c.issued;
@@ -95,8 +97,15 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
     totals.shared += c.shared;
     totals.redeemed += c.redeemed;
   }
+  for (const uc of (userCoupons as any[]) || []) {
+    const k = keyFor(uc.collected_at);
+    if (!k) continue;
+    byDay[k] = byDay[k] || { collected: 0, redeemed: 0 };
+    byDay[k].collected += 1;
+    if (uc.is_redeemed) byDay[k].redeemed += 1;
+  }
 
-  const payload: any = { ok: true, funnel: totals };
+  const payload: any = { ok: true, funnel: totals, funnelByDay: byDay };
   if (group === 'business') payload.funnelByBusiness = byBusiness;
   return json(payload, {
     headers: {
