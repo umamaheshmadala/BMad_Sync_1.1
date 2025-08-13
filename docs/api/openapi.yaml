@@ -798,7 +798,22 @@ paths:
     get:
       summary: Platform health and feature flags
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  version: { type: string }
+                  time: { type: string, format: date-time }
+                  features:
+                    type: object
+                    properties:
+                      FEATURE_SUPABASE_AUTH: { type: boolean }
+                      FEATURE_DEV_AUTH: { type: boolean }
+                      FEATURE_SHARED_RATELIMIT: { type: boolean }
   /api/platform/config/pricing:
     put:
       security: [ { bearerAuth: [] } ]

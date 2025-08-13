@@ -8,6 +8,7 @@ export default async () => {
     features: {
       FEATURE_SUPABASE_AUTH: isFeatureEnabled('FEATURE_SUPABASE_AUTH'),
       FEATURE_DEV_AUTH: isFeatureEnabled('FEATURE_DEV_AUTH'),
+      FEATURE_SHARED_RATELIMIT: isFeatureEnabled('FEATURE_SHARED_RATELIMIT'),
     },
   };
   return new Response(JSON.stringify(payload), { headers: { 'Content-Type': 'application/json' } });
