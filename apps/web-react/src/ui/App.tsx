@@ -183,6 +183,16 @@ export default function App() {
     }
   }
 
+  function base64Url(json: string): string {
+    try { return btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, ''); } catch { return ''; }
+  }
+
+  function makeUnsignedBearer(sub: string, role?: string): string {
+    const header = base64Url(JSON.stringify({ alg: 'none', typ: 'JWT' }));
+    const payload = base64Url(JSON.stringify(role ? { sub, role } : { sub }));
+    return `Bearer ${header}.${payload}.`;
+  }
+
   async function loginSupabase() {
     try {
       const url = sbUrl?.trim();
@@ -616,6 +626,15 @@ export default function App() {
           <div className="flex gap-2">
             <button className="btn" onClick={signup}>signup</button>
             <button className="btn" onClick={login}>login</button>
+            <button className="btn" title="build unsigned owner token" onClick={() => {
+              const email = (document.getElementById('authEmail') as HTMLInputElement)?.value?.trim();
+              const role = (document.getElementById('authRole') as HTMLInputElement)?.value?.trim() || 'owner';
+              const sub = email || '11111111-1111-1111-1111-111111111111';
+              const bearer = makeUnsignedBearer(sub, role);
+              setToken(bearer);
+              try { localStorage.setItem('sync_token', bearer); } catch {}
+              showToast('Bearer built', 'success');
+            }}>build owner bearer</button>
           </div>
         </div>
         <div className="mt-2 p-2 border border-dashed border-[color:var(--border)] rounded-md">
