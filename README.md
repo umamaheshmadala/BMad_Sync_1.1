@@ -10,7 +10,7 @@ SynC MVP scaffold with Netlify Functions, Supabase schema/RLS, and integration t
 
 - Site: `tiny-bombolone-8f8acf`
 - UI: `https://tiny-bombolone-8f8acf.netlify.app/react`
-- Current tag: `v0.1.7`
+- Current tag: `v0.1.8`
 
 ### Local run
 
@@ -57,6 +57,8 @@ Environment variables:
 - `FEATURE_DEV_AUTH=false`
 - `FEATURE_SHARED_RATELIMIT=true` (optional; enables Postgres-backed shared limiter)
 - UI autofill (recommended): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+ - Advisors (optional): `SUPABASE_PAT`, `SUPABASE_PROJECT_ID`, and optionally `STRICT_ADVISORS=true`
+ - EXPLAIN baselines (optional): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
 
 CLI deploy (optional):
 
@@ -76,7 +78,7 @@ npx --yes netlify-cli@17 deploy --build --prod --dir "apps/web-react/dist" --fun
 
 ### Releases
 
-- Latest stable: [v0.1.7](https://github.com/umamaheshmadala/BMad_Sync_1.1/releases/tag/v0.1.7)
+- Latest stable: [v0.1.8](https://github.com/umamaheshmadala/BMad_Sync_1.1/releases/tag/v0.1.8)
 - All releases: https://github.com/umamaheshmadala/BMad_Sync_1.1/releases
 
 

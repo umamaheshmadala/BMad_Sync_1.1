@@ -1,6 +1,6 @@
 ---
 description: An autonomous assistant for this project.
-globs: ["src/**/*.js", "src/**/*.jsx"]
+globs: ["src/**/*.js", "src/**/*.jsx", "tests/**/*.ts", "api/**/*.ts"]
 alwaysApply: true
 ---
 # Instructions for Autonomous Agent

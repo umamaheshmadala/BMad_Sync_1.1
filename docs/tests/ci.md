@@ -20,6 +20,14 @@ Date: 2025-08-11
 - Use dummy billing mode; no Razorpay keys in CI
 - Supabase: test project/branch or local container; service role for tests only
 - Notifications: use mock queue
+- Advisors (optional, recommended):
+  - SUPABASE_PAT: Personal access token with access to project
+  - SUPABASE_PROJECT_ID: Project ref/id (abcd1234)
+  - STRICT_ADVISORS=true to fail CI on findings (optional)
+- EXPLAIN baselines (optional):
+  - SUPABASE_URL: Project URL
+  - SUPABASE_SERVICE_ROLE_KEY: Service role for EXPLAIN RPC
+  - Note: EXPLAIN step is non-blocking by default; enable thresholds separately
 
 ## Caching
 - Node modules cache by lockfile hash

@@ -4,6 +4,7 @@ import notificationsGet from '../../apps/api/functions/users-notifications-get';
 import notificationsPut from '../../apps/api/functions/users-notifications-put';
 import notificationReadItem from '../../apps/api/functions/users-notifications-read-item-put';
 import collectPost from '../../apps/api/functions/users-coupons-collect-post';
+import storefrontProducts from '../../apps/api/functions/storefronts-products-post';
 import funnelGet from '../../apps/api/functions/business-analytics-funnel-get';
 import revenueGet from '../../apps/api/functions/platform-revenue-get';
 
@@ -103,6 +104,29 @@ it('allows owner to access platform revenue and forbids non-owner', async () => 
     })
   );
   expect(resOwner.status).toBe(200);
+});
+
+it('enforces storefront products GET: non-owner forbidden, owner allowed', async () => {
+  db.storefronts.insert({ id: 'sf-sec', business_id: TEST_BIZ_1 });
+  db.storefront_products.insert({ id: 'p-sec-1', storefront_id: 'sf-sec', product_name: 'Sec Item' });
+
+  // Non-owner cannot read
+  const resForbidden = await storefrontProducts(
+    makeReq(path(`/api/storefronts/sf-sec/products`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_2),
+    })
+  );
+  expect(resForbidden.status).toBe(403);
+
+  // Owner can read
+  const resOwner = await storefrontProducts(
+    makeReq(path(`/api/storefronts/sf-sec/products`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(resOwner.status).toBe(200);
+  const json = await resOwner.json();
+  expect(Array.isArray(json.items)).toBe(true);
 });
 
 
