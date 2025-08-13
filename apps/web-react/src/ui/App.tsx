@@ -85,10 +85,14 @@ export default function App() {
       const funnelBiz = localStorage.getItem('sync_funnel_biz_id') || '';
       const offerId = localStorage.getItem('sync_offer_id') || '';
       const bizId = localStorage.getItem('sync_reviews_biz_id') || '';
+      const trendGroup = (localStorage.getItem('sync_trend_group') || '') === '1';
+      const funnelGroup = (localStorage.getItem('sync_funnel_group') || '') === '1';
       if (trendBiz) { const el = document.getElementById('trendBizId') as HTMLInputElement | null; if (el) el.value = trendBiz; }
       if (funnelBiz) { const el = document.getElementById('funnelBizId') as HTMLInputElement | null; if (el) el.value = funnelBiz; }
       if (offerId) { const el = document.getElementById('offerId') as HTMLInputElement | null; if (el) el.value = offerId; }
       if (bizId) { const el = document.getElementById('bizId') as HTMLInputElement | null; if (el) el.value = bizId; }
+      try { const tg = document.getElementById('trendGroupBiz') as HTMLInputElement | null; if (tg) tg.checked = trendGroup; } catch {}
+      try { const fg = document.getElementById('funnelGroupBiz') as HTMLInputElement | null; if (fg) fg.checked = funnelGroup; } catch {}
     } catch {}
   }, []);
 
@@ -1599,7 +1603,7 @@ export default function App() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <input id="trendBizId" placeholder="businessId (optional)" aria-label="Trends businessId" onChange={(e) => { try { localStorage.setItem('sync_trend_biz_id', (e.target as HTMLInputElement).value || ''); } catch {} }} />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="checkbox" id="trendGroupBiz" aria-label="Group trends by business" /> group by business
+            <input type="checkbox" id="trendGroupBiz" aria-label="Group trends by business" onChange={(e) => { try { localStorage.setItem('sync_trend_group', (e.target as HTMLInputElement).checked ? '1' : ''); } catch {} }} /> group by business
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span className="muted text-sm">sinceDays</span>
@@ -1690,7 +1694,7 @@ export default function App() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <input id="funnelBizId" className="input" placeholder="businessId (optional)" aria-label="Funnel businessId" onChange={(e) => { try { localStorage.setItem('sync_funnel_biz_id', (e.target as HTMLInputElement).value || ''); } catch {} }} />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="checkbox" id="funnelGroupBiz" aria-label="Group funnel by business" /> group by business
+            <input type="checkbox" id="funnelGroupBiz" aria-label="Group funnel by business" onChange={(e) => { try { localStorage.setItem('sync_funnel_group', (e.target as HTMLInputElement).checked ? '1' : ''); } catch {} }} /> group by business
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span className="muted text-sm">sinceDays</span>

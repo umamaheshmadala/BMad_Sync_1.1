@@ -90,6 +90,8 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
   const totals: FunnelCounts = { issued: 0, collected: 0, shared: 0, redeemed: 0 };
   const byDay: Record<string, { collected: number; redeemed: number }> = {};
   const tz = (url.searchParams.get('tz') || '').trim();
+  const fillParam = url.searchParams.get('fill');
+  const fill = fillParam == null ? true : String(fillParam).toLowerCase() !== 'false';
   const keyFor = (iso?: string) => {
     try {
       if (!iso) return '';
@@ -136,11 +138,17 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
     }
     return keys;
   })();
-  for (const k of windowKeys) {
-    zeroFilled[k] = byDay[k] || { collected: 0, redeemed: 0 };
+  let funnelByDay: Record<string, { collected: number; redeemed: number }>;
+  if (fill) {
+    for (const k of windowKeys) zeroFilled[k] = byDay[k] || { collected: 0, redeemed: 0 };
+    funnelByDay = zeroFilled;
+  } else {
+    const ordered: Record<string, { collected: number; redeemed: number }> = {};
+    Object.keys(byDay).sort().forEach((k) => { ordered[k] = byDay[k]; });
+    funnelByDay = ordered;
   }
 
-  const payload: any = { ok: true, funnel: totals, funnelByDay: zeroFilled };
+  const payload: any = { ok: true, funnel: totals, funnelByDay };
   if (group === 'business') payload.funnelByBusiness = byBusiness;
   return json(payload, {
     headers: {

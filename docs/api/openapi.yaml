@@ -855,6 +855,11 @@ paths:
           required: false
           schema: { type: string }
           description: Optional IANA timezone; affects `funnelByDay` bucketing.
+        - in: query
+          name: fill
+          required: false
+          schema: { type: string, enum: ["true","false"] }
+          description: When `false`, disables zero-fill of missing days in `funnelByDay` (default `true`).
       responses:
         '200':
           description: OK
