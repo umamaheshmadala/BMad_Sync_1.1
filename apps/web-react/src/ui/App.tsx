@@ -395,7 +395,7 @@ export default function App() {
     <div className={`min-h-screen mx-auto max-w-5xl p-6 theme-${theme}`}
       data-build="funnel-theme"
     >
-      <h2 className="text-xl font-semibold">SynC React UI (v0.1.6+funnel+theme)</h2>
+      <h2 className="text-xl font-semibold">SynC React UI (v0.1.7+funnel+theme)</h2>
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-3">
         {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','funnel','pricing','health'].map((t) => (
