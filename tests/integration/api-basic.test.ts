@@ -430,6 +430,25 @@ it('forbids analytics trends with businessId for non-owner', async () => {
   expect(res.status).toBe(403);
 });
 
+it('forbids coupons analytics for non-owner; allows owner', async () => {
+  // Seed coupon activity
+  db.user_coupons.insert({ id: 'uc3', coupon_id: TEST_COUPON_1, is_redeemed: true });
+  // Non-owner forbidden
+  const forb = await analyticsCoupons(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/analytics/coupons`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_2),
+    })
+  );
+  expect(forb.status).toBe(403);
+  // Owner allowed
+  const ok = await analyticsCoupons(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/analytics/coupons`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(ok.status).toBe(200);
+});
+
 it('updates platform pricing (owner)', async () => {
   const res = await pricingPut(
     makeReq(path(`/api/platform/config/pricing`), 'PUT', { tiers: [{ name: 'basic', price: 0 }] }, {

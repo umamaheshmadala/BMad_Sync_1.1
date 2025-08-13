@@ -4,8 +4,8 @@ info:
   version: 0.1.8
   description: REST-ish endpoints implemented via Netlify Functions with Supabase Auth.
 servers:
-  - url: https://example.com
-    description: Placeholder
+  - url: https://tiny-bombolone-8f8acf.netlify.app
+    description: Production
 components:
   securitySchemes:
     bearerAuth:
@@ -522,7 +522,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Forbidden
+          description: Forbidden (owner or platform only)
           content:
             application/json:
               schema:
@@ -609,7 +609,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Forbidden
+          description: Forbidden (owner or platform only)
           content:
             application/json:
               schema:

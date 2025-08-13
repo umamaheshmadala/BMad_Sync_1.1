@@ -9,7 +9,11 @@ async function initSentryIfConfigured() {
     const dsn = (globalThis as any)?.process?.env?.SENTRY_DSN as string | undefined;
     if (!dsn) return;
     if (!sentryInited && (Sentry as any)?.init) {
-      (Sentry as any).init({ dsn });
+      (Sentry as any).init({
+        dsn,
+        release: (globalThis as any)?.process?.env?.npm_package_version,
+        environment: (globalThis as any)?.process?.env?.NETLIFY ? 'prod' : 'dev',
+      });
       sentryInited = true;
     }
   } catch {}

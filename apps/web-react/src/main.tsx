@@ -9,6 +9,8 @@ try {
   if (dsn) {
     Sentry.init({
       dsn,
+      release: (import.meta as any)?.env?.npm_package_version,
+      environment: (import.meta as any)?.env?.MODE || 'dev',
       tracesSampleRate: 0.0,
       replaysSessionSampleRate: 0.0,
       replaysOnErrorSampleRate: 0.0,
