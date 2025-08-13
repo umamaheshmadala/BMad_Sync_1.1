@@ -5,8 +5,8 @@ import healthGet from '../../apps/api/functions/platform-health-get';
 import { db } from '../setup';
 
 function path(base: string) { return `http://localhost${base}`; }
-function makeReq(url: string, method: string, body?: any) {
-  return new Request(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+function makeReq(url: string, method: string, body?: any, headers?: Record<string, string>) {
+  return new Request(url, { method, headers: { 'Content-Type': 'application/json', ...(headers || {}) }, body: body ? JSON.stringify(body) : undefined });
 }
 
 it('reads platform config with dummy billing mode', async () => {
@@ -31,7 +31,12 @@ it('gets platform revenue summary', async () => {
   (db as any).user_coupons.insert({ id: 'uc2', coupon_id: 'c1', is_redeemed: false });
   (db as any).user_coupons.insert({ id: 'uc3', coupon_id: 'c2', is_redeemed: true });
 
-  const res = await revenueGet(makeReq(path('/api/platform/revenue'), 'GET')) as Response;
+  const ownerHeader = { Authorization: ((): string => {
+    const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({ sub: 'owner-user', role: 'owner' })).toString('base64url');
+    return `Bearer ${header}.${payload}.`;
+  })() };
+  const res = await revenueGet(makeReq(path('/api/platform/revenue'), 'GET', undefined, ownerHeader)) as Response;
   expect(res.status).toBe(200);
   const json = await res.json();
   expect(json).toHaveProperty('coupon_revenue');

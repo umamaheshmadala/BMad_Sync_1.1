@@ -1,9 +1,12 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
+import { isPlatformOwner, isPlatformOwnerAsync } from '../../../packages/shared/auth';
 import { withErrorHandling } from '../../../packages/shared/errors';
 import { withRateLimit } from '../../../packages/shared/ratelimit';
 import { json } from '../../../packages/shared/http';
 
-export default withRateLimit('platform-revenue-get', { limit: 120, windowMs: 60_000 }, withErrorHandling(async () => {
+export default withRateLimit('platform-revenue-get', { limit: 120, windowMs: 60_000 }, withErrorHandling(async (req: Request) => {
+  const allow = (await isPlatformOwnerAsync(req)) || isPlatformOwner(req);
+  if (!allow) return json({ ok: false, error: 'Forbidden' }, { status: 403 });
   const supabase = createSupabaseClient(true) as any;
   // Fetch coupons and user_coupons; compute revenue as cost_per_coupon * redeemed_count
   const [{ data: coupons, error: coupErr }, { data: userCoupons, error: ucErr }] = await Promise.all([

@@ -3,7 +3,7 @@ import { isFeatureEnabled } from '../../../packages/shared/env';
 export default async () => {
   const payload = {
     ok: true,
-    version: '0.1.6',
+    version: '0.1.8',
     time: new Date().toISOString(),
     features: {
       FEATURE_SUPABASE_AUTH: isFeatureEnabled('FEATURE_SUPABASE_AUTH'),
