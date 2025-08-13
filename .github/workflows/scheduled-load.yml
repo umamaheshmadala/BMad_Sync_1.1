@@ -1,0 +1,20 @@
+name: Scheduled Light Load Test
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Light load test
+        run: npx cross-env BASE_URL=${{ secrets.DEPLOYED_BASE_URL }} CONCURRENCY=15 ITERATIONS=300 npm run load:test
+

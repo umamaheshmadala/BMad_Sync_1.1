@@ -23,6 +23,19 @@ function CopyButton({ getText }: { getText: () => string }) {
   );
 }
 
+function CopyCurlButton({ tag, getCurl }: { tag: string; getCurl: (t: string) => string | undefined }) {
+  const curl = getCurl(tag) || '';
+  const disabled = !curl;
+  return (
+    <button
+      className="btn"
+      disabled={disabled}
+      title={disabled ? 'Run the action first to generate cURL' : 'Copy cURL'}
+      onClick={() => { if (curl) { try { (navigator as any)?.clipboard?.writeText(curl); } catch {} } }}
+    >copy cURL</button>
+  );
+}
+
 export default function App() {
   const [token, setToken] = useState(() => {
     try { return localStorage.getItem('sync_token') || ''; } catch { return ''; }
@@ -52,6 +65,7 @@ export default function App() {
   const [lastCurl, setLastCurl] = useState('' as string);
 	const [curlOpen, setCurlOpen] = useState(false as boolean);
   const [curlByAction, setCurlByAction] = useState<Record<string, string>>({});
+  const getCurl = (t: string) => curlByAction[t];
 
   function buildCurl(url: string, init?: RequestInit): string {
     try {
@@ -588,9 +602,9 @@ export default function App() {
         <>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={postStorefront}>POST upsert</button>
-          <button className="btn" onClick={() => { const c = curlByAction['storefront:post']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['storefront:post']}>copy cURL</button>
+          <CopyCurlButton tag={'storefront:post'} getCurl={getCurl} />
           <button onClick={getStorefront}>GET</button>
-          <button className="btn" onClick={() => { const c = curlByAction['storefront:get']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['storefront:get']}>copy cURL</button>
+          <CopyCurlButton tag={'storefront:get'} getCurl={getCurl} />
           <button className="btn" onClick={() => setStorefront(null as any)}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(storefront, null, 2)} />
@@ -614,7 +628,7 @@ export default function App() {
           >
             POST review
           </button>
-          <button className="btn" onClick={() => { const c = curlByAction['reviews:post']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['reviews:post']}>copy cURL</button>
+          <CopyCurlButton tag={'reviews:post'} getCurl={getCurl} />
           <select id="revFilter" defaultValue="">
             <option value="">all</option>
             <option value="true">recommend</option>
@@ -628,7 +642,7 @@ export default function App() {
           >
             GET reviews
           </button>
-          <button className="btn" onClick={() => { const c = curlByAction['reviews:get']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['reviews:get']}>copy cURL</button>
+          <CopyCurlButton tag={'reviews:get'} getCurl={getCurl} />
           <button className="btn" onClick={() => { setReviewResult(null as any); setReviewsList(null as any); setReviewsSummary(null as any); }}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(reviewResult, null, 2)} />
@@ -659,7 +673,7 @@ export default function App() {
           >
             GET matches
           </button>
-          <button className="btn" onClick={() => { const c = curlByAction['wishlist:matches']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['wishlist:matches']}>copy cURL</button>
+          <CopyCurlButton tag={'wishlist:matches'} getCurl={getCurl} />
           <button className="btn" onClick={() => setWishlistMatches(null as any)}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(wishlistMatches, null, 2)} />
@@ -750,7 +764,7 @@ export default function App() {
           >
             GET products
           </button>
-          <button className="btn" onClick={() => { const c = curlByAction['products:get']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['products:get']}>copy cURL</button>
+          <CopyCurlButton tag={'products:get'} getCurl={getCurl} />
           <button className="btn" onClick={() => setProducts(null as any)}>clear</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
@@ -833,7 +847,7 @@ export default function App() {
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button onClick={postAd}>POST ad</button>
-          <button className="btn" onClick={() => { const c = curlByAction['ads:post']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['ads:post']}>copy cURL</button>
+          <CopyCurlButton tag={'ads:post'} getCurl={getCurl} />
           <button className="btn" onClick={() => setAdsResult(null as any)}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(adsResult, null, 2)} />
@@ -849,31 +863,31 @@ export default function App() {
           <input id="offerTitle" className="input" placeholder="offer title" />
           <input id="offerQty" className="input" placeholder="total_quantity (optional)" />
           <button className="btn" onClick={createOffer}>POST offer</button>
-          <button className="btn" onClick={() => { const c = curlByAction['offers:create']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['offers:create']}>copy cURL</button>
+          <CopyCurlButton tag={'offers:create'} getCurl={getCurl} />
         </div>
         <div className="grid grid-cols-3 gap-2 mt-2">
           <input id="offerId" className="input" placeholder="offerId" />
           <input id="offerGenQty" className="input" placeholder="generate total_quantity (optional)" />
           <button className="btn" onClick={generateOfferCoupons}>POST generate coupons</button>
-          <button className="btn" onClick={() => { const c = curlByAction['offers:generate']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['offers:generate']}>copy cURL</button>
+          <CopyCurlButton tag={'offers:generate'} getCurl={getCurl} />
         </div>
         <div className="grid grid-cols-3 gap-2 mt-2">
           <input id="collectCouponId" className="input" placeholder="coupon_id to collect (from offer)" />
           <div></div>
           <button className="btn" onClick={collectCoupon}>COLLECT to my wallet</button>
-          <button className="btn" onClick={() => { const c = curlByAction['offers:collect']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['offers:collect']}>copy cURL</button>
+          <CopyCurlButton tag={'offers:collect'} getCurl={getCurl} />
         </div>
         <div className="grid grid-cols-3 gap-2 mt-2">
           <input id="redeemCode" className="input" placeholder="unique_code (from collect)" />
           <input id="redeemBizId" className="input" placeholder="businessId (owner)" />
           <button className="btn" onClick={redeemAtBusiness}>POST redeem</button>
-          <button className="btn" onClick={() => { const c = curlByAction['offers:redeem']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['offers:redeem']}>copy cURL</button>
+          <CopyCurlButton tag={'offers:redeem'} getCurl={getCurl} />
         </div>
         <div className="flex gap-2 mt-2">
           <button className="btn" onClick={getRevenue}>GET revenue</button>
-          <button className="btn" onClick={() => { const c = curlByAction['platform:revenue']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['platform:revenue']}>copy cURL</button>
+          <CopyCurlButton tag={'platform:revenue'} getCurl={getCurl} />
           <button className="btn" onClick={getCouponAnalytics}>GET coupon analytics</button>
-          <button className="btn" onClick={() => { const c = curlByAction['analytics:coupons']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['analytics:coupons']}>copy cURL</button>
+          <CopyCurlButton tag={'analytics:coupons'} getCurl={getCurl} />
           <button className="btn" onClick={() => { setOffersResult(null as any); setRedeemResult(null as any); setRevenueResult(null as any); setCouponAnalytics(null as any); }}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(offersResult, null, 2)} />
@@ -909,7 +923,7 @@ export default function App() {
             />
           </label>
           <button onClick={getTrends}>GET trends</button>
-          <button className="btn" onClick={() => { const c = curlByAction['analytics:trends']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['analytics:trends']}>copy cURL</button>
+          <CopyCurlButton tag={'analytics:trends'} getCurl={getCurl} />
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
           <button className="btn" onClick={() => setTrendsResult(null as any)}>clear</button>
         </div>
@@ -946,7 +960,7 @@ export default function App() {
             />
           </label>
           <button className="btn" onClick={getFunnel}>GET funnel</button>
-          <button className="btn" onClick={() => { const c = curlByAction['analytics:funnel']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['analytics:funnel']}>copy cURL</button>
+          <CopyCurlButton tag={'analytics:funnel'} getCurl={getCurl} />
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
           <button className="btn" onClick={() => setFunnelResult(null as any)}>clear</button>
         </div>
@@ -1022,7 +1036,7 @@ export default function App() {
         <textarea id="pricingJson" style={{ width: '100%', height: 120 }} defaultValue={'{"tiers":[{"name":"basic","price":0},{"name":"pro","price":1000}]}' as any} />
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button onClick={putPricing}>PUT pricing</button>
-          <button className="btn" onClick={() => { const c = curlByAction['platform:pricing']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['platform:pricing']}>copy cURL</button>
+          <CopyCurlButton tag={'platform:pricing'} getCurl={getCurl} />
           <button className="btn" onClick={() => setPricingResult(null as any)}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(pricingResult, null, 2)} />

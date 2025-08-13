@@ -1,0 +1,22 @@
+name: Scheduled Smoke Tests
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Run smoke tests against deployed URL
+        run: node scripts/smoke.mjs
+        env:
+          BASE_URL: ${{ secrets.DEPLOYED_BASE_URL }}
+
