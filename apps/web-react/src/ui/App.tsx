@@ -51,6 +51,7 @@ export default function App() {
 	const [lastMeta, setLastMeta] = useState(null as any);
   const [lastCurl, setLastCurl] = useState('' as string);
 	const [curlOpen, setCurlOpen] = useState(false as boolean);
+  const [curlByAction, setCurlByAction] = useState<Record<string, string>>({});
 
   function buildCurl(url: string, init?: RequestInit): string {
     try {
@@ -76,6 +77,15 @@ export default function App() {
     const res = await fetch(url, init);
     try { setLastCurl(buildCurl(url, init)); } catch {}
     recordHeaders(res);
+    return res;
+  }
+
+  async function actionFetch(tag: string, url: string, init?: RequestInit): Promise<Response> {
+    const res = await apiFetch(url, init);
+    try {
+      const curl = buildCurl(url, init);
+      setCurlByAction((prev) => ({ ...prev, [tag]: curl }));
+    } catch {}
     return res;
   }
   function recordHeaders(res: Response) {
@@ -108,7 +118,7 @@ export default function App() {
   });
 
   async function postStorefront() {
-    const res = await apiFetch('/api/business/storefront', {
+    const res = await actionFetch('storefront:post', '/api/business/storefront', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ description: 'React SF', theme: 'light', is_open: true }),
@@ -177,7 +187,7 @@ export default function App() {
     const description = (document.getElementById('adDesc') as HTMLInputElement)?.value?.trim();
     const image = (document.getElementById('adImg') as HTMLInputElement)?.value?.trim();
     if (!title) { alert('title required'); return; }
-    const res = await apiFetch('/api/business/ads', {
+    const res = await actionFetch('ads:post', '/api/business/ads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ title, description, image_url: image || null })
@@ -193,7 +203,7 @@ export default function App() {
     const qtyStr = (document.getElementById('offerQty') as HTMLInputElement)?.value?.trim();
     if (!title) { showToast('title required'); return; }
     const total_quantity = qtyStr && !Number.isNaN(Number(qtyStr)) ? Number(qtyStr) : undefined;
-    const res = await apiFetch('/api/business/offers', {
+    const res = await actionFetch('offers:create', '/api/business/offers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ title, total_quantity })
@@ -209,7 +219,7 @@ export default function App() {
     const qtyStr = (document.getElementById('offerGenQty') as HTMLInputElement)?.value?.trim();
     if (!offerId) { showToast('offerId required'); return; }
     const total_quantity = qtyStr && !Number.isNaN(Number(qtyStr)) ? Number(qtyStr) : undefined;
-    const res = await apiFetch(`/api/business/offers/${offerId}/coupons`, {
+    const res = await actionFetch('offers:generate', `/api/business/offers/${offerId}/coupons`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ total_quantity })
@@ -225,7 +235,7 @@ export default function App() {
     const userId = parseUserIdFromBearer();
     if (!userId) { showToast('Set a valid Bearer token (Auth tab)'); return; }
     if (!couponId) { showToast('coupon_id required'); return; }
-    const res = await apiFetch(`/api/users/${userId}/coupons/collect`, {
+    const res = await actionFetch('offers:collect', `/api/users/${userId}/coupons/collect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ coupon_id: couponId })
@@ -240,7 +250,7 @@ export default function App() {
     const unique = (document.getElementById('redeemCode') as HTMLInputElement)?.value?.trim();
     const biz = (document.getElementById('redeemBizId') as HTMLInputElement)?.value?.trim();
     if (!unique || !biz) { showToast('unique_code and businessId required'); return; }
-    const res = await apiFetch(`/api/business/${biz}/redeem`, {
+    const res = await actionFetch('offers:redeem', `/api/business/${biz}/redeem`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ unique_code: unique })
@@ -252,7 +262,7 @@ export default function App() {
   }
 
   async function getRevenue() {
-    const res = await apiFetch('/api/platform/revenue', { headers: { ...authHeaders } });
+    const res = await actionFetch('platform:revenue', '/api/platform/revenue', { headers: { ...authHeaders } });
     const j = await res.json();
     setRevenueResult(j);
   }
@@ -260,7 +270,7 @@ export default function App() {
   async function getCouponAnalytics() {
     const biz = (document.getElementById('redeemBizId') as HTMLInputElement)?.value?.trim();
     if (!biz) { showToast('businessId required'); return; }
-    const res = await apiFetch(`/api/business/${biz}/analytics/coupons`, { headers: { ...authHeaders } });
+    const res = await actionFetch('analytics:coupons', `/api/business/${biz}/analytics/coupons`, { headers: { ...authHeaders } });
     const j = await res.json();
     setCouponAnalytics(j);
   }
@@ -277,7 +287,7 @@ export default function App() {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10000);
     try {
-      const res = await apiFetch(`/api/business/analytics/trends${qs}`, { headers: { ...authHeaders }, signal: controller.signal });
+      const res = await actionFetch('analytics:trends', `/api/business/analytics/trends${qs}`, { headers: { ...authHeaders }, signal: controller.signal } as any);
       recordHeaders(res);
       const j = await res.json();
       setTrendsResult(j);
@@ -302,7 +312,7 @@ export default function App() {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10000);
     try {
-      const res = await apiFetch(`/api/business/analytics/funnel${qs}`, { headers: { ...authHeaders }, signal: controller.signal });
+      const res = await actionFetch('analytics:funnel', `/api/business/analytics/funnel${qs}`, { headers: { ...authHeaders }, signal: controller.signal } as any);
       recordHeaders(res);
       const j = await res.json();
       setFunnelResult(j);
@@ -319,7 +329,7 @@ export default function App() {
     const txt = (document.getElementById('pricingJson') as HTMLTextAreaElement)?.value;
     let payload: any;
     try { payload = JSON.parse(txt || '{}'); } catch { alert('Invalid JSON'); return; }
-    const res = await apiFetch('/api/platform/config/pricing', {
+    const res = await actionFetch('platform:pricing', '/api/platform/config/pricing', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify(payload),
@@ -331,7 +341,7 @@ export default function App() {
   }
 
   async function getStorefront() {
-    const res = await apiFetch('/api/business/storefront', { headers: { ...authHeaders } });
+    const res = await actionFetch('storefront:get', '/api/business/storefront', { headers: { ...authHeaders } });
     const j = await res.json();
     setStorefront(j);
     if (j?.storefront?.business_id) setSessionBusinessId(String(j.storefront.business_id));
@@ -339,7 +349,7 @@ export default function App() {
   }
 
   async function postReview(businessId: string) {
-    const res = await apiFetch(`/api/business/${businessId}/reviews`, {
+    const res = await actionFetch('reviews:post', `/api/business/${businessId}/reviews`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ recommend_status: true, review_text: 'Great place!' }),
@@ -359,24 +369,24 @@ export default function App() {
     if (limit) params.set('limit', String(limit));
     if (offset) params.set('offset', String(offset));
     const qs = params.toString() ? `?${params.toString()}` : '';
-    const res = await apiFetch(`/api/business/${businessId}/reviews${qs}`, { headers: { ...authHeaders } });
+    const res = await actionFetch('reviews:get', `/api/business/${businessId}/reviews${qs}`, { headers: { ...authHeaders } });
     const list = await res.json();
     setReviewsList(list);
     if (!list?.ok) showToast(list?.error || 'Reviews fetch error', 'error');
     // Fetch summary
-    const resSum = await apiFetch(`/api/business/${businessId}/analytics/reviews`, { headers: { ...authHeaders } });
+    const resSum = await actionFetch('analytics:reviews', `/api/business/${businessId}/analytics/reviews`, { headers: { ...authHeaders } });
     setReviewsSummary(await resSum.json());
   }
 
   async function getWishlistMatches(userId: string) {
-    const res = await apiFetch(`/api/users/${userId}/wishlist/matches`, { headers: { ...authHeaders } });
+    const res = await actionFetch('wishlist:matches', `/api/users/${userId}/wishlist/matches`, { headers: { ...authHeaders } });
     const j = await res.json();
     setWishlistMatches(j);
     if (!j?.ok) showToast(j?.error || 'Matches fetch error', 'error');
   }
 
   async function getProducts(storefrontId: string) {
-    const res = await apiFetch(`/api/storefronts/${storefrontId}/products`, { headers: { ...authHeaders } });
+    const res = await actionFetch('products:get', `/api/storefronts/${storefrontId}/products`, { headers: { ...authHeaders } });
     const j = await res.json();
     setProducts(j);
     if (!j?.ok) showToast(j?.error || 'Products fetch error', 'error');
@@ -578,7 +588,9 @@ export default function App() {
         <>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={postStorefront}>POST upsert</button>
+          <button className="btn" onClick={() => { const c = curlByAction['storefront:post']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['storefront:post']}>copy cURL</button>
           <button onClick={getStorefront}>GET</button>
+          <button className="btn" onClick={() => { const c = curlByAction['storefront:get']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['storefront:get']}>copy cURL</button>
           <button className="btn" onClick={() => setStorefront(null as any)}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(storefront, null, 2)} />
@@ -602,6 +614,7 @@ export default function App() {
           >
             POST review
           </button>
+          <button className="btn" onClick={() => { const c = curlByAction['reviews:post']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['reviews:post']}>copy cURL</button>
           <select id="revFilter" defaultValue="">
             <option value="">all</option>
             <option value="true">recommend</option>
@@ -615,6 +628,7 @@ export default function App() {
           >
             GET reviews
           </button>
+          <button className="btn" onClick={() => { const c = curlByAction['reviews:get']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['reviews:get']}>copy cURL</button>
           <button className="btn" onClick={() => { setReviewResult(null as any); setReviewsList(null as any); setReviewsSummary(null as any); }}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(reviewResult, null, 2)} />
@@ -645,6 +659,7 @@ export default function App() {
           >
             GET matches
           </button>
+          <button className="btn" onClick={() => { const c = curlByAction['wishlist:matches']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['wishlist:matches']}>copy cURL</button>
           <button className="btn" onClick={() => setWishlistMatches(null as any)}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(wishlistMatches, null, 2)} />
@@ -735,6 +750,7 @@ export default function App() {
           >
             GET products
           </button>
+          <button className="btn" onClick={() => { const c = curlByAction['products:get']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['products:get']}>copy cURL</button>
           <button className="btn" onClick={() => setProducts(null as any)}>clear</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
@@ -784,7 +800,7 @@ export default function App() {
                 suggested: !!suggested,
               };
 
-      const res = await apiFetch(`/api/storefronts/${sfId}/products`, {
+      const res = await actionFetch('products:post', `/api/storefronts/${sfId}/products`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHeaders },
                 body: JSON.stringify({ items: [payload] }),
@@ -817,6 +833,7 @@ export default function App() {
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button onClick={postAd}>POST ad</button>
+          <button className="btn" onClick={() => { const c = curlByAction['ads:post']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['ads:post']}>copy cURL</button>
           <button className="btn" onClick={() => setAdsResult(null as any)}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(adsResult, null, 2)} />
@@ -832,25 +849,31 @@ export default function App() {
           <input id="offerTitle" className="input" placeholder="offer title" />
           <input id="offerQty" className="input" placeholder="total_quantity (optional)" />
           <button className="btn" onClick={createOffer}>POST offer</button>
+          <button className="btn" onClick={() => { const c = curlByAction['offers:create']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['offers:create']}>copy cURL</button>
         </div>
         <div className="grid grid-cols-3 gap-2 mt-2">
           <input id="offerId" className="input" placeholder="offerId" />
           <input id="offerGenQty" className="input" placeholder="generate total_quantity (optional)" />
           <button className="btn" onClick={generateOfferCoupons}>POST generate coupons</button>
+          <button className="btn" onClick={() => { const c = curlByAction['offers:generate']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['offers:generate']}>copy cURL</button>
         </div>
         <div className="grid grid-cols-3 gap-2 mt-2">
           <input id="collectCouponId" className="input" placeholder="coupon_id to collect (from offer)" />
           <div></div>
           <button className="btn" onClick={collectCoupon}>COLLECT to my wallet</button>
+          <button className="btn" onClick={() => { const c = curlByAction['offers:collect']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['offers:collect']}>copy cURL</button>
         </div>
         <div className="grid grid-cols-3 gap-2 mt-2">
           <input id="redeemCode" className="input" placeholder="unique_code (from collect)" />
           <input id="redeemBizId" className="input" placeholder="businessId (owner)" />
           <button className="btn" onClick={redeemAtBusiness}>POST redeem</button>
+          <button className="btn" onClick={() => { const c = curlByAction['offers:redeem']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['offers:redeem']}>copy cURL</button>
         </div>
         <div className="flex gap-2 mt-2">
           <button className="btn" onClick={getRevenue}>GET revenue</button>
+          <button className="btn" onClick={() => { const c = curlByAction['platform:revenue']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['platform:revenue']}>copy cURL</button>
           <button className="btn" onClick={getCouponAnalytics}>GET coupon analytics</button>
+          <button className="btn" onClick={() => { const c = curlByAction['analytics:coupons']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['analytics:coupons']}>copy cURL</button>
           <button className="btn" onClick={() => { setOffersResult(null as any); setRedeemResult(null as any); setRevenueResult(null as any); setCouponAnalytics(null as any); }}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(offersResult, null, 2)} />
@@ -886,6 +909,7 @@ export default function App() {
             />
           </label>
           <button onClick={getTrends}>GET trends</button>
+          <button className="btn" onClick={() => { const c = curlByAction['analytics:trends']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['analytics:trends']}>copy cURL</button>
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
           <button className="btn" onClick={() => setTrendsResult(null as any)}>clear</button>
         </div>
@@ -922,6 +946,7 @@ export default function App() {
             />
           </label>
           <button className="btn" onClick={getFunnel}>GET funnel</button>
+          <button className="btn" onClick={() => { const c = curlByAction['analytics:funnel']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['analytics:funnel']}>copy cURL</button>
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
           <button className="btn" onClick={() => setFunnelResult(null as any)}>clear</button>
         </div>
@@ -997,6 +1022,7 @@ export default function App() {
         <textarea id="pricingJson" style={{ width: '100%', height: 120 }} defaultValue={'{"tiers":[{"name":"basic","price":0},{"name":"pro","price":1000}]}' as any} />
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button onClick={putPricing}>PUT pricing</button>
+          <button className="btn" onClick={() => { const c = curlByAction['platform:pricing']; if (c) { (navigator as any)?.clipboard?.writeText(c); showToast('Copied cURL', 'success'); } }} disabled={!curlByAction['platform:pricing']}>copy cURL</button>
           <button className="btn" onClick={() => setPricingResult(null as any)}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(pricingResult, null, 2)} />
