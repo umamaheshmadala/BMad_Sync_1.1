@@ -37,6 +37,7 @@
 - Server logs include reqId, method, path, status, latency
  - CI surfaces Supabase Advisors findings in a GitHub issue labeled `advisors`
  - EXPLAIN baselines: thresholds via EXPLAIN_MAX_ROWS and EXPLAIN_STRICT (CI env)
+ - Optional Sentry: set `SENTRY_DSN` (functions) and `VITE_SENTRY_DSN` (frontend). `x-request-id` is added as a tag.
 
 #### Common runbooks
 1) Elevated error rates (429/5xx)

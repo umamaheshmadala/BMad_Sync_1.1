@@ -59,6 +59,7 @@ Environment variables:
 - UI autofill (recommended): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
  - Advisors (optional): `SUPABASE_PAT`, `SUPABASE_PROJECT_ID`, and optionally `STRICT_ADVISORS=true`
  - EXPLAIN baselines (optional): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+ - Sentry (optional): `VITE_SENTRY_DSN` (frontend), `SENTRY_DSN` (functions)
 
 CLI deploy (optional):
 
