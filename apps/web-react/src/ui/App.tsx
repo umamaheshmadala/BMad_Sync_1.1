@@ -36,6 +36,42 @@ function CopyCurlButton({ tag, getCurl }: { tag: string; getCurl: (t: string) =>
   );
 }
 
+function MiniBars({
+  entries,
+  maxY,
+  renderBar,
+  height = 120,
+  gap = 6,
+  width = 16,
+  border = '1px solid #333',
+  padding = '6px 0',
+  legend,
+}: {
+  entries: Array<[string, any]>;
+  maxY: number;
+  renderBar: (day: string, value: any, scaled: (v: number) => number) => React.ReactNode;
+  height?: number;
+  gap?: number;
+  width?: number;
+  border?: string;
+  padding?: string;
+  legend?: React.ReactNode;
+}) {
+  const scaled = (v: number) => Math.max(2, Math.round((v / (maxY || 1)) * (height - 10)));
+  return (
+    <div>
+      {legend ? (<div style={{ marginBottom: 4 }}>{legend}</div>) : null}
+      <div style={{ display: 'flex', gap, alignItems: 'flex-end', height, borderBottom: border, padding }}>
+        {entries.map(([day, v]) => (
+          <div key={day} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width }}>
+            {renderBar(day, v, scaled)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [token, setToken] = useState(() => {
     try { return localStorage.getItem('sync_token') || ''; } catch { return ''; }
@@ -59,15 +95,22 @@ export default function App() {
   const [adsResult, setAdsResult] = useState(null as any);
   const [trendsResult, setTrendsResult] = useState(null as any);
   const [funnelResult, setFunnelResult] = useState(null as any);
-  const [analyticsSinceDays, setAnalyticsSinceDays] = useState(7 as number);
+  const initialSinceDays = (() => { try { const v = Number(localStorage.getItem('sync_analytics_since_days') || '7'); return Math.max(1, Math.min(365, isFinite(v) ? v : 7)); } catch { return 7; } })();
+  const [analyticsSinceDays, setAnalyticsSinceDays] = useState(initialSinceDays as number);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false as boolean);
   const [isLoadingFunnel, setIsLoadingFunnel] = useState(false as boolean);
+  const [isLoadingOffers, setIsLoadingOffers] = useState(false as boolean);
+  const [isLoadingCoupons, setIsLoadingCoupons] = useState(false as boolean);
 	const [lastMeta, setLastMeta] = useState(null as any);
   const [lastCurl, setLastCurl] = useState('' as string);
 	const [curlOpen, setCurlOpen] = useState(false as boolean);
   type CurlMap = Record<string, string>;
   const [curlByAction, setCurlByAction] = useState({} as CurlMap);
   const getCurl = (t: string) => curlByAction[t];
+  const initialCompact = (() => { try { return (localStorage.getItem('sync_compact_rows') || '') === '1'; } catch { return false; } })();
+  const [compactRows, setCompactRows] = useState(initialCompact as boolean);
+  const offersDebounceRef = useRef(null as any);
+  const couponsDebounceRef = useRef(null as any);
 
   function buildCurl(url: string, init?: RequestInit): string {
     try {
@@ -127,13 +170,38 @@ export default function App() {
   const [ratelimitResult, setRatelimitResult] = useState(null as any);
   const [couponAnalytics, setCouponAnalytics] = useState(null as any);
   const [healthResult, setHealthResult] = useState(null as any);
+  const [features, setFeatures] = useState({} as any);
   const [authResult, setAuthResult] = useState(null as any);
-  const [offersPage, setOffersPage] = useState(1 as number);
-  const [offersPageSize, setOffersPageSize] = useState(10 as number);
-  const [reviewsPage, setReviewsPage] = useState(1 as number);
-  const [reviewsPageSize, setReviewsPageSize] = useState(10 as number);
+  const initialOffersSearch = (() => { try { return localStorage.getItem('sync_offers_search') || ''; } catch { return ''; } })();
+  const [offersSearch, setOffersSearch] = useState(initialOffersSearch as string);
+  const initialOffersSort = (() => { try { return localStorage.getItem('sync_offers_sort') || ''; } catch { return ''; } })();
+  const [offersSort, setOffersSort] = useState(initialOffersSort as any);
+  const initialCouponsSort = (() => { try { return localStorage.getItem('sync_coupons_sort') || ''; } catch { return ''; } })();
+  const [couponsSort, setCouponsSort] = useState(initialCouponsSort as any);
+  const initialOffersOrder = (() => { try { return localStorage.getItem('sync_offers_order') || (initialOffersSort==='title' ? 'title.asc' : 'start_date.desc'); } catch { return 'start_date.desc'; } })();
+  const [offersOrder, setOffersOrder] = useState(initialOffersOrder as string);
+  const initialCouponsOrder = (() => { try { return localStorage.getItem('sync_coupons_order') || (initialCouponsSort==='code' ? 'unique_code.asc' : 'is_redeemed.desc'); } catch { return 'unique_code.asc'; } })();
+  const [couponsOrder, setCouponsOrder] = useState(initialCouponsOrder as string);
+  const initialCouponsPage = (() => { try { return Number(localStorage.getItem('sync_coupons_page') || '1') || 1; } catch { return 1; } })();
+  const initialCouponsPageSize = (() => { try { return Number(localStorage.getItem('sync_coupons_page_size') || '10') || 10; } catch { return 10; } })();
+  const initialCouponsSearch = (() => { try { return localStorage.getItem('sync_coupons_search') || ''; } catch { return ''; } })();
+  const [couponsPage, setCouponsPage] = useState(initialCouponsPage as number);
+  const [couponsPageSize, setCouponsPageSize] = useState(initialCouponsPageSize as number);
+  const [couponsSearch, setCouponsSearch] = useState(initialCouponsSearch as string);
+  const [lastPreviewOfferId, setLastPreviewOfferId] = useState('' as string);
+  const initialOffersPage = (() => { try { return Number(localStorage.getItem('sync_offers_page') || '1') || 1; } catch { return 1; } })();
+  const initialOffersPageSize = (() => { try { return Number(localStorage.getItem('sync_offers_page_size') || '10') || 10; } catch { return 10; } })();
+  const [offersPage, setOffersPage] = useState(initialOffersPage as number);
+  const [offersPageSize, setOffersPageSize] = useState(initialOffersPageSize as number);
+  const initialReviewsPage = (() => { try { return Number(localStorage.getItem('sync_reviews_page') || '1') || 1; } catch { return 1; } })();
+  const initialReviewsPageSize = (() => { try { return Number(localStorage.getItem('sync_reviews_page_size') || '10') || 10; } catch { return 10; } })();
+  const [reviewsPage, setReviewsPage] = useState(initialReviewsPage as number);
+  const [reviewsPageSize, setReviewsPageSize] = useState(initialReviewsPageSize as number);
   const [rateKeyFilter, setRateKeyFilter] = useState('' as string);
-  const [reviewsFilterText, setReviewsFilterText] = useState('' as string);
+  const initialReviewsFilter = (() => { try { return localStorage.getItem('sync_reviews_filter') || ''; } catch { return ''; } })();
+  const [reviewsFilterText, setReviewsFilterText] = useState(initialReviewsFilter as string);
+  const initialReviewsOrder = (() => { try { return localStorage.getItem('sync_reviews_order') || 'created_at.desc'; } catch { return 'created_at.desc'; } })();
+  const [reviewsOrder, setReviewsOrder] = useState(initialReviewsOrder as string);
   const initialSbUrl = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_URL || ''; } catch { return ''; } })();
   const initialSbAnon = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_ANON_KEY || ''; } catch { return ''; } })();
   const [sbUrl, setSbUrl] = useState(initialSbUrl as string);
@@ -148,6 +216,18 @@ export default function App() {
     } catch { return 'cosmic'; }
   })();
   const [theme, setTheme] = useState(initialTheme as Theme);
+
+  useEffect(() => {
+    // Prefetch platform health to get feature flags for gating UI bits
+    (async () => {
+      try {
+        const res = await apiFetch('/api/platform/health');
+        const j = await res.json();
+        setHealthResult((prev: any) => prev || j);
+        if (j?.features) setFeatures(j.features);
+      } catch {}
+    })();
+  }, []);
 
   async function postStorefront() {
     const res = await actionFetch('storefront:post', '/api/business/storefront', {
@@ -309,6 +389,41 @@ export default function App() {
     setRevenueResult(j);
   }
 
+  async function fetchOffers() {
+    try {
+      setIsLoadingOffers(true);
+      const params = new URLSearchParams();
+      if (offersSearch && offersSearch.trim()) params.set('q', offersSearch.trim());
+      params.set('limit', String(offersPageSize));
+      params.set('offset', String((offersPage - 1) * offersPageSize));
+      if (offersOrder) params.set('order', offersOrder);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const res = await apiFetch(`/api/business/offers${qs}`, { headers: { ...authHeaders } });
+      const j = await res.json();
+      setOffersResult({ ...(offersResult||{}), offers_list: { ...(j||{}) } });
+    } catch (e: any) { showToast('offers list error', 'error'); }
+    finally { setIsLoadingOffers(false); }
+  }
+
+  async function fetchCoupons() {
+    try {
+      const id = (document.getElementById('offerId') as HTMLInputElement)?.value?.trim();
+      if (!id) { alert('set offerId'); return; }
+      setLastPreviewOfferId(id);
+      setIsLoadingCoupons(true);
+      const params = new URLSearchParams();
+      if (couponsOrder) params.set('order', couponsOrder);
+      if (couponsSearch && couponsSearch.trim()) params.set('q', couponsSearch.trim());
+      params.set('limit', String(couponsPageSize));
+      params.set('offset', String((couponsPage - 1) * couponsPageSize));
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const res = await apiFetch(`/api/business/offers/${id}/coupons${qs}`, { headers: { ...authHeaders } });
+      const j = await res.json();
+      setOffersResult({ ...(offersResult||{}), coupons_preview: { ...(j||{}) } });
+    } catch (e: any) { showToast('coupons preview error', 'error'); }
+    finally { setIsLoadingCoupons(false); }
+  }
+
   async function getCouponAnalytics() {
     const biz = (document.getElementById('redeemBizId') as HTMLInputElement)?.value?.trim();
     if (!biz) { showToast('businessId required'); return; }
@@ -413,6 +528,16 @@ export default function App() {
       const j = await res.json();
       setFunnelResult(j);
       if (!j?.ok) showToast(j?.error || 'Funnel fetch error');
+      // Also refresh trends in background for mini chart (collected/redeemed by day)
+      try {
+        const tParams = new URLSearchParams();
+        if (bizId) tParams.set('businessId', bizId);
+        if (!tParams.has('sinceDays')) tParams.set('sinceDays', String(analyticsSinceDays || 7));
+        const tQs = tParams.toString() ? `?${tParams.toString()}` : '';
+        const tres = await actionFetch('analytics:trends', `/api/business/analytics/trends${tQs}`, { headers: { ...authHeaders } });
+        const tj = await tres.json();
+        setTrendsResult(tj);
+      } catch {}
     } catch (e: any) {
       showToast(e?.name === 'AbortError' ? 'Funnel timeout' : (e?.message || 'Funnel error'));
     } finally {
@@ -458,20 +583,27 @@ export default function App() {
 
   async function getReviews(businessId: string) {
     const filter = (document.getElementById('revFilter') as HTMLSelectElement)?.value;
-    const limit = (document.getElementById('revLimit') as HTMLInputElement)?.value || '10';
-    const offset = (document.getElementById('revOffset') as HTMLInputElement)?.value || '0';
     const params = new URLSearchParams();
     if (filter) params.set('recommend', filter);
-    if (limit) params.set('limit', String(limit));
-    if (offset) params.set('offset', String(offset));
+    params.set('limit', String(reviewsPageSize));
+    params.set('offset', String((reviewsPage - 1) * reviewsPageSize));
+    if (reviewsOrder) params.set('order', reviewsOrder);
     const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await actionFetch('reviews:get', `/api/business/${businessId}/reviews${qs}`, { headers: { ...authHeaders } });
     const list = await res.json();
     setReviewsList(list);
     if (!list?.ok) showToast(list?.error || 'Reviews fetch error', 'error');
-    // Fetch summary
+    // Fetch summary and trends for mini-chart
     const resSum = await actionFetch('analytics:reviews', `/api/business/${businessId}/analytics/reviews`, { headers: { ...authHeaders } });
     setReviewsSummary(await resSum.json());
+    try {
+      const tParams = new URLSearchParams();
+      tParams.set('businessId', businessId);
+      const tQs = `?${tParams.toString()}`;
+      const tres = await actionFetch('analytics:trends', `/api/business/analytics/trends${tQs}`, { headers: { ...authHeaders } });
+      const tj = await tres.json();
+      setTrendsResult(tj);
+    } catch {}
   }
 
   async function getWishlistMatches(userId: string) {
@@ -546,6 +678,16 @@ export default function App() {
   function formatTs(ts?: string) {
     if (!ts) return '';
     try { return new Date(ts).toLocaleString(); } catch { return ts; }
+  }
+
+  function parseOrder(order: string): { col: string; dir: 'asc' | 'desc' } {
+    try { const [c, d] = String(order||'').split('.') as [string, any]; return { col: c||'', dir: (d==='asc'?'asc':'desc') as 'asc'|'desc' }; } catch { return { col: '', dir: 'asc' }; }
+  }
+
+  function toggleOrder(current: string, col: string, defaultDir: 'asc' | 'desc') {
+    const { col: curCol, dir } = parseOrder(current);
+    if (curCol !== col) return `${col}.${defaultDir}`;
+    return `${col}.${dir==='asc' ? 'desc' : 'asc'}`;
   }
 
 	function showToast(message: string, type: 'success' | 'error' = 'error') {
@@ -633,15 +775,17 @@ export default function App() {
           <div className="flex gap-2">
             <button className="btn" onClick={signup}>signup</button>
             <button className="btn" onClick={login}>login</button>
-            <button className="btn" title="build unsigned owner token" onClick={() => {
-              const email = (document.getElementById('authEmail') as HTMLInputElement)?.value?.trim();
-              const role = (document.getElementById('authRole') as HTMLInputElement)?.value?.trim() || 'owner';
-              const sub = email || '11111111-1111-1111-1111-111111111111';
-              const bearer = makeUnsignedBearer(sub, role);
-              setToken(bearer);
-              try { localStorage.setItem('sync_token', bearer); } catch {}
-              showToast('Bearer built', 'success');
-            }}>build owner bearer</button>
+            {features?.FEATURE_SUPABASE_AUTH ? null : (
+              <button className="btn" title="build unsigned owner token" onClick={() => {
+                const email = (document.getElementById('authEmail') as HTMLInputElement)?.value?.trim();
+                const role = (document.getElementById('authRole') as HTMLInputElement)?.value?.trim() || 'owner';
+                const sub = email || '11111111-1111-1111-1111-111111111111';
+                const bearer = makeUnsignedBearer(sub, role);
+                setToken(bearer);
+                try { localStorage.setItem('sync_token', bearer); } catch {}
+                showToast('Bearer built', 'success');
+              }}>build owner bearer</button>
+            )}
           </div>
         </div>
         <div className="mt-2 p-2 border border-dashed border-[color:var(--border)] rounded-md">
@@ -720,8 +864,58 @@ export default function App() {
         <>
         <div style={{ display: 'flex', gap: 8 }}>
           <input id="bizId" placeholder="businessId" />
-          <input id="revLimit" placeholder="limit" defaultValue={10 as any} style={{ width: 64 }} />
-          <input id="revOffset" placeholder="offset" defaultValue={0 as any} style={{ width: 72 }} />
+          <select className="input" value={reviewsPageSize as any} onChange={(e) => {
+            const n = Number((e.target as HTMLSelectElement).value || 10);
+            setReviewsPageSize(n);
+            setReviewsPage(1);
+            try { localStorage.setItem('sync_reviews_page_size', String(n)); localStorage.setItem('sync_reviews_page', '1'); } catch {}
+          }}>
+            {[10,20,50,100].map(n => (<option key={n} value={n as any}>{n} / page</option>))}
+          </select>
+            <div className="flex" style={{ gap: 6, alignItems: 'center' }}>
+            <button className="btn" onClick={() => { const n = Math.max(1, reviewsPage - 1); setReviewsPage(n); try { localStorage.setItem('sync_reviews_page', String(n)); } catch {} }} disabled={reviewsPage <= 1}>&lt;</button>
+            <span className="muted text-sm">page {reviewsPage}{(() => {
+              try {
+                const total = Number(reviewsList?.total || 0);
+                const pages = Math.max(1, Math.ceil(total / (reviewsPageSize || 10)));
+                return ` of ${pages} (total ${total})`;
+              } catch { return ''; }
+            })()}</span>
+            <button className="btn" onClick={() => { const n = reviewsPage + 1; setReviewsPage(n); try { localStorage.setItem('sync_reviews_page', String(n)); } catch {} }} disabled={(() => {
+              try {
+                const total = Number(reviewsList?.total || 0);
+                const pages = Math.max(1, Math.ceil(total / (reviewsPageSize || 10)));
+                return reviewsPage >= pages;
+              } catch { return false; }
+            })()}>&gt;</button>
+              {(() => {
+                const total = Number(reviewsList?.total || 0);
+                const pages = Math.max(1, Math.ceil(total / (reviewsPageSize || 10)));
+                if (total) {
+                  return (
+                    <>
+                      <button className="btn" onClick={() => { const n=1; setReviewsPage(n); try { localStorage.setItem('sync_reviews_page', String(n)); } catch {} }} disabled={reviewsPage<=1} title="first">«</button>
+                      <button className="btn" onClick={() => { const n=pages; setReviewsPage(n); try { localStorage.setItem('sync_reviews_page', String(n)); } catch {} }} disabled={reviewsPage>=pages} title="last">»</button>
+                    </>
+                  );
+                }
+                return null;
+              })()}
+          </div>
+          {/* Go to page (reviews) */}
+          <div className="flex" style={{ gap: 6, alignItems: 'center', marginTop: 6 }}>
+            <input id="reviewsGoto" className="input" placeholder="go to page" style={{ width: 110 }} onKeyDown={(e) => { if ((e as any).key === 'Enter') { (document.getElementById('reviewsGoBtn') as HTMLButtonElement)?.click(); } }} />
+            <button id="reviewsGoBtn" className="btn" title="go" onClick={() => {
+              try {
+                const total = Number(reviewsList?.total || 0);
+                const pages = Math.max(1, Math.ceil(total / (reviewsPageSize || 10)));
+                const raw = (document.getElementById('reviewsGoto') as HTMLInputElement)?.value || '';
+                const n = Math.max(1, Math.min(pages, Number(raw || 1)));
+                setReviewsPage(n);
+                try { localStorage.setItem('sync_reviews_page', String(n)); } catch {}
+              } catch {}
+            }}>go</button>
+          </div>
           <button
             onClick={() => {
               const id = (document.getElementById('bizId') as HTMLInputElement)?.value;
@@ -753,45 +947,83 @@ export default function App() {
         {Array.isArray(reviewsList?.items) && (reviewsList.items as any[]).length ? (
           <div style={{ marginTop: 8 }}>
             <div className="flex gap-2" style={{ marginBottom: 6 }}>
+              <span className="muted text-sm" style={{ alignSelf: 'center' }}>click headers to sort</span>
+              <input className="input" placeholder="filter text" value={reviewsFilterText} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setReviewsFilterText(v); try { localStorage.setItem('sync_reviews_filter', v); } catch {} }} style={{ maxWidth: 220 }} />
               <button className="btn" onClick={() => {
+                // CSV export for reviews table
                 try {
-                  const items = [...(reviewsList.items as any[])];
-                  items.sort((a: any, b: any) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
-                  setReviewsList({ items });
-                } catch {}
-              }}>sort newest</button>
-              <button className="btn" onClick={() => {
-                try {
-                  const items = [...(reviewsList.items as any[])];
-                  items.sort((a: any, b: any) => (Number(b.recommend_status||0) - Number(a.recommend_status||0)));
-                  setReviewsList({ items });
-                } catch {}
-              }}>sort recommend first</button>
-              <input className="input" placeholder="filter text" value={reviewsFilterText} onChange={(e) => setReviewsFilterText((e.target as HTMLInputElement).value)} style={{ maxWidth: 220 }} />
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>id</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>user</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>created</th>
-                    <th style={{ textAlign: 'center', borderBottom: '1px solid #333', padding: '6px 8px' }}>recommend</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>text</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>copy</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(reviewsList.items as any[])
+                  const rows: any[] = Array.isArray(reviewsList?.items) ? (reviewsList.items as any[]) : [];
+                  if (!rows.length) { showToast('No reviews to export'); return; }
+                  const headers = ['id','user_id','created_at','recommend_status','review_text'];
+                  const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
+                  const lines = [headers.join(',')].concat(rows
                     .filter((r: any) => {
                       const q = (reviewsFilterText || '').trim().toLowerCase();
                       if (!q) return true;
-                      try {
-                        const hay = `${r?.review_text||''} ${r?.user_id||''} ${r?.id||''}`.toLowerCase();
-                        return hay.includes(q);
-                      } catch { return true; }
+                      try { const hay = `${r?.review_text||''} ${r?.user_id||''} ${r?.id||''}`.toLowerCase(); return hay.includes(q); } catch { return true; }
                     })
-                    .map((r: any) => (
+                    .map(r => headers.map(h => escape((r as any)[h])).join(',')));
+                  const csv = lines.join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `reviews_${Date.now()}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  showToast('Exported CSV', 'success');
+                } catch (e: any) { showToast(e?.message || 'CSV export error'); }
+              }}>export CSV</button>
+              <button className="btn" onClick={() => {
+                // JSON export for reviews
+                try {
+                  const data = reviewsList ?? {};
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `reviews_${Date.now()}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  showToast('Exported JSON', 'success');
+                } catch (e: any) { showToast(e?.message || 'JSON export error'); }
+              }}>export JSON</button>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }} className={compactRows ? 'compact' : ''}>
+                <thead>
+                  <tr>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>id</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>user</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px', cursor: 'pointer' }} title="Sort by created" onClick={() => { const next = toggleOrder(reviewsOrder, 'created_at', 'desc'); setReviewsOrder(next); try { localStorage.setItem('sync_reviews_order', next); } catch {} }}>
+                      {(() => { const { col, dir } = parseOrder(reviewsOrder); return `created${col==='created_at' ? (dir==='asc' ? ' ▲' : ' ▼') : ''}`; })()}
+                    </th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'center', borderBottom: '1px solid #333', padding: '6px 8px', cursor: 'pointer' }} title="Sort by recommend" onClick={() => { const next = toggleOrder(reviewsOrder, 'recommend_status', 'desc'); setReviewsOrder(next); try { localStorage.setItem('sync_reviews_order', next); } catch {} }}>
+                      {(() => { const { col, dir } = parseOrder(reviewsOrder); return `recommend${col==='recommend_status' ? (dir==='asc' ? ' ▲' : ' ▼') : ''}`; })()}
+                    </th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>text</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>copy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const all = Array.isArray(reviewsList?.items) ? (reviewsList.items as any[]) : [];
+                    const q = (reviewsFilterText || '').trim().toLowerCase();
+                    let filtered = all.filter((r: any) => {
+                      if (!q) return true;
+                      try { const hay = `${r?.review_text||''} ${r?.user_id||''} ${r?.id||''}`.toLowerCase(); return hay.includes(q); } catch { return true; }
+                    });
+                    try {
+                      const { col, dir } = parseOrder(reviewsOrder);
+                      if (col === 'created_at') {
+                        filtered = filtered.sort((a: any, b: any) => String((dir==='asc'?a:b).created_at||'').localeCompare(String((dir==='asc'?b:a).created_at||'')));
+                      } else if (col === 'recommend_status') {
+                        filtered = filtered.sort((a: any, b: any) => (Number((dir==='asc'?a:b).recommend_status||0) - Number((dir==='asc'?b:a).recommend_status||0)));
+                      }
+                    } catch {}
+                    const start = (reviewsPage - 1) * reviewsPageSize;
+                    const end = start + reviewsPageSize;
+                    return filtered.slice(start, end).map((r: any) => (
                     <tr key={r.id}>
                       <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', fontFamily: 'monospace' }}>{r.id}</td>
                       <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', fontFamily: 'monospace' }}>{r.user_id}</td>
@@ -803,7 +1035,8 @@ export default function App() {
                         <button className="btn" onClick={() => { try { (navigator as any)?.clipboard?.writeText(String(r.user_id)); showToast('copied user','success'); } catch {} }} style={{ marginLeft: 6 }}>copy user</button>
                       </td>
                     </tr>
-                  ))}
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -821,6 +1054,37 @@ export default function App() {
             <span style={{ color: '#a22' }}>Not: {reviewsSummary.summary?.not_recommend ?? 0}</span>
           </div>
         )}
+        {/* Mini chart: Reviews by day (recommend vs not) */}
+        {trendsResult?.trends ? (
+          <div style={{ marginTop: 12 }}>
+            <div className="muted text-sm" style={{ marginBottom: 4 }}>Reviews by day (recommend vs not)</div>
+            {(() => {
+              const entries = Object.entries((trendsResult.trends as any).reviews || {}) as Array<[string, any]>;
+              if (!entries.length) return (<div className="muted text-sm">(no data)</div>);
+              const maxY = entries.reduce((m, [_, v]) => {
+                const rec = Number((v as any).recommend || 0);
+                const nrec = Math.max(0, Number((v as any).total || 0) - rec);
+                return Math.max(m, rec, nrec);
+              }, 1);
+              return (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 120, borderBottom: '1px solid #333', padding: '6px 0' }}>
+                  {entries.map(([day, v]) => {
+                    const rec = Number((v as any).recommend || 0);
+                    const nrec = Math.max(0, Number((v as any).total || 0) - rec);
+                    const rh = Math.max(2, Math.round((rec / (maxY || 1)) * 110));
+                    const nh = Math.max(2, Math.round((nrec / (maxY || 1)) * 110));
+                    return (
+                      <div key={day} title={`${day}: ✓=${rec} ✗=${nrec}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 16 }}>
+                        <div style={{ width: 6, height: nh, background: '#c62828', marginBottom: 2 }}></div>
+                        <div style={{ width: 6, height: rh, background: '#2e7d32' }}></div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        ) : null}
         </>
         )}
       </Section>
@@ -1039,22 +1303,158 @@ export default function App() {
         </div>
         <div className="muted text-sm" style={{ marginTop: 4 }}>Then collect using coupon_id below; or preview with list buttons.</div>
         <div className="flex gap-2 mt-2">
-          <button className="btn" onClick={async () => {
-            try {
-              const res = await apiFetch('/api/business/offers', { headers: { ...authHeaders } });
-              const j = await res.json();
-              setOffersResult({ ...(offersResult||{}), offers_list: j });
-            } catch (e: any) { showToast('offers list error', 'error'); }
-          }}>GET offers (owner)</button>
-          <button className="btn" onClick={async () => {
-            try {
-              const id = (document.getElementById('offerId') as HTMLInputElement)?.value?.trim();
-              if (!id) { alert('set offerId'); return; }
-              const res = await apiFetch(`/api/business/offers/${id}/coupons`, { headers: { ...authHeaders } });
-              const j = await res.json();
-              setOffersResult({ ...(offersResult||{}), coupons_preview: j });
-            } catch (e: any) { showToast('coupons preview error', 'error'); }
-          }}>GET coupons (preview)</button>
+          <input
+            className="input"
+            placeholder="search title"
+            value={offersSearch}
+            onChange={(e) => {
+              const v = (e.target as HTMLInputElement).value;
+              setOffersSearch(v);
+              try { localStorage.setItem('sync_offers_search', v); } catch {}
+              try {
+                if (offersDebounceRef.current) window.clearTimeout(offersDebounceRef.current as any);
+                offersDebounceRef.current = window.setTimeout(() => { fetchOffers(); }, 400);
+              } catch {}
+            }}
+            style={{ maxWidth: 200 }}
+          />
+          <select className="input" value={offersPageSize as any} onChange={(e) => {
+            const n = Number((e.target as HTMLSelectElement).value || 10);
+            setOffersPageSize(n);
+            setOffersPage(1);
+            try { localStorage.setItem('sync_offers_page_size', String(n)); localStorage.setItem('sync_offers_page', '1'); } catch {}
+          }}>
+            {[10,20,50,100].map(n => (<option key={n} value={n as any}>{n} / page</option>))}
+          </select>
+            <div className="flex" style={{ gap: 6, alignItems: 'center' }}>
+            <button className="btn" onClick={() => {
+              const n = Math.max(1, offersPage - 1);
+              setOffersPage(n);
+              try { localStorage.setItem('sync_offers_page', String(n)); } catch {}
+            }} disabled={offersPage <= 1}>&lt;</button>
+            <span className="muted text-sm">page {offersPage}{(() => {
+              try {
+                const total = Number(offersResult?.offers_list?.total || 0);
+                const pages = Math.max(1, Math.ceil(total / (offersPageSize || 10)));
+                return ` of ${pages} (total ${total})`;
+              } catch { return ''; }
+            })()}</span>
+            <button className="btn" onClick={() => {
+              const n = offersPage + 1;
+              setOffersPage(n);
+              try { localStorage.setItem('sync_offers_page', String(n)); } catch {}
+            }} disabled={(() => {
+              try {
+                const total = Number(offersResult?.offers_list?.total || 0);
+                const pages = Math.max(1, Math.ceil(total / (offersPageSize || 10)));
+                return offersPage >= pages;
+              } catch { return false; }
+            })()}>&gt;</button>
+              {(() => {
+                const total = Number(offersResult?.offers_list?.total || 0);
+                const pages = Math.max(1, Math.ceil(total / (offersPageSize || 10)));
+                if (total) {
+                  return (
+                    <>
+                      <button className="btn" title="first" onClick={() => { const n=1; setOffersPage(n); try { localStorage.setItem('sync_offers_page', String(n)); } catch {} }} disabled={offersPage<=1}>«</button>
+                      <button className="btn" title="last" onClick={() => { const n=pages; setOffersPage(n); try { localStorage.setItem('sync_offers_page', String(n)); } catch {} }} disabled={offersPage>=pages}>»</button>
+                    </>
+                  );
+                }
+                return null;
+              })()}
+          </div>
+          {/* Go to page (offers) */}
+          <div className="flex" style={{ gap: 6, alignItems: 'center', marginTop: 6 }}>
+            <input id="offersGoto" className="input" placeholder="go to page" style={{ width: 110 }} onKeyDown={(e) => { if ((e as any).key === 'Enter') { (document.getElementById('offersGoBtn') as HTMLButtonElement)?.click(); } }} />
+            <button id="offersGoBtn" className="btn" title="go" onClick={() => {
+              try {
+                const total = Number(offersResult?.offers_list?.total || 0);
+                const pages = Math.max(1, Math.ceil(total / (offersPageSize || 10)));
+                const raw = (document.getElementById('offersGoto') as HTMLInputElement)?.value || '';
+                const n = Math.max(1, Math.min(pages, Number(raw || 1)));
+                setOffersPage(n);
+                try { localStorage.setItem('sync_offers_page', String(n)); } catch {}
+              } catch {}
+            }}>go</button>
+          </div>
+          <button className="btn" onClick={fetchOffers}>GET offers (owner)</button>
+          <input
+            className="input"
+            placeholder="search code"
+            value={couponsSearch}
+            onChange={(e) => {
+              const v = (e.target as HTMLInputElement).value;
+              setCouponsSearch(v);
+              try { localStorage.setItem('sync_coupons_search', v); } catch {}
+              try {
+                if (couponsDebounceRef.current) window.clearTimeout(couponsDebounceRef.current as any);
+                couponsDebounceRef.current = window.setTimeout(() => { fetchCoupons(); }, 400);
+              } catch {}
+            }}
+            style={{ maxWidth: 200 }}
+          />
+          <select className="input" value={couponsPageSize as any} onChange={(e) => {
+            const n = Number((e.target as HTMLSelectElement).value || 10);
+            setCouponsPageSize(n);
+            setCouponsPage(1);
+            try { localStorage.setItem('sync_coupons_page_size', String(n)); localStorage.setItem('sync_coupons_page', '1'); } catch {}
+          }}>
+            {[10,20,50,100].map(n => (<option key={n} value={n as any}>{n} / page</option>))}
+          </select>
+            <div className="flex" style={{ gap: 6, alignItems: 'center' }}>
+            <button className="btn" onClick={() => {
+              const n = Math.max(1, couponsPage - 1);
+              setCouponsPage(n);
+              try { localStorage.setItem('sync_coupons_page', String(n)); } catch {}
+            }} disabled={couponsPage <= 1}>&lt;</button>
+            <span className="muted text-sm">page {couponsPage}{(() => {
+              try {
+                const total = Number(offersResult?.coupons_preview?.total || 0);
+                const pages = Math.max(1, Math.ceil(total / (couponsPageSize || 10)));
+                return ` of ${pages} (total ${total})`;
+              } catch { return ''; }
+            })()}</span>
+            <button className="btn" onClick={() => {
+              const n = couponsPage + 1;
+              setCouponsPage(n);
+              try { localStorage.setItem('sync_coupons_page', String(n)); } catch {}
+            }} disabled={(() => {
+              try {
+                const total = Number(offersResult?.coupons_preview?.total || 0);
+                const pages = Math.max(1, Math.ceil(total / (couponsPageSize || 10)));
+                return couponsPage >= pages;
+              } catch { return false; }
+            })()}>&gt;</button>
+              {(() => {
+                const total = Number(offersResult?.coupons_preview?.total || 0);
+                const pages = Math.max(1, Math.ceil(total / (couponsPageSize || 10)));
+                if (total) {
+                  return (
+                    <>
+                      <button className="btn" title="first" onClick={() => { const n=1; setCouponsPage(n); try { localStorage.setItem('sync_coupons_page', String(n)); } catch {} }} disabled={couponsPage<=1}>«</button>
+                      <button className="btn" title="last" onClick={() => { const n=pages; setCouponsPage(n); try { localStorage.setItem('sync_coupons_page', String(n)); } catch {} }} disabled={couponsPage>=pages}>»</button>
+                    </>
+                  );
+                }
+                return null;
+              })()}
+          </div>
+          {/* Go to page (coupons preview) */}
+          <div className="flex" style={{ gap: 6, alignItems: 'center', marginTop: 6 }}>
+            <input id="couponsGoto" className="input" placeholder="go to page" style={{ width: 110 }} onKeyDown={(e) => { if ((e as any).key === 'Enter') { (document.getElementById('couponsGoBtn') as HTMLButtonElement)?.click(); } }} />
+            <button id="couponsGoBtn" className="btn" title="go" onClick={() => {
+              try {
+                const total = Number(offersResult?.coupons_preview?.total || 0);
+                const pages = Math.max(1, Math.ceil(total / (couponsPageSize || 10)));
+                const raw = (document.getElementById('couponsGoto') as HTMLInputElement)?.value || '';
+                const n = Math.max(1, Math.min(pages, Number(raw || 1)));
+                setCouponsPage(n);
+                try { localStorage.setItem('sync_coupons_page', String(n)); } catch {}
+              } catch {}
+            }}>go</button>
+          </div>
+          <button className="btn" onClick={fetchCoupons}>GET coupons (preview)</button>
         </div>
         <div className="grid grid-cols-3 gap-2 mt-2">
           <input id="collectCouponId" className="input" placeholder="coupon_id to collect (from offer)" />
@@ -1073,38 +1473,58 @@ export default function App() {
           <CopyCurlButton tag={'platform:revenue'} getCurl={getCurl} />
           <button className="btn" onClick={getCouponAnalytics}>GET coupon analytics</button>
           <CopyCurlButton tag={'analytics:coupons'} getCurl={getCurl} />
+          <label className="flex items-center gap-1 muted text-sm" title="Compact row density">
+            <input type="checkbox" checked={compactRows} onChange={(e) => { const v=(e.target as HTMLInputElement).checked; setCompactRows(v); try { localStorage.setItem('sync_compact_rows',''+(v?1:0)); } catch {} }} />
+            compact rows
+          </label>
           <button className="btn" onClick={() => { setOffersResult(null as any); setRedeemResult(null as any); setRevenueResult(null as any); setCouponAnalytics(null as any); }}>clear</button>
         </div>
         {/* Offers list table */}
         {Array.isArray(offersResult?.offers_list?.items) && (offersResult.offers_list.items as any[]).length ? (
           <div style={{ marginTop: 10 }}>
             <div className="flex gap-2" style={{ marginBottom: 6 }}>
+              <span className="muted text-sm" style={{ alignSelf: 'center' }}>{isLoadingOffers ? 'loading…' : 'click column headers to sort'}</span>
               <button className="btn" onClick={() => {
+                // CSV export for offers
                 try {
-                  const items = [...(offersResult.offers_list.items as any[])];
-                  items.sort((a: any, b: any) => String(a.title||'').localeCompare(String(b.title||'')));
-                  setOffersResult({ ...(offersResult||{}), offers_list: { ...(offersResult.offers_list||{}), items } });
-                } catch {}
-              }}>sort by title</button>
-              <button className="btn" onClick={() => {
-                try {
-                  const items = [...(offersResult.offers_list.items as any[])];
-                  items.sort((a: any, b: any) => String(b.start_date||'').localeCompare(String(a.start_date||'')));
-                  setOffersResult({ ...(offersResult||{}), offers_list: { ...(offersResult.offers_list||{}), items } });
-                } catch {}
-              }}>sort by start date</button>
+                  const rows: any[] = Array.isArray(offersResult?.offers_list?.items) ? (offersResult.offers_list.items as any[]) : [];
+                  if (!rows.length) { showToast('No offers to export'); return; }
+                  const headers = ['id','business_id','title','total_quantity','cost_per_coupon','start_date','end_date'];
+                  const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
+                  const lines = [headers.join(',')].concat(rows.map(r => headers.map(h => escape((r as any)[h])).join(',')));
+                  const csv = lines.join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `offers_${Date.now()}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  showToast('Exported CSV', 'success');
+                } catch (e: any) { showToast(e?.message || 'CSV export error'); }
+              }}>export CSV</button>
             </div>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }} className={compactRows ? 'compact' : ''}>
                 <thead>
                   <tr>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>id</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>title</th>
-                    <th style={{ textAlign: 'right', borderBottom: '1px solid #333', padding: '6px 8px' }}>qty</th>
-                    <th style={{ textAlign: 'right', borderBottom: '1px solid #333', padding: '6px 8px' }}>cost</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>start</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>end</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>copy</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>id</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px', cursor: 'pointer' }} title="Sort by title" onClick={() => {
+                      const next = toggleOrder(offersOrder, 'title', 'asc');
+                      setOffersOrder(next); setOffersSort('title');
+                      try { localStorage.setItem('sync_offers_order', next); localStorage.setItem('sync_offers_sort', 'title'); } catch {}
+                      fetchOffers();
+                    }}>title{(() => { const { col, dir } = parseOrder(offersOrder); return col==='title' ? (dir==='asc' ? ' ▲' : ' ▼') : ''; })()}</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'right', borderBottom: '1px solid #333', padding: '6px 8px' }}>qty</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'right', borderBottom: '1px solid #333', padding: '6px 8px' }}>cost</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px', cursor: 'pointer' }} title="Sort by start date" onClick={() => {
+                      const next = toggleOrder(offersOrder, 'start_date', 'desc');
+                      setOffersOrder(next); setOffersSort('start_date');
+                      try { localStorage.setItem('sync_offers_order', next); localStorage.setItem('sync_offers_sort', 'start_date'); } catch {}
+                      fetchOffers();
+                    }}>start{(() => { const { col, dir } = parseOrder(offersOrder); return col==='start_date' ? (dir==='asc' ? ' ▲' : ' ▼') : ''; })()}</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>end</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>copy</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1130,31 +1550,37 @@ export default function App() {
         {Array.isArray(offersResult?.coupons_preview?.items) && (offersResult.coupons_preview.items as any[]).length ? (
           <div style={{ marginTop: 10 }}>
             <div className="flex gap-2" style={{ marginBottom: 6 }}>
+              <span className="muted text-sm" style={{ alignSelf: 'center' }}>{isLoadingCoupons ? 'loading…' : 'click column headers to sort'}</span>
               <button className="btn" onClick={() => {
+                // CSV export for coupons preview
                 try {
-                  const items = [...(offersResult.coupons_preview.items as any[])];
-                  items.sort((a: any, b: any) => String(a.unique_code||'').localeCompare(String(b.unique_code||'')));
-                  setOffersResult({ ...(offersResult||{}), coupons_preview: { ...(offersResult.coupons_preview||{}), items } });
-                } catch {}
-              }}>sort by code</button>
-              <button className="btn" onClick={() => {
-                try {
-                  const items = [...(offersResult.coupons_preview.items as any[])];
-                  items.sort((a: any, b: any) => Number(b.is_redeemed||0) - Number(a.is_redeemed||0));
-                  setOffersResult({ ...(offersResult||{}), coupons_preview: { ...(offersResult.coupons_preview||{}), items } });
-                } catch {}
-              }}>sort redeemed first</button>
+                  const rows: any[] = Array.isArray(offersResult?.coupons_preview?.items) ? (offersResult.coupons_preview.items as any[]) : [];
+                  if (!rows.length) { showToast('No coupons to export'); return; }
+                  const headers = ['id','coupon_id','unique_code','user_id','is_redeemed'];
+                  const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
+                  const lines = [headers.join(',')].concat(rows.map(r => headers.map(h => escape((r as any)[h])).join(',')));
+                  const csv = lines.join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `coupons_${Date.now()}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  showToast('Exported CSV', 'success');
+                } catch (e: any) { showToast(e?.message || 'CSV export error'); }
+              }}>export CSV</button>
             </div>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }} className={compactRows ? 'compact' : ''}>
                 <thead>
                   <tr>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>id</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>coupon_id</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>unique_code</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>user_id</th>
-                    <th style={{ textAlign: 'center', borderBottom: '1px solid #333', padding: '6px 8px' }}>redeemed</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>copy</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>id</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>coupon_id</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px', cursor: 'pointer' }} title="Sort by code" onClick={() => { const next = toggleOrder(couponsOrder, 'unique_code', 'asc'); setCouponsOrder(next); setCouponsSort('code'); try { localStorage.setItem('sync_coupons_order', next); localStorage.setItem('sync_coupons_sort', 'code'); } catch {}; fetchCoupons(); }}>unique_code{(() => { const { col, dir } = parseOrder(couponsOrder); return col==='unique_code' ? (dir==='asc' ? ' ▲' : ' ▼') : ''; })()}</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>user_id</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'center', borderBottom: '1px solid #333', padding: '6px 8px', cursor: 'pointer' }} title="Sort by redeemed" onClick={() => { const next = toggleOrder(couponsOrder, 'is_redeemed', 'desc'); setCouponsOrder(next); setCouponsSort('redeemed'); try { localStorage.setItem('sync_coupons_order', next); localStorage.setItem('sync_coupons_sort', 'redeemed'); } catch {}; fetchCoupons(); }}>redeemed{(() => { const { col, dir } = parseOrder(couponsOrder); return col==='is_redeemed' ? (dir==='asc' ? ' ▲' : ' ▼') : ''; })()}</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>copy</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1191,9 +1617,9 @@ export default function App() {
         {activeTab !== 'trends' ? null : (
         <>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input id="trendBizId" placeholder="businessId (optional)" />
+          <input id="trendBizId" placeholder="businessId (optional)" aria-label="Trends businessId" />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="checkbox" id="trendGroupBiz" /> group by business
+            <input type="checkbox" id="trendGroupBiz" aria-label="Group trends by business" /> group by business
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span className="muted text-sm">sinceDays</span>
@@ -1202,9 +1628,10 @@ export default function App() {
               min={1 as any}
               max={365 as any}
               value={analyticsSinceDays as any}
-              onChange={(e) => setAnalyticsSinceDays(Math.max(1, Math.min(365, Number((e.target as HTMLInputElement).value || 7))))}
+              onChange={(e) => { const n = Math.max(1, Math.min(365, Number((e.target as HTMLInputElement).value || 7))); setAnalyticsSinceDays(n); try { localStorage.setItem('sync_analytics_since_days', String(n)); } catch {} }}
               style={{ width: 90 }}
               className="input"
+              aria-label="Trends sinceDays"
             />
           </label>
           <button onClick={getTrends}>GET trends</button>
@@ -1224,21 +1651,47 @@ export default function App() {
                   const data = (trendsResult.trends as any)[series] || {};
                   const entries = Object.entries(data) as Array<[string, any]>;
                   const maxY = entries.reduce((m, [_, v]) => {
-                    const y = series === 'reviews' ? (v.total||0) : (v.collected||0);
+                    if (series === 'reviews') {
+                      const rec = Number((v as any).recommend || 0);
+                      const nrec = Math.max(0, Number((v as any).total || 0) - rec);
+                      return Math.max(m, rec + nrec);
+                    }
+                    const y = Number((v as any).collected || 0);
                     return Math.max(m, y);
                   }, 1);
+                  const legend = series === 'reviews'
+                    ? (<div className="muted text-xs"><span style={{ display: 'inline-block', width: 8, height: 8, background: '#2e7d32', marginRight: 4 }}></span>recommend <span style={{ display: 'inline-block', width: 8, height: 8, background: '#c62828', margin: '0 4px 0 8px' }}></span>not</div>)
+                    : (<div className="muted text-xs"><span style={{ display: 'inline-block', width: 8, height: 8, background: '#7c4dff', marginRight: 4 }}></span>collected</div>);
                   return (
                     <div key={series}>
-                      <div className="muted text-sm" style={{ marginBottom: 4 }}>{series} per day</div>
-                      <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', height: 120, borderBottom: '1px solid #333', padding: '6px 0' }}>
-                        {entries.map(([day, v]) => {
-                          const y = series === 'reviews' ? (v.total||0) : (v.collected||0);
-                          const h = Math.max(2, Math.round((y / (maxY || 1)) * 110));
-                          return (
-                            <div key={day} title={`${day}: ${y}`} style={{ width: 10, height: h, background: '#7c4dff' }}></div>
-                          );
-                        })}
-                      </div>
+                      <div className="muted text-sm" style={{ marginBottom: 2 }}>{series} per day</div>
+                      <MiniBars
+                        entries={entries}
+                        maxY={maxY}
+                        legend={legend}
+                        renderBar={(day, v, scaled) => (
+                          series === 'reviews' ? (
+                            (() => {
+                              const rec = Number((v as any).recommend || 0);
+                              const nrec = Math.max(0, Number((v as any).total || 0) - rec);
+                              const rh = scaled(rec);
+                              const nh = scaled(nrec);
+                              return (
+                                <div title={`${day}: ✓=${rec} ✗=${nrec}`}>
+                                  <div style={{ width: 8, height: nh, background: '#c62828', marginBottom: 2 }}></div>
+                                  <div style={{ width: 8, height: rh, background: '#2e7d32' }}></div>
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            (() => {
+                              const y = Number((v as any).collected || 0);
+                              const h = scaled(y);
+                              return (<div title={`${day}: ${y}`} style={{ width: 10, height: h, background: '#7c4dff' }}></div>);
+                            })()
+                          )
+                        )}
+                      />
                     </div>
                   );
                 })}
@@ -1255,9 +1708,9 @@ export default function App() {
         {activeTab !== 'funnel' ? null : (
         <>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input id="funnelBizId" className="input" placeholder="businessId (optional)" />
+          <input id="funnelBizId" className="input" placeholder="businessId (optional)" aria-label="Funnel businessId" />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="checkbox" id="funnelGroupBiz" /> group by business
+            <input type="checkbox" id="funnelGroupBiz" aria-label="Group funnel by business" /> group by business
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span className="muted text-sm">sinceDays</span>
@@ -1266,9 +1719,10 @@ export default function App() {
               min={1 as any}
               max={365 as any}
               value={analyticsSinceDays as any}
-              onChange={(e) => setAnalyticsSinceDays(Math.max(1, Math.min(365, Number((e.target as HTMLInputElement).value || 7))))}
+              onChange={(e) => { const n = Math.max(1, Math.min(365, Number((e.target as HTMLInputElement).value || 7))); setAnalyticsSinceDays(n); try { localStorage.setItem('sync_analytics_since_days', String(n)); } catch {} }}
               style={{ width: 90 }}
               className="input"
+              aria-label="Funnel sinceDays"
             />
           </label>
           <button className="btn" onClick={getFunnel}>GET funnel</button>
@@ -1310,6 +1764,33 @@ export default function App() {
                 );
               })()}
             </div>
+            {/* Mini chart: Collected vs Redeemed per day (bars) */}
+            {trendsResult?.trends ? (
+              <div style={{ marginTop: 12 }}>
+                <div className="muted text-sm" style={{ marginBottom: 4 }}>Funnel by day (collected vs redeemed)</div>
+                {(() => {
+                  const entries = Object.entries((trendsResult.trends as any).coupons || {}) as Array<[string, any]>;
+                  if (!entries.length) return (<div className="muted text-sm">(no data)</div>);
+                  const maxY = entries.reduce((m, [_, v]) => Math.max(m, Number((v as any).collected||0), Number((v as any).redeemed||0)), 1);
+                  return (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 120, borderBottom: '1px solid #333', padding: '6px 0' }}>
+                      {entries.map(([day, v]) => {
+                        const c = Number((v as any).collected||0);
+                        const r = Number((v as any).redeemed||0);
+                        const ch = Math.max(2, Math.round((c / (maxY || 1)) * 110));
+                        const rh = Math.max(2, Math.round((r / (maxY || 1)) * 110));
+                        return (
+                          <div key={day} title={`${day}: C=${c} R=${r}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 16 }}>
+                            <div style={{ width: 6, height: rh, background: '#26a69a', marginBottom: 2 }}></div>
+                            <div style={{ width: 6, height: ch, background: '#7c4dff' }}></div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : null}
             {funnelResult?.funnelByBusiness ? (
               <div style={{ marginTop: 12 }}>
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>By business</div>
@@ -1359,6 +1840,32 @@ export default function App() {
           <>
             <CopyButton getText={() => (typeof funnelResult === 'object' ? JSON.stringify(funnelResult, null, 2) : String(funnelResult ?? ''))} />
             <pre>{typeof funnelResult === 'object' ? JSON.stringify(funnelResult, null, 2) : (funnelResult ?? '')}</pre>
+            {trendsResult?.trends ? (
+              <>
+                <div className="muted text-sm" style={{ marginTop: 12 }}>Funnel by day (collected vs redeemed)</div>
+                {(() => {
+                  const entries = Object.entries((trendsResult.trends as any).coupons || {}) as Array<[string, any]>;
+                  if (!entries.length) return (<div className="muted text-sm">(no data)</div>);
+                  const maxY = entries.reduce((m, [_, v]) => Math.max(m, Number((v as any).collected||0), Number((v as any).redeemed||0)), 1);
+                  return (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 120, borderBottom: '1px solid #333', padding: '6px 0' }}>
+                      {entries.map(([day, v]) => {
+                        const c = Number((v as any).collected||0);
+                        const r = Number((v as any).redeemed||0);
+                        const ch = Math.max(2, Math.round((c / (maxY || 1)) * 110));
+                        const rh = Math.max(2, Math.round((r / (maxY || 1)) * 110));
+                        return (
+                          <div key={day} title={`${day}: C=${c} R=${r}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 16 }}>
+                            <div style={{ width: 6, height: rh, background: '#26a69a', marginBottom: 2 }}></div>
+                            <div style={{ width: 6, height: ch, background: '#7c4dff' }}></div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </>
+            ) : null}
           </>
         )}
         </>

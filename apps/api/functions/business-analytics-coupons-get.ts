@@ -23,10 +23,13 @@ export default withRateLimit('business-analytics-coupons-get', { limit: 120, win
   // Fetch coupon ids for this business first
   const { data: coupons, error: coupErr } = await supabase
     .from('coupons')
-    .select('id, business_id')
+    .select('id, business_id, title, start_date')
     .eq('business_id', businessId);
   if (coupErr) return json({ ok: false, error: coupErr.message }, { status: 500 });
-  const couponIds = new Set((coupons || []).map((c: any) => c.id));
+  // Filter out offer templates (those generally have title/start_date set)
+  const couponIds = new Set((coupons || [])
+    .filter((c: any) => !(('title' in c && c.title != null) || ('start_date' in c && c.start_date != null)))
+    .map((c: any) => c.id));
 
   // Then fetch user coupons and aggregate for those ids
   const { data: userCoupons, error: ucErr } = await supabase

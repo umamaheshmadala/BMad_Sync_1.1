@@ -42,7 +42,7 @@ export class MockDb {
 }
 
 function builder(table: Table) {
-  const state: any = { _filters: [] as Array<(r: Row) => boolean>, _op: 'select', _patch: null, _last: null };
+  const state: any = { _filters: [] as Array<(r: Row) => boolean>, _op: 'select', _patch: null, _last: null, _range: null as null | { from: number, to: number }, _order: null as null | { field: string, ascending?: boolean } };
   const api: any = {
     select(_cols?: string) { state._op = state._op === 'insert' ? 'insertSelect' : 'select'; return api; },
     insert(row: Row | Row[]) {
@@ -60,6 +60,18 @@ function builder(table: Table) {
       return Promise.resolve({ data: null, error: null });
     },
     eq(field: string, value: any) { state._filters.push((r: Row) => r[field] === value); return api; },
+    in(field: string, values: any[]) { state._filters.push((r: Row) => Array.isArray(values) && values.includes((r as any)[field])); return api; },
+    ilike(field: string, pattern: string) {
+      const p = String(pattern || '').toLowerCase();
+      const hasWild = p.includes('%');
+      const needle = p.replace(/^%+/, '').replace(/%+$/, '');
+      state._filters.push((r: Row) => {
+        const val = String((r as any)[field] || '').toLowerCase();
+        if (!hasWild) return val === needle;
+        return val.includes(needle);
+      });
+      return api;
+    },
     gte(field: string, value: any) {
       state._filters.push((r: Row) => {
         const v = (r as any)[field];
@@ -67,12 +79,19 @@ function builder(table: Table) {
       });
       return api;
     },
-    is(field: string, value: any) { state._filters.push((r: Row) => r[field] === value); return api; },
-    order(field: string, opts?: { ascending?: boolean }) {
-      // For simplicity, we ignore ordering in mock select results; tests focus on presence not order
+    lte(field: string, value: any) {
+      state._filters.push((r: Row) => {
+        const v = (r as any)[field];
+        return v !== undefined && v !== null && v <= value;
+      });
       return api;
     },
-    range(_from?: number, _to?: number) { return api; },
+    is(field: string, value: any) { state._filters.push((r: Row) => r[field] === value); return api; },
+    order(field: string, opts?: { ascending?: boolean }) {
+      state._order = { field, ascending: !!(opts && opts.ascending) };
+      return api;
+    },
+    range(from?: number, to?: number) { if (typeof from === 'number' && typeof to === 'number') state._range = { from, to }; return api; },
     limit(_n?: number) { return api; },
     maybeSingle() {
       const rows = table.find((r) => state._filters.every((f: any) => f(r)));
@@ -89,8 +108,26 @@ function builder(table: Table) {
     then(onFulfilled: any, onRejected: any) {
       try {
         if (state._op === 'select') {
-          const rows = table.find((r) => state._filters.every((f: any) => f(r)));
-          return Promise.resolve({ data: rows, error: null }).then(onFulfilled, onRejected);
+          const all = table.find((r) => state._filters.every((f: any) => f(r)));
+          let rows = all;
+          if (state._order && state._order.field) {
+            const f = state._order.field;
+            const asc = !!state._order.ascending;
+            rows = rows.slice().sort((a: any, b: any) => {
+              const av = a[f];
+              const bv = b[f];
+              const ar = av == null ? '' : String(av);
+              const br = bv == null ? '' : String(bv);
+              const cmp = ar.localeCompare(br);
+              return asc ? cmp : -cmp;
+            });
+          }
+          if (state._range) {
+            const start = Math.max(0, state._range.from);
+            const end = Math.max(start, state._range.to);
+            rows = rows.slice(start, end + 1);
+          }
+          return Promise.resolve({ data: rows, error: null, count: all.length }).then(onFulfilled, onRejected);
         }
         if (state._op === 'insertSelect') {
           return Promise.resolve({ data: state._last ? [state._last] : [], error: null }).then(onFulfilled, onRejected);

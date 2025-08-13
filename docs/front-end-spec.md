@@ -93,7 +93,22 @@ Owner: UX Expert
 ## Analytics Hooks (UI)
 - Track offer/coupon clicks, storefront visits, ad impressions
 - Respect privacy settings
- - Capture request IDs on failures and tag Sentry events with `x-request-id`
+- Capture request IDs on failures and tag Sentry events with `x-request-id`
+
+## Table Behavior (Dev UI)
+- Persisted per table via `localStorage`:
+  - Offers: order, page, page size, search
+  - Coupons preview: order, page, page size, search
+  - Reviews: filter, order, page, page size
+- Navigation controls:
+  - First/Prev/Next/Last buttons
+  - Go-to-page input (enter page number, click go)
+- Sorting arrows: ▲ for ascending, ▼ for descending next to the active header
+
+## Mini-Charts
+- Trends: daily inline bars for reviews total and coupons collected (from `trendsResult.trends`)
+- Funnel: collected vs redeemed daily double bars using coupons series
+- Reviews: daily recommend vs not‑recommend bars using `trendsResult.trends.reviews`
 
 ## Acceptance Notes per Story (UI)
 - 1.2: Auth pages → `/dashboard` on success

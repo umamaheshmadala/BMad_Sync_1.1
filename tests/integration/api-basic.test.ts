@@ -14,6 +14,8 @@ import storefrontProducts from '../../apps/api/functions/storefronts-products-po
 import analyticsReviews from '../../apps/api/functions/business-analytics-reviews-get';
 import reviewsPost from '../../apps/api/functions/business-reviews-post';
 import analyticsCoupons from '../../apps/api/functions/business-analytics-coupons-get';
+import offersGet from '../../apps/api/functions/business-offers-get';
+import offersCouponsGet from '../../apps/api/functions/business-offers-coupons-get';
 import wishlistMatchesGet from '../../apps/api/functions/users-wishlist-matches-get';
 import notificationsGet from '../../apps/api/functions/users-notifications-get';
 import notificationReadItem from '../../apps/api/functions/users-notifications-read-item-put';
@@ -58,6 +60,11 @@ beforeEach(() => {
   db.users.insert({ id: TEST_USER_2, city: 'Bengaluru', interests: [] });
   db.businesses.insert({ id: TEST_BIZ_1, owner_user_id: TEST_USER_1 });
   db.coupons.insert({ id: TEST_COUPON_1, business_id: TEST_BIZ_1 });
+  // Seed some offers and coupons
+  db.coupons.insert({ id: 'offer-1', business_id: TEST_BIZ_1, title: 'Alpha Deal', start_date: '2025-01-01' });
+  db.coupons.insert({ id: 'offer-2', business_id: TEST_BIZ_1, title: 'Beta Bonanza', start_date: '2025-01-02' });
+  db.user_coupons.insert({ id: 'uc-offer-2-1', coupon_id: 'offer-2', unique_code: 'UC-XYZ-1', is_redeemed: false });
+  db.user_coupons.insert({ id: 'uc-offer-2-2', coupon_id: 'offer-2', unique_code: 'UC-XYZ-2', is_redeemed: true });
   db.business_reviews.insert({ id: 'r1', business_id: TEST_BIZ_1, recommend_status: true });
   db.business_reviews.insert({ id: 'r2', business_id: TEST_BIZ_1, recommend_status: false });
 });
@@ -285,6 +292,78 @@ it('analytics endpoints return summaries', async () => {
   expect(jsonC.summary.total).toBe(2);
 });
 
+it('lists offers with search and pagination for owner', async () => {
+  const res1 = await offersGet(
+    makeReq(path(`/api/business/offers?q=Beta&limit=1&offset=0&order=title.asc`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(res1.status).toBe(200);
+  const j1 = await res1.json();
+  expect(j1.ok).toBe(true);
+  expect(Array.isArray(j1.items)).toBe(true);
+  expect(j1.items.length).toBeLessThanOrEqual(1);
+  // Next page
+  const res2 = await offersGet(
+    makeReq(path(`/api/business/offers?limit=1&offset=1&order=start_date.desc`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  const j2 = await res2.json();
+  expect(j2.ok).toBe(true);
+});
+
+it('lists offer coupons with pagination and code search for owner', async () => {
+  const res = await offersCouponsGet(
+    makeReq(path(`/api/business/offers/offer-2/coupons?limit=1&offset=0&q=XYZ&order=unique_code.asc`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(res.status).toBe(200);
+  const j = await res.json();
+  expect(j.ok).toBe(true);
+  expect(Array.isArray(j.items)).toBe(true);
+  expect(j.items.length).toBe(1);
+});
+
+it('orders and paginates reviews asc/desc with totals', async () => {
+  // Seed deterministic timestamps
+  const now = Date.now();
+  db.business_reviews.insert({ id: 'r3', business_id: TEST_BIZ_1, recommend_status: true, created_at: new Date(now - 3000).toISOString() });
+  db.business_reviews.insert({ id: 'r4', business_id: TEST_BIZ_1, recommend_status: false, created_at: new Date(now - 2000).toISOString() });
+  db.business_reviews.insert({ id: 'r5', business_id: TEST_BIZ_1, recommend_status: true, created_at: new Date(now - 1000).toISOString() });
+
+  // Desc by created_at (default)
+  const resDesc = await reviewsPost(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/reviews?limit=2&offset=0&order=created_at.desc`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(resDesc.status).toBe(200);
+  const jDesc = await resDesc.json();
+  expect(jDesc.ok).toBe(true);
+  expect(jDesc.limit).toBe(2);
+  expect(jDesc.total).toBeGreaterThanOrEqual(5);
+  // Asc by created_at
+  const resAsc = await reviewsPost(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/reviews?limit=2&offset=0&order=created_at.asc`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  const jAsc = await resAsc.json();
+  expect(jAsc.ok).toBe(true);
+  expect(jAsc.limit).toBe(2);
+  // Order by recommend_status desc
+  const resRec = await reviewsPost(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/reviews?limit=3&offset=0&order=recommend_status.desc`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  const jRec = await resRec.json();
+  expect(jRec.ok).toBe(true);
+  expect(jRec.limit).toBe(3);
+});
+
 it('creates a business review and reflects in analytics', async () => {
   // Add positive review
   const resPost = await reviewsPost(
@@ -419,6 +498,38 @@ it('returns analytics trends', async () => {
   const j = await res.json();
   expect(j.ok).toBe(true);
   expect(j.trends).toBeTruthy();
+});
+
+it('trends zero-fill and sinceDays clamping', async () => {
+  const res = await trendsGet(makeReq(path(`/api/business/analytics/trends?sinceDays=1`), 'GET'));
+  expect(res.status).toBe(200);
+  const j = await res.json();
+  expect(j.ok).toBe(true);
+  // Expect at least 1 day present
+  expect(Object.keys(j.trends.reviews).length).toBeGreaterThanOrEqual(1);
+});
+
+it('filters reviews by created_at date range', async () => {
+  const now = Date.now();
+  const early = new Date(now - 10 * 24 * 60 * 60 * 1000).toISOString();
+  const mid = new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString();
+  const late = new Date(now - 1 * 24 * 60 * 60 * 1000).toISOString();
+  db.business_reviews.insert({ id: 'dr1', business_id: TEST_BIZ_1, recommend_status: true, created_at: early });
+  db.business_reviews.insert({ id: 'dr2', business_id: TEST_BIZ_1, recommend_status: false, created_at: mid });
+  db.business_reviews.insert({ id: 'dr3', business_id: TEST_BIZ_1, recommend_status: true, created_at: late });
+  const res = await reviewsPost(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/reviews?created_gte=${encodeURIComponent(mid)}&created_lte=${encodeURIComponent(late)}&limit=100&offset=0`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(res.status).toBe(200);
+  const j = await res.json();
+  expect(j.ok).toBe(true);
+  // Should include mid and late, but not early
+  const ids = (j.items as any[]).map(r => r.id);
+  expect(ids.includes('dr2')).toBe(true);
+  expect(ids.includes('dr3')).toBe(true);
+  expect(ids.includes('dr1')).toBe(false);
 });
 
 it('forbids analytics trends with businessId for non-owner', async () => {

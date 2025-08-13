@@ -119,6 +119,17 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  items: { type: array, items: { $ref: '#/components/schemas/Coupon' } }
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+                  order: { type: string }
           headers:
             RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
             RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
@@ -194,7 +205,19 @@ paths:
                   city: "San Jose"
                   interests: ["Food", "Books", "Outdoors"]
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  items: { type: array, items: { $ref: '#/components/schemas/UserCoupon' } }
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+                  order: { type: string }
   /api/users/{userId}/dashboard:
     get:
       security: [ { bearerAuth: [] } ]
@@ -451,6 +474,37 @@ paths:
                 end_date: { type: string, format: date }
       responses:
         '200': { description: OK }
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: List offers (coupon templates) for owner businesses
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema: { type: string }
+          description: Case-insensitive search in title
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200 }
+          description: Max items to return (default 10)
+        - in: query
+          name: offset
+          required: false
+          schema: { type: integer, minimum: 0 }
+          description: Offset for pagination (default 0)
+        - in: query
+          name: order
+          required: false
+          schema: { type: string, enum: ["title.asc","title.desc","start_date.asc","start_date.desc"] }
+          description: Sort order (default start_date.desc)
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /api/business/offers/{offerId}/coupons:
     post:
       security: [ { bearerAuth: [] } ]
@@ -476,6 +530,38 @@ paths:
                   terms_and_conditions: "Valid Mon–Thu only"
       responses:
         '200': { description: OK }
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: List generated coupons for an offer (owner or platform)
+      parameters:
+        - in: path
+          name: offerId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: q
+          required: false
+          schema: { type: string }
+          description: Case-insensitive search in unique_code
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 500 }
+          description: Max items to return (default 100)
+        - in: query
+          name: offset
+          required: false
+          schema: { type: integer, minimum: 0 }
+          description: Offset for pagination (default 0)
+        - in: query
+          name: order
+          required: false
+          schema: { type: string, enum: ["unique_code.asc","unique_code.desc","is_redeemed.asc","is_redeemed.desc"] }
+          description: Sort order (default unique_code.asc)
+      responses:
+        '200': { description: OK }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
   /api/business/{businessId}/redeem:
     post:
       security: [ { bearerAuth: [] } ]
@@ -550,6 +636,11 @@ paths:
           required: true
           schema: { type: string, format: uuid }
         - in: query
+          name: order
+          required: false
+          schema: { type: string, enum: ["created_at.asc","created_at.desc","recommend_status.asc","recommend_status.desc"] }
+          description: Sort order (default created_at.desc)
+        - in: query
           name: recommend
           required: false
           schema: { type: string, enum: ["true","false"] }
@@ -565,7 +656,28 @@ paths:
           schema: { type: integer, minimum: 0 }
           description: Offset for pagination (default 0)
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        user_id: { type: string }
+                        created_at: { type: string, format: date-time }
+                        recommend_status: { type: boolean }
+                        review_text: { type: string }
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+                  order: { type: string }
     post:
       security: [ { bearerAuth: [] } ]
       summary: Create a review for a business
@@ -650,6 +762,11 @@ paths:
             minimum: 1
             maximum: 365
           description: Optional rolling window in days (default 7; clamped to 1–365).
+        - in: query
+          name: tz
+          required: false
+          schema: { type: string }
+          description: Optional IANA timezone for bucketing; if omitted, uses UTC boundaries.
       responses:
         '200':
           description: OK

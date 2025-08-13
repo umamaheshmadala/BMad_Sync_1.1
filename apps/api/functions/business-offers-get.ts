@@ -12,6 +12,23 @@ export default withRequestLogging('business-offers-get', withRateLimit('business
   if (!callerUserId) return json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
   const supabase = createSupabaseClient(true) as any;
+  const url = new URL(req.url);
+  const q = (url.searchParams.get('q') || '').trim();
+  const limitParam = url.searchParams.get('limit');
+  const offsetParam = url.searchParams.get('offset');
+  const orderParam = (url.searchParams.get('order') || '').trim(); // e.g., title.asc or start_date.desc
+  const limit = (() => { const n = Number(limitParam); return Number.isFinite(n) && n > 0 && n <= 200 ? n : 10; })();
+  const offset = (() => { const n = Number(offsetParam); return Number.isFinite(n) && n >= 0 ? n : 0; })();
+  const allowedOrderCols = new Set(['title', 'start_date']);
+  let orderCol = 'start_date';
+  let orderAsc = false;
+  if (orderParam) {
+    const [col, dir] = orderParam.split('.') as [string, string];
+    if (allowedOrderCols.has(col)) {
+      orderCol = col;
+      orderAsc = (dir || '').toLowerCase() === 'asc';
+    }
+  }
 
   // Determine business context: owner user's business ids
   const { data: myBusinesses, error: bizErr } = await supabase
@@ -27,14 +44,20 @@ export default withRequestLogging('business-offers-get', withRateLimit('business
   if (headerBiz && isPlatformOwner(req)) targetBizIds = [headerBiz];
   if (!targetBizIds.length) return json({ ok: true, items: [] });
 
-  const { data: offers, error } = await supabase
+  let query = supabase
     .from('coupons')
-    .select('id, business_id, title, total_quantity, cost_per_coupon, start_date, end_date')
-    .in('business_id', targetBizIds)
-    .order('start_date', { ascending: false } as any);
+    .select('id, business_id, title, total_quantity, cost_per_coupon, start_date, end_date', { count: 'exact' } as any)
+    .in('business_id', targetBizIds) as any;
+  if (q) {
+    // Optional search by title (case-insensitive, contains)
+    query = query.ilike('title', `%${q}%`);
+  }
+  const { data: offers, error, count } = await query
+    .order(orderCol, { ascending: orderAsc } as any)
+    .range(offset, Math.max(offset, offset + limit - 1));
   if (error) return json({ ok: false, error: error.message }, { status: 500 });
 
-  return json({ ok: true, items: offers || [] });
+  return json({ ok: true, items: offers || [], total: count ?? (offers?.length || 0), limit, offset, order: `${orderCol}.${orderAsc ? 'asc' : 'desc'}` });
 })));
 
 export const config = {

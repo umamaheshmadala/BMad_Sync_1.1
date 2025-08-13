@@ -13,6 +13,7 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
   const url = new URL(req.url);
   const businessId = url.searchParams.get('businessId') || '';
   const group = (url.searchParams.get('group') || '').toLowerCase();
+  const tz = (url.searchParams.get('tz') || '').trim();
   const sinceDaysParam = url.searchParams.get('sinceDays');
   // Align default with UI for snappier responses
   const sinceDays = sinceDaysParam ? Math.max(1, Math.min(365, Number(sinceDaysParam))) : 7;
@@ -44,6 +45,24 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
 
   function dateKey(iso?: string) {
     try { return (iso || '').slice(0, 10); } catch { return ''; }
+  }
+  function dateKeysRange(startIso: string, endIso: string): string[] {
+    try {
+      const keys: string[] = [];
+      const start = new Date(startIso);
+      const end = new Date(endIso);
+      // Normalize to UTC date boundaries (tz handling can be added later if needed)
+      let cur = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+      const endDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
+      while (cur <= endDay) {
+        const k = cur.toISOString().slice(0, 10);
+        keys.push(k);
+        cur = new Date(cur.getTime() + 24 * 60 * 60 * 1000);
+      }
+      return keys;
+    } catch {
+      return [];
+    }
   }
 
   const reviewTrend: Record<string, { total: number; recommend: number }> = {};
@@ -88,7 +107,19 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
     }
   }
 
-  const payload: any = { ok: true, trends: { reviews: reviewTrend, coupons: couponTrend } };
+  // Zero-fill for requested range and ensure ascending key order
+  const todayIso = new Date().toISOString();
+  const allDays = dateKeysRange(sinceIso, todayIso);
+  const orderedReviews: Record<string, { total: number; recommend: number }> = {};
+  const orderedCoupons: Record<string, { collected: number; redeemed: number }> = {};
+  for (const d of allDays) {
+    const r = reviewTrend[d] || { total: 0, recommend: 0 };
+    const c = couponTrend[d] || { collected: 0, redeemed: 0 };
+    orderedReviews[d] = r;
+    orderedCoupons[d] = c;
+  }
+
+  const payload: any = { ok: true, trends: { reviews: orderedReviews, coupons: orderedCoupons } };
   if (group === 'business') {
     payload.trendsByBusiness = { reviews: reviewByBusiness, coupons: couponByBusiness };
   }

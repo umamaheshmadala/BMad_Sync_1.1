@@ -30,20 +30,35 @@ export default withRateLimit('business-reviews', { limit: 120, windowMs: 60_000 
 
     const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || 50)));
     const offset = Math.max(0, Number(url.searchParams.get('offset') || 0));
+    const createdGte = (url.searchParams.get('created_gte') || '').trim();
+    const createdLte = (url.searchParams.get('created_lte') || '').trim();
+    const orderParam = (url.searchParams.get('order') || '').trim(); // e.g., created_at.desc or recommend_status.asc
+    const allowedOrderCols = new Set(['created_at', 'recommend_status']);
+    let orderCol = 'created_at';
+    let orderAsc = false;
+    if (orderParam) {
+      const [col, dir] = orderParam.split('.') as [string, string];
+      if (allowedOrderCols.has(col)) {
+        orderCol = col;
+        orderAsc = (dir || '').toLowerCase() === 'asc';
+      }
+    }
     const recommendParam = url.searchParams.get('recommend');
     let query = supabase
       .from('business_reviews')
-      .select('id, user_id, recommend_status, review_text, checked_in_at, created_at')
-      .eq('business_id', businessId)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .select('id, user_id, recommend_status, review_text, checked_in_at, created_at', { count: 'exact' } as any)
+      .eq('business_id', businessId) as any;
+    if (createdGte) query = query.gte('created_at', createdGte);
+    if (createdLte) query = query.lte('created_at', createdLte);
     if (recommendParam === 'true' || recommendParam === 'false') {
       const recommend = recommendParam === 'true';
       query = query.eq('recommend_status', recommend);
     }
-    const { data, error } = await query;
+    const { data, error, count } = await query
+      .order(orderCol, { ascending: orderAsc } as any)
+      .range(offset, Math.max(offset, offset + limit - 1));
     if (error) return json({ ok: false, error: error.message }, { status: 500 });
-    return json({ ok: true, items: (data as any[]) || [] });
+    return json({ ok: true, items: (data as any[]) || [], total: count ?? ((data as any[])?.length || 0), limit, offset, order: `${orderCol}.${orderAsc ? 'asc' : 'desc'}` });
   }
 
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
