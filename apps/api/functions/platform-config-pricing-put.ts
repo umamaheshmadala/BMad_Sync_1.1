@@ -3,6 +3,7 @@ import { isPlatformOwner, isPlatformOwnerAsync } from '../../../packages/shared/
 import { withRequestLogging } from '../../../packages/shared/logging';
 import { withErrorHandling } from '../../../packages/shared/errors';
 import { json } from '../../../packages/shared/http';
+import { PlatformPricingSchema } from '../../../packages/shared/validation';
 
 export default withRequestLogging('platform-config-pricing-put', withErrorHandling(async (req: Request) => {
   if (req.method !== 'PUT') return new Response('Method Not Allowed', { status: 405 });
@@ -10,7 +11,9 @@ export default withRequestLogging('platform-config-pricing-put', withErrorHandli
   if (!allow) return json({ ok: false, error: 'Forbidden' }, { status: 403 });
   try {
     const body = await req.json();
-    const pricing = typeof body === 'object' && body ? body : {};
+    const parsed = PlatformPricingSchema.safeParse(body);
+    if (!parsed.success) return json({ ok: false, error: 'Invalid payload', details: parsed.error.flatten() }, { status: 400 });
+    const pricing = parsed.data;
     const supabase = createSupabaseClient(true) as any;
     const { error } = await supabase
       .from('platform_config')

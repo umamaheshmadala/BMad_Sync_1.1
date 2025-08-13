@@ -127,3 +127,21 @@ export const IssueTargetedPayloadSchema = z.object({
 
 export type IssueTargetedPayload = z.infer<typeof IssueTargetedPayloadSchema>;
 
+// Platform config schemas
+export const PlatformPricingSchema = z.record(z.string(), z.any());
+
+export const PlatformRuntimeConfigShapeSchema = z
+  .object({
+    'billing.mode': z.object({ value: z.string() }).optional(),
+    'billing.threshold': z.object({ value: z.number() }).optional(),
+    'notifications.promotions_per_hour': z.object({ value: z.number() }).optional(),
+    'notifications.promotions_per_day': z.object({ value: z.number() }).optional(),
+    'notifications.quiet_hours': z.object({ value: z.string() }).optional(),
+    'coupon_sharing.cap_per_user_per_day': z.object({ value: z.number() }).optional(),
+    'ads.carousel_slots': z.object({ value: z.number() }).optional(),
+    'ads.rotation_sec': z.object({ value: z.number() }).optional(),
+  })
+  .strict();
+
+export type PlatformRuntimeConfigShape = z.infer<typeof PlatformRuntimeConfigShapeSchema>;
+
