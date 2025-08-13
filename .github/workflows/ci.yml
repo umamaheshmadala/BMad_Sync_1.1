@@ -34,16 +34,18 @@ jobs:
       - name: Lint OpenAPI spec
         run: npx --yes @redocly/cli@latest lint docs/api/openapi.yaml
 
-      - name: Run Supabase Advisors (best-effort)
-        run: node scripts/advisors.mjs || echo "Advisors skipped or non-fatal"
+      - name: Run Supabase Advisors
+        run: node scripts/advisors.mjs
+        continue-on-error: ${{ vars.STRICT_ADVISORS != 'true' }}
         env:
           SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
           STRICT_ADVISORS: ${{ vars.STRICT_ADVISORS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run EXPLAIN baselines (best-effort)
-        run: node scripts/explain.mjs || echo "EXPLAIN skipped or non-fatal"
+      - name: Run EXPLAIN baselines
+        run: node scripts/explain.mjs
+        continue-on-error: ${{ vars.EXPLAIN_STRICT != 'true' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
