@@ -28,6 +28,9 @@ jobs:
       - name: Run tests
         run: npm test --silent
 
+      - name: Build web
+        run: npm run build:web --silent
+
   openapi-validate:
     runs-on: ubuntu-latest
     steps:
@@ -38,5 +41,18 @@ jobs:
         with:
           files: |
             docs/api/openapi.yaml
+
+  preview-smoke:
+    needs: [build-and-test]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Smoke against preview URL
+        env:
+          BASE_URL: ${{ github.event.pull_request.head.repo.fork == true && '' || format('https://{0}--{1}.netlify.app', github.head_ref || github.ref_name, 'tiny-bombolone-8f8acf') }}
+        run: |
+          if [ -z "$BASE_URL" ]; then echo "Skipping (fork PR or unable to resolve preview URL)"; exit 0; fi
+          echo "BASE_URL=$BASE_URL"
+          node -e "(async()=>{const f=await fetch('$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/raw/$GITHUB_SHA/scripts/smoke.mjs'); const t=await f.text(); await import('data:text/javascript,'+encodeURIComponent(t));})()"
 
 
