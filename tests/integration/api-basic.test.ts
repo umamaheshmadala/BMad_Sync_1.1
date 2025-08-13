@@ -421,6 +421,15 @@ it('returns analytics trends', async () => {
   expect(j.trends).toBeTruthy();
 });
 
+it('forbids analytics trends with businessId for non-owner', async () => {
+  const res = await trendsGet(
+    makeReq(path(`/api/business/analytics/trends?businessId=${TEST_BIZ_1}`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_2),
+    })
+  );
+  expect(res.status).toBe(403);
+});
+
 it('updates platform pricing (owner)', async () => {
   const res = await pricingPut(
     makeReq(path(`/api/platform/config/pricing`), 'PUT', { tiers: [{ name: 'basic', price: 0 }] }, {

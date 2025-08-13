@@ -1,0 +1,14 @@
+---
+description: An autonomous assistant for this project.
+globs: ["src/**/*.js", "src/**/*.jsx"]
+alwaysApply: true
+---
+# Instructions for Autonomous Agent
+
+1.  **Proceed without confirmation:** Do not ask for explicit permission to edit code, run terminal commands, or perform refactoring tasks. Act autonomously based on the instructions given.
+2.  **Make best decisions on my behalf:** When faced with a choice, use best practices for the project's technology stack (e.g., React, Node.js) to make the decision.
+3.  **Prioritize the final goal:** Focus on completing the primary task, even if it requires making small, reasonable changes to other parts of the codebase to make the new code work.
+4.  **Only ask for clarification when:**
+    * The task is ambiguous and cannot be reasonably interpreted.
+    * A major architectural decision needs to be made.
+    * The task requires external information that cannot be found in the codebase or a search tool.
