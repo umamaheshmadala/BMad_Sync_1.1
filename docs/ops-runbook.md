@@ -31,6 +31,7 @@
   - Enable via FEATURE_SHARED_RATELIMIT=true
   - Keep in-memory fallback if disabled
   - Diagnostics (owner-only): GET /api/platform/ratelimit (shows top 50 counters when shared limiter enabled)
+  - Deployed via migration `supabase/migrations/20250811152000_rate_limits.sql` (ensure it’s applied before flipping the flag)
 
 #### Logging & tracing
 - x-request-id header added to all responses from wrapped handlers

@@ -64,7 +64,8 @@ export default function App() {
 	const [lastMeta, setLastMeta] = useState(null as any);
   const [lastCurl, setLastCurl] = useState('' as string);
 	const [curlOpen, setCurlOpen] = useState(false as boolean);
-  const [curlByAction, setCurlByAction] = useState<Record<string, string>>({});
+  type CurlMap = Record<string, string>;
+  const [curlByAction, setCurlByAction] = useState({} as CurlMap);
   const getCurl = (t: string) => curlByAction[t];
 
   function buildCurl(url: string, init?: RequestInit): string {
@@ -98,7 +99,7 @@ export default function App() {
     const res = await apiFetch(url, init);
     try {
       const curl = buildCurl(url, init);
-      setCurlByAction((prev) => ({ ...prev, [tag]: curl }));
+      setCurlByAction((prev: CurlMap) => ({ ...prev, [tag]: curl }));
     } catch {}
     return res;
   }
@@ -132,9 +133,14 @@ export default function App() {
   const [sbAnon, setSbAnon] = useState(initialSbAnon as string);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPwd, setLoginPwd] = useState('');
-  const [theme, setTheme] = useState<'cosmic' | 'daylight' | 'ocean'>(() => {
-    try { return (localStorage.getItem('sync_theme') as any) || 'cosmic'; } catch { return 'cosmic'; }
-  });
+  type Theme = 'cosmic' | 'daylight' | 'ocean';
+  const initialTheme: Theme = (() => {
+    try {
+      const t = (localStorage.getItem('sync_theme') as any) || 'cosmic';
+      return (t === 'cosmic' || t === 'daylight' || t === 'ocean') ? (t as Theme) : 'cosmic';
+    } catch { return 'cosmic'; }
+  })();
+  const [theme, setTheme] = useState(initialTheme as Theme);
 
   async function postStorefront() {
     const res = await actionFetch('storefront:post', '/api/business/storefront', {
@@ -1128,6 +1134,7 @@ export default function App() {
             <button className="btn" onClick={exportRateLimitCsv} disabled={!Array.isArray((ratelimitResult as any)?.top_counters) || !(ratelimitResult as any)?.top_counters?.length}>export CSV</button>
             <button className="btn" onClick={() => setRatelimitResult(null as any)}>clear</button>
           </div>
+          <div className="muted text-sm" style={{ marginTop: 6 }}>Shared limiter requires table <code>public.rate_limits</code> and <code>FEATURE_SHARED_RATELIMIT=true</code>. When disabled, diagnostics run in memory mode.</div>
           <CopyButton getText={() => JSON.stringify(ratelimitResult, null, 2)} />
           <pre>{JSON.stringify(ratelimitResult, null, 2)}</pre>
         </>

@@ -193,3 +193,19 @@ $platformRate = Invoke-RestMethod -UseBasicParsing -Uri "$BASE/api/platform/rate
 
 - PowerShell does not support `&&` for command chaining. Run commands separately (e.g., `npm run test` then `npm run build:web`).
 
+
+## Shared rate limiter (optional)
+
+- Backend support requires `public.rate_limits` (created by migration `supabase/migrations/20250811152000_rate_limits.sql`). If you need to create manually, run:
+
+```sql
+create table if not exists public.rate_limits (
+  key text primary key,
+  window_start integer not null,
+  count integer not null default 0
+);
+create index if not exists idx_rate_limits_window on public.rate_limits(window_start);
+alter table public.rate_limits disable row level security;
+```
+
+- After deploy, enable via `FEATURE_SHARED_RATELIMIT=true`. When disabled, limiter runs in-memory per instance and `/api/platform/ratelimit` will report `mode: "memory"`.
