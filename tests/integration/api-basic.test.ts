@@ -462,4 +462,31 @@ it('rejects forbidden requests with 403 when caller != path user', async () => {
   expect(res.status).toBe(403);
 });
 
+it('enforces basic access patterns akin to RLS (owner vs non-owner)', async () => {
+  // Non-owner cannot read another user's notifications
+  db.notifications.insert({ id: 'n2', recipient_user_id: TEST_USER_1, message: 'Z', notification_type: 'wishlist_match' });
+  const resN = await notificationsGet(
+    makeReq(path(`/api/users/${TEST_USER_1}/notifications`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_2),
+    })
+  );
+  expect(resN.status).toBe(403);
+
+  // Non-owner cannot list reviews for business they don't own
+  const resRev = await reviewsPost(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/reviews`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_2),
+    })
+  );
+  expect(resRev.status).toBe(403);
+
+  // Business owner can list reviews
+  const resOwner = await reviewsPost(
+    makeReq(path(`/api/business/${TEST_BIZ_1}/reviews`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(resOwner.status).toBe(200);
+});
+
 
