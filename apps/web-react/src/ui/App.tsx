@@ -119,6 +119,7 @@ export default function App() {
   const [offersResult, setOffersResult] = useState(null as any);
   const [redeemResult, setRedeemResult] = useState(null as any);
   const [revenueResult, setRevenueResult] = useState(null as any);
+  const [platformConfigResult, setPlatformConfigResult] = useState(null as any);
   const [ratelimitResult, setRatelimitResult] = useState(null as any);
   const [couponAnalytics, setCouponAnalytics] = useState(null as any);
   const [authResult, setAuthResult] = useState(null as any);
@@ -295,6 +296,12 @@ export default function App() {
     const j = await res.json();
     setRatelimitResult(j);
     if (!j?.ok) showToast(j?.error || 'Rate limit diagnostics error');
+  }
+
+  async function getPlatformConfig() {
+    const res = await actionFetch('platform:config', '/api/platform/config', { headers: { ...authHeaders } });
+    const j = await res.json();
+    setPlatformConfigResult(j);
   }
 
   async function getTrends() {
@@ -1049,6 +1056,15 @@ export default function App() {
         </div>
         <CopyButton getText={() => JSON.stringify(pricingResult, null, 2)} />
         <pre>{JSON.stringify(pricingResult, null, 2)}</pre>
+
+        <div className="muted text-sm" style={{ marginTop: 12 }}>Platform config (read-only GET)</div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+          <button className="btn" onClick={getPlatformConfig}>GET config</button>
+          <CopyCurlButton tag={'platform:config'} getCurl={getCurl} />
+          <button className="btn" onClick={() => setPlatformConfigResult(null as any)}>clear</button>
+        </div>
+        <CopyButton getText={() => JSON.stringify(platformConfigResult, null, 2)} />
+        <pre>{JSON.stringify(platformConfigResult, null, 2)}</pre>
         </>
         )}
       </Section>

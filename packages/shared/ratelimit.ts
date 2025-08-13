@@ -89,7 +89,6 @@ function attachRateHeaders(res: Response, limit: number, remaining: number, rese
   headers.set('RateLimit-Limit', String(limit));
   headers.set('RateLimit-Remaining', String(remaining));
   headers.set('RateLimit-Reset', String(Math.ceil(resetAtMs / 1000)));
-  const body = (res as any).text ? undefined : undefined;
   return new Response((res as any).body, { status: res.status, headers });
 }
 
