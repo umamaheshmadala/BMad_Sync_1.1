@@ -123,8 +123,27 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
   }
 
   // Zero-fill for requested range and ensure ascending key order
-  const todayIso = new Date().toISOString();
-  const allDays = dateKeysRange(sinceIso, todayIso);
+  function tzYmd(d: Date): string {
+    if (!tz) return d.toISOString().slice(0, 10);
+    try {
+      const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+      return fmt.format(d);
+    } catch {
+      return d.toISOString().slice(0, 10);
+    }
+  }
+  const now = new Date();
+  const allDays = (() => {
+    if (!tz) {
+      return dateKeysRange(sinceIso, now.toISOString());
+    }
+    const keys: string[] = [];
+    for (let i = sinceDays; i >= 0; i -= 1) {
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      keys.push(tzYmd(d));
+    }
+    return keys;
+  })();
   const orderedReviews: Record<string, { total: number; recommend: number }> = {};
   const orderedCoupons: Record<string, { collected: number; redeemed: number }> = {};
   for (const d of allDays) {

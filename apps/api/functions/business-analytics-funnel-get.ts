@@ -89,7 +89,17 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
   // Aggregate totals and per-day buckets for collected/redeemed
   const totals: FunnelCounts = { issued: 0, collected: 0, shared: 0, redeemed: 0 };
   const byDay: Record<string, { collected: number; redeemed: number }> = {};
-  const keyFor = (iso?: string) => { try { return (iso || '').slice(0, 10); } catch { return ''; } };
+  const tz = (url.searchParams.get('tz') || '').trim();
+  const keyFor = (iso?: string) => {
+    try {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (tz) {
+        try { const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }); return fmt.format(d); } catch {}
+      }
+      return (iso || '').slice(0, 10);
+    } catch { return ''; }
+  };
   for (const bizId of Object.keys(byBusiness)) {
     const c = byBusiness[bizId];
     totals.issued += c.issued;
@@ -105,7 +115,32 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
     if (uc.is_redeemed) byDay[k].redeemed += 1;
   }
 
-  const payload: any = { ok: true, funnel: totals, funnelByDay: byDay };
+  // Zero-fill and order ascending by key
+  const zeroFilled: Record<string, { collected: number; redeemed: number }> = {};
+  const keysAsc = (() => {
+    const ks = Object.keys(byDay);
+    return ks.sort();
+  })();
+  // Build a default window same as trends (today back to sinceDays)
+  const windowKeys = (() => {
+    const keys: string[] = [];
+    const nowD = new Date();
+    for (let i = sinceDays; i >= 0; i -= 1) {
+      const d = new Date(nowD.getTime() - i * 24 * 60 * 60 * 1000);
+      try {
+        const ymd = tz ? new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d) : d.toISOString().slice(0, 10);
+        keys.push(ymd);
+      } catch {
+        keys.push(d.toISOString().slice(0, 10));
+      }
+    }
+    return keys;
+  })();
+  for (const k of windowKeys) {
+    zeroFilled[k] = byDay[k] || { collected: 0, redeemed: 0 };
+  }
+
+  const payload: any = { ok: true, funnel: totals, funnelByDay: zeroFilled };
   if (group === 'business') payload.funnelByBusiness = byBusiness;
   return json(payload, {
     headers: {

@@ -845,6 +845,11 @@ paths:
             minimum: 1
             maximum: 365
           description: Optional rolling window in days (default 7; clamped to 1–365).
+        - in: query
+          name: tz
+          required: false
+          schema: { type: string }
+          description: Optional IANA timezone; affects `funnelByDay` bucketing.
       responses:
         '200':
           description: OK

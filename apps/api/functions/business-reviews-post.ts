@@ -35,7 +35,7 @@ export default withRateLimit('business-reviews', { limit: 120, windowMs: 60_000 
     const createdGte = (url.searchParams.get('created_gte') || '').trim();
     const createdLte = (url.searchParams.get('created_lte') || '').trim();
     const orderParam = (url.searchParams.get('order') || '').trim(); // e.g., created_at.desc or recommend_status.asc
-    const allowedOrderCols = new Set(['created_at', 'recommend_status']);
+    const allowedOrderCols = new Set(['created_at', 'recommend_status', 'user_id']);
     let orderCol = 'created_at';
     let orderAsc = false;
     if (orderParam) {
