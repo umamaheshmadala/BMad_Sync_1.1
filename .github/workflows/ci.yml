@@ -37,6 +37,7 @@ jobs:
           SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
           STRICT_ADVISORS: ${{ secrets.STRICT_ADVISORS }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: EXPLAIN baselines (optional)
         if: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
