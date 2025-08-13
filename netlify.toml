@@ -10,17 +10,23 @@
   functions = "apps/api/functions"
   publish = "."
 
+# Landing page at /
+[[redirects]]
+  from = "/"
+  to = "/landing.html"
+  status = 200
+
 # Route a simple mini UI at /web to apps/web
 [[redirects]]
   from = "/web"
   to = "/apps/web/index.html"
   status = 200
 
-# Landing page at /
-[[redirects]]
-  from = "/"
-  to = "/landing.html"
-  status = 200
+[[headers]]
+  for = "/landing.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Netlify-CDN-Cache-Control = "public, max-age=0, must-revalidate"
 
 # React UI at /react (production points to built assets)
 [[redirects]]
