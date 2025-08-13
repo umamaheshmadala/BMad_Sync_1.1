@@ -12,7 +12,7 @@ export default withRateLimit('platform-ratelimit-get', { limit: 60, windowMs: 60
 
   const shared = isFeatureEnabled('FEATURE_SHARED_RATELIMIT');
   if (!shared) {
-    return json({ ok: true, mode: 'memory', message: 'Shared Postgres-backed limiter disabled. Memory counters are per-instance and not centrally observable.' });
+    return json({ ok: true, mode: 'memory', message: 'Shared Postgres-backed limiter disabled. Memory counters are per-instance and not centrally observable.', top_counters: [] });
   }
 
   const supabase = createSupabaseClient(true) as any;
@@ -22,7 +22,7 @@ export default withRateLimit('platform-ratelimit-get', { limit: 60, windowMs: 60
     .order('count', { ascending: false } as any)
     .limit(50);
   if (error) return json({ ok: false, error: error.message }, { status: 500 });
-  return json({ ok: true, mode: 'shared', items: data || [] });
+  return json({ ok: true, mode: 'shared', top_counters: data || [] });
 }));
 
 export const config = {
