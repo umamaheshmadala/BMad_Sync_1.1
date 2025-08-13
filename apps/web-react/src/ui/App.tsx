@@ -1047,6 +1047,33 @@ export default function App() {
         ) : (
           <>
             <CopyButton getText={() => JSON.stringify(trendsResult, null, 2)} />
+            {/* Lightweight inline charts (no external deps) */}
+            {trendsResult?.trends ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginTop: 8 }}>
+                {['reviews','coupons'].map((series) => {
+                  const data = (trendsResult.trends as any)[series] || {};
+                  const entries = Object.entries(data) as Array<[string, any]>;
+                  const maxY = entries.reduce((m, [_, v]) => {
+                    const y = series === 'reviews' ? (v.total||0) : (v.collected||0);
+                    return Math.max(m, y);
+                  }, 1);
+                  return (
+                    <div key={series}>
+                      <div className="muted text-sm" style={{ marginBottom: 4 }}>{series} per day</div>
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', height: 120, borderBottom: '1px solid #333', padding: '6px 0' }}>
+                        {entries.map(([day, v]) => {
+                          const y = series === 'reviews' ? (v.total||0) : (v.collected||0);
+                          const h = Math.max(2, Math.round((y / (maxY || 1)) * 110));
+                          return (
+                            <div key={day} title={`${day}: ${y}`} style={{ width: 10, height: h, background: '#7c4dff' }}></div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
             <pre>{JSON.stringify(trendsResult, null, 2)}</pre>
           </>
         )}
