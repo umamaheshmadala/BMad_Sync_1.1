@@ -1,0 +1,5 @@
+https://tiny-bombolone-8f8acf.netlify.app/
+https://tiny-bombolone-8f8acf.netlify.app/react
+https://tiny-bombolone-8f8acf.netlify.app/api-docs
+https://tiny-bombolone-8f8acf.netlify.app/api/platform/health
+

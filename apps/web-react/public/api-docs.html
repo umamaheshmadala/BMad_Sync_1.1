@@ -16,6 +16,10 @@
       <div style="margin-left:auto; font-size:12px"><a href="https://github.com/umamaheshmadala/BMad_Sync_1.1/blob/main/docs/api/openapi.yaml" target="_blank" rel="noreferrer">View YAML</a></div>
     </div>
     <div id="swagger-ui"></div>
+    <div style="padding:12px; font: 13px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; color:#444;">
+      <strong>Owner bearer tip:</strong> For owner-only endpoints (e.g., <code>/api/platform/ratelimit</code>), you can construct an unsigned bearer for diagnostics:<br/>
+      <code>header = base64url({"alg":"none","typ":"JWT"}); payload = base64url({"sub":"YOUR_ID","role":"owner"}); Authorization: Bearer <em>header</em>.<em>payload</em>.</code>
+    </div>
     <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
     <script>
       window.onload = async () => {
