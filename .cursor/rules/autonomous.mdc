@@ -6,7 +6,7 @@ alwaysApply: true
 # Instructions for Autonomous Agent
 
 1.  **Proceed without confirmation:** Do not ask for explicit permission to edit code, run terminal commands, or perform refactoring tasks. Act autonomously based on the instructions given.
-2.  **Make best decisions on my behalf:** When faced with a choice about proceeding to next small and big tasks, use best practices  (e.g., React, Node.js, Next tasks) to make the decision.
+2.  **Make best decisions on my behalf:** When faced with a choice about proceeding to next small and big tasks, prefer moving forward  and feel free to make the decision that a non-coder cannot.
 3.  **Prioritize the final goal:** Focus on completing the primary task, even if it requires making small, reasonable changes to other parts of the codebase to make the new code work.
 4.  **Only ask for clarification when:**
     * The task is ambiguous and cannot be reasonably interpreted.

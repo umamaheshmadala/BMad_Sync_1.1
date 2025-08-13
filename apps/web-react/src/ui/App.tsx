@@ -579,6 +579,7 @@ export default function App() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={postStorefront}>POST upsert</button>
           <button onClick={getStorefront}>GET</button>
+          <button className="btn" onClick={() => setStorefront(null as any)}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(storefront, null, 2)} />
         <pre>{JSON.stringify(storefront, null, 2)}</pre>
@@ -614,6 +615,7 @@ export default function App() {
           >
             GET reviews
           </button>
+          <button className="btn" onClick={() => { setReviewResult(null as any); setReviewsList(null as any); setReviewsSummary(null as any); }}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(reviewResult, null, 2)} />
         <pre>{JSON.stringify(reviewResult, null, 2)}</pre>
@@ -643,6 +645,7 @@ export default function App() {
           >
             GET matches
           </button>
+          <button className="btn" onClick={() => setWishlistMatches(null as any)}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(wishlistMatches, null, 2)} />
         <pre>{JSON.stringify(wishlistMatches, null, 2)}</pre>
@@ -679,6 +682,7 @@ export default function App() {
           >
             MARK ALL READ
           </button>
+          <button className="btn" onClick={() => { setNotifications(null as any); setUnreadCount(0 as any); }}>clear</button>
         </div>
         <div>
           {Array.isArray(notifications?.items) ? (
@@ -731,6 +735,7 @@ export default function App() {
           >
             GET products
           </button>
+          <button className="btn" onClick={() => setProducts(null as any)}>clear</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
           <input id="prodName" placeholder="product_name (min 2 chars)" />
@@ -812,6 +817,7 @@ export default function App() {
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button onClick={postAd}>POST ad</button>
+          <button className="btn" onClick={() => setAdsResult(null as any)}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(adsResult, null, 2)} />
         <pre>{JSON.stringify(adsResult, null, 2)}</pre>
@@ -845,6 +851,7 @@ export default function App() {
         <div className="flex gap-2 mt-2">
           <button className="btn" onClick={getRevenue}>GET revenue</button>
           <button className="btn" onClick={getCouponAnalytics}>GET coupon analytics</button>
+          <button className="btn" onClick={() => { setOffersResult(null as any); setRedeemResult(null as any); setRevenueResult(null as any); setCouponAnalytics(null as any); }}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(offersResult, null, 2)} />
         <pre>{JSON.stringify(offersResult, null, 2)}</pre>
@@ -880,6 +887,7 @@ export default function App() {
           </label>
           <button onClick={getTrends}>GET trends</button>
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
+          <button className="btn" onClick={() => setTrendsResult(null as any)}>clear</button>
         </div>
         {isLoadingTrends ? (
           <div className="muted text-sm" style={{ marginTop: 8 }}>Loading trends…</div>
@@ -915,6 +923,7 @@ export default function App() {
           </label>
           <button className="btn" onClick={getFunnel}>GET funnel</button>
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
+          <button className="btn" onClick={() => setFunnelResult(null as any)}>clear</button>
         </div>
         {isLoadingFunnel ? (
           <div className="muted text-sm" style={{ marginTop: 8 }}>Loading funnel…</div>
@@ -988,6 +997,7 @@ export default function App() {
         <textarea id="pricingJson" style={{ width: '100%', height: 120 }} defaultValue={'{"tiers":[{"name":"basic","price":0},{"name":"pro","price":1000}]}' as any} />
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button onClick={putPricing}>PUT pricing</button>
+          <button className="btn" onClick={() => setPricingResult(null as any)}>clear</button>
         </div>
         <CopyButton getText={() => JSON.stringify(pricingResult, null, 2)} />
         <pre>{JSON.stringify(pricingResult, null, 2)}</pre>
@@ -1003,6 +1013,7 @@ export default function App() {
             const j = await res.json();
             setPricingResult(j);
           }}>GET health</button>
+          <button className="btn" onClick={() => setPricingResult(null as any)}>clear</button>
           <CopyButton getText={() => JSON.stringify(pricingResult, null, 2)} />
           <pre>{JSON.stringify(pricingResult, null, 2)}</pre>
         </>
