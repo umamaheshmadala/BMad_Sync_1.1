@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Sitemap: https://tiny-bombolone-8f8acf.netlify.app/sitemap.txt
+
