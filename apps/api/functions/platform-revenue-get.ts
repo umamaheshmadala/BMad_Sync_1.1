@@ -1,6 +1,9 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
+import { withErrorHandling } from '../../../packages/shared/errors';
+import { withRateLimit } from '../../../packages/shared/ratelimit';
+import { json } from '../../../packages/shared/http';
 
-export default async () => {
+export default withRateLimit('platform-revenue-get', { limit: 120, windowMs: 60_000 }, withErrorHandling(async () => {
   const supabase = createSupabaseClient(true) as any;
   // Fetch coupons and user_coupons; compute revenue as cost_per_coupon * redeemed_count
   const [{ data: coupons, error: coupErr }, { data: userCoupons, error: ucErr }] = await Promise.all([
@@ -10,7 +13,7 @@ export default async () => {
 
   if (coupErr || ucErr) {
     const summary = { coupon_revenue: 0, banner_revenue: 0, search_revenue: 0, push_revenue: 0 };
-    return new Response(JSON.stringify(summary), { headers: { 'Content-Type': 'application/json' } });
+    return json(summary);
   }
 
   const costByCoupon: Record<string, number> = Object.create(null);
@@ -31,8 +34,8 @@ export default async () => {
     search_revenue: 0,
     push_revenue: 0,
   };
-  return new Response(JSON.stringify(summary), { headers: { 'Content-Type': 'application/json' } });
-};
+  return json(summary);
+}));
 
 export const config = {
   path: '/api/platform/revenue',

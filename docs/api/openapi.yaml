@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SynC API (MVP Skeleton)
-  version: 0.1.5
+  version: 0.1.6
   description: REST-ish endpoints implemented via Netlify Functions with Supabase Auth.
 servers:
   - url: https://example.com
@@ -72,6 +72,23 @@ components:
         banner_revenue: { type: number }
         search_revenue: { type: number }
         push_revenue: { type: number }
+    ErrorResponse:
+      type: object
+      required: [ok, error]
+      properties:
+        ok: { type: boolean, example: false }
+        error: { type: string }
+        code: { type: string, nullable: true }
+  headers:
+    RateLimit-Limit:
+      description: Maximum requests allowed in the current window
+      schema: { type: integer }
+    RateLimit-Remaining:
+      description: Remaining requests in the current window
+      schema: { type: integer }
+    RateLimit-Reset:
+      description: Epoch seconds when the current window resets
+      schema: { type: integer }
 paths:
   /api/auth/signup:
     post:
@@ -86,7 +103,25 @@ paths:
                 email: { type: string }
                 password: { type: string }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+            Retry-After:
+              description: Seconds until the next allowed request
+              schema: { type: integer }
   /api/auth/login:
     post:
       summary: User login (proxy to Supabase)
@@ -100,7 +135,25 @@ paths:
                 email: { type: string }
                 password: { type: string }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+            Retry-After:
+              description: Seconds until the next allowed request
+              schema: { type: integer }
   /api/users/{userId}/profile/interests:
     put:
       security: [ { bearerAuth: [] } ]
@@ -172,7 +225,7 @@ paths:
                 item_name: { type: string }
                 item_description: { type: string }
       responses:
-        '201': { description: Created }
+        '200': { description: OK }
   /api/users/{userId}/wishlist/matches:
     get:
       security: [ { bearerAuth: [] } ]
@@ -363,7 +416,7 @@ paths:
                 start_date: { type: string, format: date }
                 end_date: { type: string, format: date }
       responses:
-        '201': { description: Created }
+        '200': { description: OK }
   /api/business/offers/{offerId}/coupons:
     post:
       security: [ { bearerAuth: [] } ]
@@ -383,7 +436,7 @@ paths:
                 total_quantity: { type: integer }
                 terms_and_conditions: { type: string }
       responses:
-        '201': { description: Created }
+        '200': { description: OK }
   /api/business/{businessId}/redeem:
     post:
       security: [ { bearerAuth: [] } ]
@@ -413,7 +466,37 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+            Retry-After:
+              description: Seconds until the next allowed request
+              schema: { type: integer }
   /api/business/{businessId}/reviews:
     get:
       security: [ { bearerAuth: [] } ]
@@ -459,7 +542,7 @@ paths:
                 review_text: { type: string }
                 checked_in_at: { type: string, format: date-time }
       responses:
-        '201': { description: Created }
+        '200': { description: OK }
   /api/business/{businessId}/analytics/coupons:
     get:
       security: [ { bearerAuth: [] } ]
@@ -470,7 +553,37 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+            Retry-After:
+              description: Seconds until the next allowed request
+              schema: { type: integer }
   /api/business/analytics/trends:
     get:
       security: [ { bearerAuth: [] } ]
@@ -495,7 +608,37 @@ paths:
             maximum: 365
           description: Optional rolling window in days (default 7; clamped to 1–365).
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+            Retry-After:
+              description: Seconds until the next allowed request
+              schema: { type: integer }
   /api/business/analytics/funnel:
     get:
       security: [ { bearerAuth: [] } ]
@@ -520,7 +663,37 @@ paths:
             maximum: 365
           description: Optional rolling window in days (default 7; clamped to 1–365).
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+            Retry-After:
+              description: Seconds until the next allowed request
+              schema: { type: integer }
   /api/business/coupons/issue-targeted:
     post:
       security: [ { bearerAuth: [] } ]
@@ -532,6 +705,7 @@ paths:
             schema:
               type: object
               properties:
+                coupon_id: { type: string, format: uuid, description: Optional coupon (offer) id to issue to targeted users }
                 target_parameters: { type: object }
       responses:
         '200': { description: OK }
@@ -625,7 +799,37 @@ paths:
           schema: { type: boolean }
           description: When true, returns only unread notifications
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+            Retry-After:
+              description: Seconds until the next allowed request
+              schema: { type: integer }
     delete:
       security: [ { bearerAuth: [] } ]
       summary: Clear all notifications for a user
@@ -635,7 +839,37 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+            Retry-After:
+              description: Seconds until the next allowed request
+              schema: { type: integer }
 
   /api/users/{userId}/notifications/read:
     put:
@@ -647,7 +881,37 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+            Retry-After:
+              description: Seconds until the next allowed request
+              schema: { type: integer }
 
   /api/users/{userId}/notifications/{notificationId}/read:
     put:
@@ -663,4 +927,34 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+            RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+            Retry-After:
+              description: Seconds until the next allowed request
+              schema: { type: integer }

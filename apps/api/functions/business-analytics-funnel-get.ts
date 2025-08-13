@@ -1,10 +1,13 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
 import { isPlatformOwner, getUserIdFromRequest } from '../../../packages/shared/auth';
 import { withRequestLogging } from '../../../packages/shared/logging';
+import { withRateLimit } from '../../../packages/shared/ratelimit';
+import { json } from '../../../packages/shared/http';
+import { withErrorHandling } from '../../../packages/shared/errors';
 
 type FunnelCounts = { issued: number; collected: number; shared: number; redeemed: number };
 
-export default withRequestLogging('business-analytics-funnel', async (req: Request) => {
+export default withRequestLogging('business-analytics-funnel', withRateLimit('analytics-funnel', { limit: 60, windowMs: 60_000 }, withErrorHandling(async (req: Request) => {
   if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
   const supabase = createSupabaseClient(true) as any;
 
@@ -25,7 +28,7 @@ export default withRequestLogging('business-analytics-funnel', async (req: Reque
       .eq('id', businessIdFilter)
       .maybeSingle();
     const isOwner = biz && biz.owner_user_id === callerId;
-    if (!isOwner && !isPlatformOwner(req)) return new Response(JSON.stringify({ ok: false, error: 'Forbidden' }), { status: 403 });
+    if (!isOwner && !isPlatformOwner(req)) return json({ ok: false, error: 'Forbidden' }, { status: 403 });
   }
 
   // Fetch core tables
@@ -95,14 +98,13 @@ export default withRequestLogging('business-analytics-funnel', async (req: Reque
 
   const payload: any = { ok: true, funnel: totals };
   if (group === 'business') payload.funnelByBusiness = byBusiness;
-  return new Response(JSON.stringify(payload), {
+  return json(payload, {
     headers: {
-      'Content-Type': 'application/json',
       'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=120',
       'Netlify-CDN-Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=120',
     },
   });
-});
+})));
 
 export const config = {
   path: '/api/business/analytics/funnel',

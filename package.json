@@ -10,7 +10,8 @@
     "dev:web": "vite dev apps/web-react",
     "build:web": "vite build apps/web-react",
     "preview:web": "vite preview apps/web-react --port 5173",
-    "load:test": "node scripts/load-test.mjs"
+    "load:test": "node scripts/load-test.mjs",
+    "smoke": "node scripts/smoke.mjs"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",

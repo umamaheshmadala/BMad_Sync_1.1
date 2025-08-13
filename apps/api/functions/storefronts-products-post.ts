@@ -1,21 +1,24 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
 import { getUserIdFromRequest, isPlatformOwner } from '../../../packages/shared/auth';
+import { withErrorHandling } from '../../../packages/shared/errors';
+import { withRateLimit } from '../../../packages/shared/ratelimit';
+import { json } from '../../../packages/shared/http';
 import { StorefrontProductsPayloadSchema } from '../../../packages/shared/validation';
 
-export default async (req: Request) => {
+export default withRateLimit('storefronts-products', { limit: 60, windowMs: 60_000 }, withErrorHandling(async (req: Request) => {
   const url = new URL(req.url);
   const parts = url.pathname.split('/');
   const storefrontId = parts[3] || '';
-  if (!storefrontId) return new Response(JSON.stringify({ ok: false, error: 'Missing storefrontId' }), { status: 400 });
+  if (!storefrontId) return json({ ok: false, error: 'Missing storefrontId' }, { status: 400 });
 
   const callerId = getUserIdFromRequest(req);
-  if (!callerId) return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401 });
+  if (!callerId) return json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
   const supabase = createSupabaseClient(true) as any;
 
   // Optional: verify caller owns the business for this storefront (best-effort, RLS also enforces)
   const { data: sf } = await supabase.from('storefronts').select('id,business_id').eq('id', storefrontId).maybeSingle();
-  if (!sf) return new Response(JSON.stringify({ ok: false, error: 'Storefront not found' }), { status: 404 });
+  if (!sf) return json({ ok: false, error: 'Storefront not found' }, { status: 404 });
   const { data: biz } = await supabase
     .from('businesses')
     .select('id,owner_user_id')
@@ -23,7 +26,7 @@ export default async (req: Request) => {
     .maybeSingle();
   const isOwner = biz && biz.owner_user_id === callerId;
   if (!isOwner && !isPlatformOwner(req)) {
-    return new Response(JSON.stringify({ ok: false, error: 'Forbidden' }), { status: 403 });
+    return json({ ok: false, error: 'Forbidden' }, { status: 403 });
   }
 
   if (req.method === 'GET') {
@@ -31,8 +34,8 @@ export default async (req: Request) => {
       .from('storefront_products')
       .select('*')
       .eq('storefront_id', storefrontId);
-    if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
-    return new Response(JSON.stringify({ ok: true, items: data || [] }), { headers: { 'Content-Type': 'application/json' } });
+    if (error) return json({ ok: false, error: error.message }, { status: 500 });
+    return json({ ok: true, items: data || [] });
   }
 
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
@@ -41,7 +44,7 @@ export default async (req: Request) => {
     const body = await req.json();
     const parsed = StorefrontProductsPayloadSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ ok: false, error: 'Invalid items', details: parsed.error.flatten() }), { status: 400 });
+      return json({ ok: false, error: 'Invalid items', details: parsed.error.flatten() }, { status: 400 });
     }
     const items = parsed.data.items as any[];
 
@@ -61,13 +64,13 @@ export default async (req: Request) => {
     // Zod validation already enforced
 
     const { error } = await supabase.from('storefront_products').insert(rows);
-    if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
+    if (error) return json({ ok: false, error: error.message }, { status: 500 });
 
-    return new Response(JSON.stringify({ ok: true, count: rows.length }), { headers: { 'Content-Type': 'application/json' } });
+    return json({ ok: true, count: rows.length });
   } catch (e: any) {
-    return new Response(JSON.stringify({ ok: false, error: e?.message || 'Bad Request' }), { status: 400 });
+    return json({ ok: false, error: e?.message || 'Bad Request' }, { status: 400 });
   }
-};
+}));
 
 export const config = {
   path: '/api/storefronts/:storefrontId/products',

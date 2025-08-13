@@ -1,9 +1,11 @@
 import { readPlatformConfig } from '../../../packages/shared/config';
+import { json } from '../../../packages/shared/http';
+import { withErrorHandling } from '../../../packages/shared/errors';
 
-export default async () => {
+export default withErrorHandling(async () => {
   const cfg = await readPlatformConfig();
-  return new Response(JSON.stringify(cfg), { headers: { 'Content-Type': 'application/json' } });
-};
+  return json(cfg);
+});
 
 export const config = {
   path: '/api/platform/config',

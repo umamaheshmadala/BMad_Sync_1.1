@@ -1,13 +1,17 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
 import { getUserIdFromRequest, isPlatformOwner } from '../../../packages/shared/auth';
 import { withRequestLogging } from '../../../packages/shared/logging';
+import { withErrorHandling } from '../../../packages/shared/errors';
+import { withRateLimit } from '../../../packages/shared/ratelimit';
+import { json } from '../../../packages/shared/http';
+import { BusinessOfferPayloadSchema } from '../../../packages/shared/validation';
 
-export default withRequestLogging('business-offers-post', async (req: Request) => {
+export default withRequestLogging('business-offers-post', withRateLimit('business-offers-post', { limit: 60, windowMs: 60_000 }, withErrorHandling(async (req: Request) => {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
 
   try {
     const callerUserId = getUserIdFromRequest(req);
-    if (!callerUserId) return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401 });
+    if (!callerUserId) return json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
     const supabase = createSupabaseClient(true) as any;
 
@@ -22,19 +26,17 @@ export default withRequestLogging('business-offers-post', async (req: Request) =
     if (!businessId && isPlatformOwner(req)) {
       businessId = req.headers.get('x-business-id') || '';
     }
-    if (!businessId) return new Response(JSON.stringify({ ok: false, error: 'Missing business context' }), { status: 400 });
+    if (!businessId) return json({ ok: false, error: 'Missing business context' }, { status: 400 });
 
     const body = await req.json().catch(() => ({}));
-    const title = typeof body?.title === 'string' ? body.title.trim() : '';
-    const description = typeof body?.description === 'string' ? body.description.trim() : null;
-    const terms = typeof body?.terms_and_conditions === 'string' ? body.terms_and_conditions.trim() : null;
-    const value = Number.isFinite(Number(body?.value)) ? Number(body.value) : null;
-    const totalQuantity = Number.isFinite(Number(body?.total_quantity)) ? Number(body.total_quantity) : 0;
-    const costPerCoupon = Number.isFinite(Number(body?.cost_per_coupon)) ? Number(body.cost_per_coupon) : 2;
-    const startDate = body?.start_date ?? null;
-    const endDate = body?.end_date ?? null;
-
-    if (!title) return new Response(JSON.stringify({ ok: false, error: 'title is required' }), { status: 400 });
+    const parsed = BusinessOfferPayloadSchema.safeParse(body);
+    if (!parsed.success) return json({ ok: false, error: 'Invalid payload', details: parsed.error.flatten() }, { status: 400 });
+    const { title, description = null, terms_and_conditions = null, value = null, total_quantity = 0, cost_per_coupon = 2, start_date = null, end_date = null } = parsed.data as any;
+    const terms = terms_and_conditions;
+    const totalQuantity = total_quantity;
+    const costPerCoupon = cost_per_coupon;
+    const startDate = start_date;
+    const endDate = end_date;
     
     const insertPayload: any = {
       business_id: businessId,
@@ -53,13 +55,13 @@ export default withRequestLogging('business-offers-post', async (req: Request) =
       .insert(insertPayload)
       .select('id')
       .maybeSingle();
-    if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
+    if (error) return json({ ok: false, error: error.message }, { status: 500 });
 
-    return new Response(JSON.stringify({ ok: true, offer_id: created?.id || null }), { headers: { 'Content-Type': 'application/json' } });
+    return json({ ok: true, offer_id: created?.id || null });
   } catch (e: any) {
-    return new Response(JSON.stringify({ ok: false, error: e?.message || 'Bad Request' }), { status: 400 });
+    return json({ ok: false, error: e?.message || 'Bad Request' }, { status: 400 });
   }
-});
+})));
 
 export const config = {
   path: '/api/business/offers',

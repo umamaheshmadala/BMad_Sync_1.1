@@ -1,15 +1,17 @@
 import { writePlatformConfig } from '../../../packages/shared/config';
+import { withErrorHandling } from '../../../packages/shared/errors';
+import { json } from '../../../packages/shared/http';
 
-export default async (req: Request) => {
+export default withErrorHandling(async (req: Request) => {
   if (req.method !== 'PUT') return new Response('Method Not Allowed', { status: 405 });
   try {
     const body = await req.json();
     await writePlatformConfig(body);
-    return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
+    return json({ ok: true });
   } catch {
-    return new Response(JSON.stringify({ ok: false, error: 'Bad Request' }), { status: 400 });
+    return json({ ok: false, error: 'Bad Request' }, { status: 400 });
   }
-};
+});
 
 export const config = {
   path: '/api/platform/config/runtime',

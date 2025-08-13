@@ -1,15 +1,18 @@
 import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
 import { getUserIdFromRequest, getUserIdFromRequestAsync, isPlatformOwner, isPlatformOwnerAsync } from '../../../packages/shared/auth';
 import { ReviewPayloadSchema } from '../../../packages/shared/validation';
+import { withErrorHandling } from '../../../packages/shared/errors';
+import { withRateLimit } from '../../../packages/shared/ratelimit';
+import { json } from '../../../packages/shared/http';
 
-export default async (req: Request) => {
+export default withRateLimit('business-reviews', { limit: 120, windowMs: 60_000 }, withErrorHandling(async (req: Request) => {
   const url = new URL(req.url);
   const parts = url.pathname.split('/');
   const businessId = parts[3] || '';
-  if (!businessId) return new Response(JSON.stringify({ ok: false, error: 'Missing businessId' }), { status: 400 });
+  if (!businessId) return json({ ok: false, error: 'Missing businessId' }, { status: 400 });
 
   const callerId = await getUserIdFromRequestAsync(req);
-  if (!callerId) return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401 });
+  if (!callerId) return json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 
   const supabase = createSupabaseClient(true) as any;
 
@@ -22,7 +25,7 @@ export default async (req: Request) => {
       .maybeSingle();
     const isOwner = biz && biz.owner_user_id === callerId;
     if (!isOwner && !(await isPlatformOwnerAsync(req))) {
-      return new Response(JSON.stringify({ ok: false, error: 'Forbidden' }), { status: 403 });
+      return json({ ok: false, error: 'Forbidden' }, { status: 403 });
     }
 
     const limit = Math.max(1, Math.min(100, Number(url.searchParams.get('limit') || 50)));
@@ -39,11 +42,8 @@ export default async (req: Request) => {
       query = query.eq('recommend_status', recommend);
     }
     const { data, error } = await query;
-    if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
-    return new Response(
-      JSON.stringify({ ok: true, items: (data as any[]) || [] }),
-      { headers: { 'Content-Type': 'application/json' } }
-    );
+    if (error) return json({ ok: false, error: error.message }, { status: 500 });
+    return json({ ok: true, items: (data as any[]) || [] });
   }
 
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
@@ -52,7 +52,7 @@ export default async (req: Request) => {
     const body = await req.json();
     const parsed = ReviewPayloadSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ ok: false, error: 'Invalid payload', details: parsed.error.flatten() }), { status: 400 });
+      return json({ ok: false, error: 'Invalid payload', details: parsed.error.flatten() }, { status: 400 });
     }
     const { recommend_status, review_text, checked_in_at } = parsed.data as any;
 
@@ -66,13 +66,13 @@ export default async (req: Request) => {
         checked_in_at: checked_in_at ?? null,
       })
       .single();
-    if (error) return new Response(JSON.stringify({ ok: false, error: error.message }), { status: 500 });
+    if (error) return json({ ok: false, error: error.message }, { status: 500 });
 
-    return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
+    return json({ ok: true });
   } catch (e: any) {
-    return new Response(JSON.stringify({ ok: false, error: e?.message || 'Bad Request' }), { status: 400 });
+    return json({ ok: false, error: e?.message || 'Bad Request' }, { status: 400 });
   }
-};
+}));
 
 export const config = {
   path: '/api/business/:businessId/reviews',
