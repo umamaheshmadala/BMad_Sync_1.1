@@ -1058,6 +1058,106 @@ export default function App() {
           <CopyCurlButton tag={'analytics:coupons'} getCurl={getCurl} />
           <button className="btn" onClick={() => { setOffersResult(null as any); setRedeemResult(null as any); setRevenueResult(null as any); setCouponAnalytics(null as any); }}>clear</button>
         </div>
+        {/* Offers list table */}
+        {Array.isArray(offersResult?.offers_list?.items) && (offersResult.offers_list.items as any[]).length ? (
+          <div style={{ marginTop: 10 }}>
+            <div className="flex gap-2" style={{ marginBottom: 6 }}>
+              <button className="btn" onClick={() => {
+                try {
+                  const items = [...(offersResult.offers_list.items as any[])];
+                  items.sort((a: any, b: any) => String(a.title||'').localeCompare(String(b.title||'')));
+                  setOffersResult({ ...(offersResult||{}), offers_list: { ...(offersResult.offers_list||{}), items } });
+                } catch {}
+              }}>sort by title</button>
+              <button className="btn" onClick={() => {
+                try {
+                  const items = [...(offersResult.offers_list.items as any[])];
+                  items.sort((a: any, b: any) => String(b.start_date||'').localeCompare(String(a.start_date||'')));
+                  setOffersResult({ ...(offersResult||{}), offers_list: { ...(offersResult.offers_list||{}), items } });
+                } catch {}
+              }}>sort by start date</button>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>id</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>title</th>
+                    <th style={{ textAlign: 'right', borderBottom: '1px solid #333', padding: '6px 8px' }}>qty</th>
+                    <th style={{ textAlign: 'right', borderBottom: '1px solid #333', padding: '6px 8px' }}>cost</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>start</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>end</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>copy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(offersResult.offers_list.items as any[]).map((o: any) => (
+                    <tr key={o.id}>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', fontFamily: 'monospace' }}>{o.id}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>{o.title || ''}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', textAlign: 'right' }}>{o.total_quantity ?? ''}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', textAlign: 'right' }}>{o.cost_per_coupon ?? ''}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>{o.start_date || ''}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>{o.end_date || ''}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>
+                        <button className="btn" onClick={() => { try { (navigator as any)?.clipboard?.writeText(String(o.id)); showToast('copied offer id','success'); } catch {} }}>copy id</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+        {/* Coupons preview table */}
+        {Array.isArray(offersResult?.coupons_preview?.items) && (offersResult.coupons_preview.items as any[]).length ? (
+          <div style={{ marginTop: 10 }}>
+            <div className="flex gap-2" style={{ marginBottom: 6 }}>
+              <button className="btn" onClick={() => {
+                try {
+                  const items = [...(offersResult.coupons_preview.items as any[])];
+                  items.sort((a: any, b: any) => String(a.unique_code||'').localeCompare(String(b.unique_code||'')));
+                  setOffersResult({ ...(offersResult||{}), coupons_preview: { ...(offersResult.coupons_preview||{}), items } });
+                } catch {}
+              }}>sort by code</button>
+              <button className="btn" onClick={() => {
+                try {
+                  const items = [...(offersResult.coupons_preview.items as any[])];
+                  items.sort((a: any, b: any) => Number(b.is_redeemed||0) - Number(a.is_redeemed||0));
+                  setOffersResult({ ...(offersResult||{}), coupons_preview: { ...(offersResult.coupons_preview||{}), items } });
+                } catch {}
+              }}>sort redeemed first</button>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>id</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>coupon_id</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>unique_code</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>user_id</th>
+                    <th style={{ textAlign: 'center', borderBottom: '1px solid #333', padding: '6px 8px' }}>redeemed</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>copy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(offersResult.coupons_preview.items as any[]).map((c: any) => (
+                    <tr key={c.id}>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', fontFamily: 'monospace' }}>{c.id}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', fontFamily: 'monospace' }}>{c.coupon_id}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', fontFamily: 'monospace' }}>{c.unique_code}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', fontFamily: 'monospace' }}>{c.user_id || ''}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', textAlign: 'center' }}>{c.is_redeemed ? '✓' : '✗'}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>
+                        <button className="btn" onClick={() => { try { (navigator as any)?.clipboard?.writeText(String(c.unique_code)); showToast('copied code','success'); } catch {} }}>copy code</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
         <CopyButton getText={() => JSON.stringify(offersResult, null, 2)} />
         <pre>{JSON.stringify(offersResult, null, 2)}</pre>
         <CopyButton getText={() => JSON.stringify(redeemResult, null, 2)} />
