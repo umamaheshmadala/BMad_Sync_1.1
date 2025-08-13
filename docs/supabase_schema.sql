@@ -294,3 +294,11 @@ create index if not exists idx_storefront_products_storefront on public.storefro
 create index if not exists idx_coupons_business on public.coupons(business_id);
 create index if not exists idx_user_coupons_user on public.user_coupons(user_id);
 create index if not exists idx_notifications_user on public.notifications(recipient_user_id);
+
+-- Shared rate limit table (optional, for multi-instance accuracy)
+create table if not exists public.rate_limits (
+  key text primary key,
+  window_start integer not null,
+  count integer not null default 0
+);
+create index if not exists idx_rate_limits_window on public.rate_limits(window_start);
