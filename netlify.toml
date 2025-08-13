@@ -22,6 +22,11 @@
   to = "/index.html"
   status = 200
 
+[[redirects]]
+  from = "/api-docs"
+  to = "/apps/web-react/public/api-docs.html"
+  status = 200
+
 
 # SPA fallback for React UI nested routes only (does not affect /api/*)
 [[redirects]]
