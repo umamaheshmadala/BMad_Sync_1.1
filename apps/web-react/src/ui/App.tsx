@@ -960,11 +960,31 @@ export default function App() {
           <button className="btn" onClick={createOffer}>POST offer</button>
           <CopyCurlButton tag={'offers:create'} getCurl={getCurl} />
         </div>
+        <div className="muted text-sm" style={{ marginTop: 4 }}>Tip: POST offer resolves your business by owner. Use owner bearer.</div>
         <div className="grid grid-cols-3 gap-2 mt-2">
           <input id="offerId" className="input" placeholder="offerId" />
           <input id="offerGenQty" className="input" placeholder="generate total_quantity (optional)" />
           <button className="btn" onClick={generateOfferCoupons}>POST generate coupons</button>
           <CopyCurlButton tag={'offers:generate'} getCurl={getCurl} />
+        </div>
+        <div className="muted text-sm" style={{ marginTop: 4 }}>Then collect using coupon_id below; or preview with list buttons.</div>
+        <div className="flex gap-2 mt-2">
+          <button className="btn" onClick={async () => {
+            try {
+              const res = await apiFetch('/api/business/offers', { headers: { ...authHeaders } });
+              const j = await res.json();
+              setOffersResult({ ...(offersResult||{}), offers_list: j });
+            } catch (e: any) { showToast('offers list error', 'error'); }
+          }}>GET offers (owner)</button>
+          <button className="btn" onClick={async () => {
+            try {
+              const id = (document.getElementById('offerId') as HTMLInputElement)?.value?.trim();
+              if (!id) { alert('set offerId'); return; }
+              const res = await apiFetch(`/api/business/offers/${id}/coupons`, { headers: { ...authHeaders } });
+              const j = await res.json();
+              setOffersResult({ ...(offersResult||{}), coupons_preview: j });
+            } catch (e: any) { showToast('coupons preview error', 'error'); }
+          }}>GET coupons (preview)</button>
         </div>
         <div className="grid grid-cols-3 gap-2 mt-2">
           <input id="collectCouponId" className="input" placeholder="coupon_id to collect (from offer)" />
