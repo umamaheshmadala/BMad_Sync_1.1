@@ -1,5 +1,19 @@
 ### Changelog
 
+### v0.1.7 — 2025-08-12
+
+- Platform
+  - Zod validation for pricing/runtime configs
+  - OpenAPI examples added for config endpoints
+- API
+  - Completed Zod validations for wishlist, favorites, interests, GPS check-in, redeem, offers generate
+  - Response codes normalized; analytics endpoints document RateLimit headers/429
+- Docs
+  - OpenAPI: requestBody examples for favorites, interests, wishlist, GPS check-in, redeem, offers generate
+- CI
+  - Hourly scheduled Smoke Tests with `DEPLOYED_BASE_URL` secret fallback
+- Tests: green (26/26)
+
 ### v0.1.6 — 2025-08-12
 
 - Added
