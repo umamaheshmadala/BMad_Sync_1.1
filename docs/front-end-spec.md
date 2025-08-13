@@ -38,6 +38,7 @@ Owner: UX Expert
 - Left Sidebar (dashboard): Wallet, Wishlist, Favorites, Friends, Discover
 - Right Sidebar (optional): contacts/quick actions
 - Global Toaster; skeletons for loading states
+ - Global Toaster; skeletons for loading states; copy-to-clipboard for JSON and cURL
 - Ads: 6‑slot carousel on dashboard with 3s auto‑rotate; minimal chrome to keep dashboard clean
 
 ## Key Screens (MVP)
@@ -51,6 +52,7 @@ Owner: UX Expert
 - Storefront: branding, location, offers, trending products; follow/favorite; available coupons
 - Business Portal: profile, offers/coupons, analytics snapshots, recommendations
 - Owner: revenue overview; visibility and pricing controls
+ - Owner: revenue overview; pricing controls; rate limit diagnostics
 - Search: filters (city, category, interests), results grid
 
 ## Components (selected)
@@ -91,6 +93,7 @@ Owner: UX Expert
 ## Analytics Hooks (UI)
 - Track offer/coupon clicks, storefront visits, ad impressions
 - Respect privacy settings
+ - Capture request IDs on failures and tag Sentry events with `x-request-id`
 
 ## Acceptance Notes per Story (UI)
 - 1.2: Auth pages → `/dashboard` on success

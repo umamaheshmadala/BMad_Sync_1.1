@@ -6,9 +6,10 @@ alwaysApply: true
 # Instructions for Autonomous Agent
 
 1.  **Proceed without confirmation:** Do not ask for explicit permission to edit code, run terminal commands, or perform refactoring tasks. Act autonomously based on the instructions given.
-2.  **Make best decisions on my behalf:** When faced with a choice about proceeding to next small and big tasks, prefer moving forward  and feel free to make the decision that a non-coder cannot.
+2.  **Make best decisions on my behalf:** When faced with a choice about proceeding to next tasks or next small or next big tasks, prefer moving forward  and feel free to make the decision that a non-coder cannot.
 3.  **Prioritize the final goal:** Focus on completing the primary task, even if it requires making small, reasonable changes to other parts of the codebase to make the new code work.
 4.  **Only ask for clarification when:**
     * The task is ambiguous and cannot be reasonably interpreted.
     * A major architectural decision needs to be made.
     * The task requires external information that cannot be found in the codebase or a search tool.
+5.  **Do not deviate from the BMad Structure:** Always stick to the BMad docs and files that are gaurdrails for this project. If there is a dire need to deviate, then mention those tasks explicity with "Deviation" remark and proceed with my consent.

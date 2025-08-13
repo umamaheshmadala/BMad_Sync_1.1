@@ -10,12 +10,29 @@
     </style>
   </head>
   <body>
+    <div style="padding:8px 12px; font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; border-bottom: 1px solid #eee; display:flex; align-items:center; gap:12px">
+      <div style="font-weight:600">BMad Sync API Docs</div>
+      <div id="spec-version" style="font-size:12px; color:#555">Loading spec…</div>
+      <div style="margin-left:auto; font-size:12px"><a href="https://github.com/umamaheshmadala/BMad_Sync_1.1/blob/main/docs/api/openapi.yaml" target="_blank" rel="noreferrer">View YAML</a></div>
+    </div>
     <div id="swagger-ui"></div>
     <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
     <script>
-      window.onload = () => {
+      window.onload = async () => {
+        const url = 'https://raw.githubusercontent.com/umamaheshmadala/BMad_Sync_1.1/main/docs/api/openapi.yaml';
+        try {
+          const res = await fetch(url, { cache: 'no-store' });
+          const text = await res.text();
+          const m = text.match(/\bversion:\s*([\w\.-]+)/);
+          const ver = m ? m[1] : '(unknown)';
+          const el = document.getElementById('spec-version');
+          if (el) el.textContent = `Spec version: ${ver}`;
+        } catch (e) {
+          const el = document.getElementById('spec-version');
+          if (el) el.textContent = 'Spec version: (error loading)';
+        }
         SwaggerUIBundle({
-          url: 'https://raw.githubusercontent.com/umamaheshmadala/BMad_Sync_1.1/main/docs/api/openapi.yaml',
+          url,
           dom_id: '#swagger-ui',
           presets: [SwaggerUIBundle.presets.apis],
         });

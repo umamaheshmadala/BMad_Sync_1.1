@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: SynC API (MVP Skeleton)
-  version: 0.1.6
+  version: 0.1.8
   description: REST-ish endpoints implemented via Netlify Functions with Supabase Auth.
 servers:
   - url: https://example.com
@@ -761,6 +761,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RevenueSummary'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (owner only)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/platform/ratelimit:
+    get:
+      security: [ { bearerAuth: [] } ]
+      summary: Inspect shared rate limit counters (owner only)
+      description: |
+        Returns top rate limit counters when FEATURE_SHARED_RATELIMIT is enabled; otherwise returns a message indicating the feature is disabled.
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (owner only)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/platform/health:
     get:
       summary: Platform health and feature flags

@@ -31,12 +31,14 @@ export class MockDb {
   public user_coupons = new Table();
   public coupon_shares = new Table();
   public businesses = new Table();
+  public business_follows = new Table();
   public storefronts = new Table();
   public storefront_products = new Table();
   public business_reviews = new Table();
   public platform_config = new Table();
   public notifications = new Table();
   public ads = new Table();
+  public user_activities = new Table();
 }
 
 function builder(table: Table) {

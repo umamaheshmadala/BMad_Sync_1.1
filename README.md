@@ -74,7 +74,9 @@ npx --yes netlify-cli@17 deploy --build --prod --dir "apps/web-react/dist" --fun
 - Logging wraps key request handlers; x-request-id in responses and logs
 - Rate limiting: IP-based with RateLimit-* headers (shared store optional)
 - API docs: Swagger UI at `/api-docs` (loads `docs/api/openapi.yaml`)
+ - API docs: Swagger UI at `/api-docs` (loads `docs/api/openapi.yaml`) — shows current spec version
 - CI: typecheck + tests + OpenAPI validation; PR preview smoke; hourly smoke; daily light load
+ - CI: typecheck + tests + OpenAPI validation (Redocly); hourly smoke; daily light load; Advisors/EXPLAIN (best‑effort)
 
 
 ### Releases

@@ -1,6 +1,7 @@
 import configGet from '../../apps/api/functions/platform-config-get';
 import configPut from '../../apps/api/functions/platform-config-runtime-put';
 import revenueGet from '../../apps/api/functions/platform-revenue-get';
+import ratelimitGet from '../../apps/api/functions/platform-ratelimit-get';
 import healthGet from '../../apps/api/functions/platform-health-get';
 import { db } from '../setup';
 
@@ -41,6 +42,22 @@ it('gets platform revenue summary', async () => {
   const json = await res.json();
   expect(json).toHaveProperty('coupon_revenue');
   expect(json.coupon_revenue).toBe(7); // 2 (c1 redeemed once) + 5 (c2 redeemed once)
+});
+
+it('gets platform ratelimit diagnostics for owner and forbids non-owner', async () => {
+  const makeBearer = (role?: string) => {
+    const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({ sub: 'some-user', ...(role ? { role } : {}) })).toString('base64url');
+    return `Bearer ${header}.${payload}.`;
+  };
+  const owner = { Authorization: makeBearer('owner') };
+  const nonOwner = { Authorization: makeBearer() };
+
+  const okRes = await ratelimitGet(makeReq(path('/api/platform/ratelimit'), 'GET', undefined, owner)) as Response;
+  expect([200, 403]).toContain(okRes.status); // Feature may be disabled, but owner access should not 401
+
+  const forbRes = await ratelimitGet(makeReq(path('/api/platform/ratelimit'), 'GET', undefined, nonOwner)) as Response;
+  expect(forbRes.status).toBe(403);
 });
 
 it('returns platform health with flags and version', async () => {

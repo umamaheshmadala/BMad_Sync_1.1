@@ -1,12 +1,28 @@
 export type RequestHandler = (req: Request) => Promise<Response> | Response;
+let sentryInited = false;
+async function initSentryIfConfigured() {
+  try {
+    // Lazy import so local/dev without dep won't crash
+    // @ts-ignore
+    const Sentry = (await import('@sentry/node')).default || null;
+    if (!Sentry) return;
+    const dsn = (globalThis as any)?.process?.env?.SENTRY_DSN as string | undefined;
+    if (!dsn) return;
+    if (!sentryInited && (Sentry as any)?.init) {
+      (Sentry as any).init({ dsn });
+      sentryInited = true;
+    }
+  } catch {}
+}
 
 export function withRequestLogging(name: string, handler: RequestHandler): RequestHandler {
   return async (req: Request) => {
     const start = Date.now();
     const requestId = (Math.random().toString(36).slice(2) + Date.now().toString(36)).slice(0, 16);
     try {
-      // Attach reqId to Sentry scope if available
+      // Ensure Sentry is initialized if DSN present, then attach request id tag
       try {
+        await initSentryIfConfigured();
         // @ts-ignore
         const Sentry = (await import('@sentry/node')).default || null;
         // @ts-ignore
@@ -31,6 +47,7 @@ export function withRequestLogging(name: string, handler: RequestHandler): Reque
         // eslint-disable-next-line no-console
         console.error(`[fn] ${name} ${req.method} ${path} reqId=${requestId} -> error ${ms}ms`, e?.message || e);
         try {
+          await initSentryIfConfigured();
           // @ts-ignore
           const Sentry = (await import('@sentry/node')).default || null;
           if (Sentry && (Sentry as any).captureException) {

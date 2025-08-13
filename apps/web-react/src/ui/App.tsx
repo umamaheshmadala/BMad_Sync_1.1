@@ -119,6 +119,7 @@ export default function App() {
   const [offersResult, setOffersResult] = useState(null as any);
   const [redeemResult, setRedeemResult] = useState(null as any);
   const [revenueResult, setRevenueResult] = useState(null as any);
+  const [ratelimitResult, setRatelimitResult] = useState(null as any);
   const [couponAnalytics, setCouponAnalytics] = useState(null as any);
   const [authResult, setAuthResult] = useState(null as any);
   const initialSbUrl = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_URL || ''; } catch { return ''; } })();
@@ -287,6 +288,13 @@ export default function App() {
     const res = await actionFetch('analytics:coupons', `/api/business/${biz}/analytics/coupons`, { headers: { ...authHeaders } });
     const j = await res.json();
     setCouponAnalytics(j);
+  }
+
+  async function getRateLimitDiagnostics() {
+    const res = await actionFetch('platform:ratelimit', '/api/platform/ratelimit', { headers: { ...authHeaders } });
+    const j = await res.json();
+    setRatelimitResult(j);
+    if (!j?.ok) showToast(j?.error || 'Rate limit diagnostics error');
   }
 
   async function getTrends() {
@@ -495,7 +503,7 @@ export default function App() {
       <h2 className="text-xl font-semibold">SynC React UI (v0.1.8)</h2>
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-3">
-        {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','funnel','pricing','health'].map((t) => (
+        {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','funnel','pricing','ratelimit','health'].map((t) => (
           <button key={t} onClick={() => setActiveTab(t as any)} className={`btn ${activeTab===t ? 'opacity-100' : 'opacity-70'}`}>{t}</button>
         ))}
       </div>
@@ -1041,6 +1049,20 @@ export default function App() {
         </div>
         <CopyButton getText={() => JSON.stringify(pricingResult, null, 2)} />
         <pre>{JSON.stringify(pricingResult, null, 2)}</pre>
+        </>
+        )}
+      </Section>
+
+      <Section title="Rate Limit (owner)">
+        {activeTab !== 'ratelimit' ? null : (
+        <>
+          <div className="flex gap-2">
+            <button className="btn" onClick={getRateLimitDiagnostics}>GET ratelimit</button>
+            <CopyCurlButton tag={'platform:ratelimit'} getCurl={getCurl} />
+            <button className="btn" onClick={() => setRatelimitResult(null as any)}>clear</button>
+          </div>
+          <CopyButton getText={() => JSON.stringify(ratelimitResult, null, 2)} />
+          <pre>{JSON.stringify(ratelimitResult, null, 2)}</pre>
         </>
         )}
       </Section>

@@ -9,6 +9,58 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and Tests
+        run: npm run test
+
+      - name: Build web
+        run: npm run build:web
+
+      - name: Lint OpenAPI spec
+        run: npx --yes @redocly/cli@latest lint docs/api/openapi.yaml
+
+      - name: Run Supabase Advisors (best-effort)
+        run: node scripts/advisors.mjs || echo "Advisors skipped or non-fatal"
+        env:
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          STRICT_ADVISORS: ${{ vars.STRICT_ADVISORS }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run EXPLAIN baselines (best-effort)
+        run: node scripts/explain.mjs || echo "EXPLAIN skipped or non-fatal"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EXPLAIN_MAX_ROWS: ${{ vars.EXPLAIN_MAX_ROWS }}
+          EXPLAIN_STRICT: ${{ vars.EXPLAIN_STRICT }}
+
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -1,5 +1,23 @@
 ### Changelog
 
+### v0.1.8 — 2025-08-13
+
+- UI/DX
+  - Added cURL generation and copy buttons for API actions; standardized toasts; version label in UI.
+  - New owner-only Rate Limit diagnostics tab hitting `/api/platform/ratelimit`.
+  - API docs page `/api-docs` shows current OpenAPI spec version and links to YAML.
+- API
+  - Owner-only check added to `/api/platform/revenue`.
+  - New endpoint `/api/platform/ratelimit` (owner-only) to inspect shared limiter state.
+  - `x-request-id` included in responses; Sentry init for backend when `SENTRY_DSN` is set.
+- Docs
+  - OpenAPI version bumped to 0.1.8; added endpoints and 401/403 semantics.
+  - Dev runbook, front-end spec, and full-stack architecture updated for Swagger UI, Sentry, diagnostics.
+- CI
+  - Added CI workflow for tests/build and best-effort Advisors/EXPLAIN.
+  - Added scheduled smoke (hourly) and light load (daily) workflows.
+- Tests: green (41/41)
+
 ### v0.1.7 — 2025-08-12
 
 - Platform

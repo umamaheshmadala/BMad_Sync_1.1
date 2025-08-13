@@ -34,6 +34,7 @@ This maps `docs/api/openapi.yaml` routes to serverless function names and expect
 - POST /api/business/coupons/issue-targeted → `business-coupons-issue-targeted-post.ts`
 - POST /api/business/ads → `business-ads-post.ts`
 - GET /api/platform/revenue → `platform-revenue-get.ts`
+- GET /api/platform/ratelimit → `platform-ratelimit-get.ts`
 - GET /api/platform/health → `platform-health-get.ts`
 - PUT /api/platform/config/pricing → `platform-config-pricing-put.ts`
 - (Add) GET /api/platform/config → `platform-config-get.ts`

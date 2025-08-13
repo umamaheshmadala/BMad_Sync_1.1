@@ -5,6 +5,9 @@ import notificationsPut from '../../apps/api/functions/users-notifications-put';
 import notificationReadItem from '../../apps/api/functions/users-notifications-read-item-put';
 import collectPost from '../../apps/api/functions/users-coupons-collect-post';
 import storefrontProducts from '../../apps/api/functions/storefronts-products-post';
+import favoritesBusinessPost from '../../apps/api/functions/users-favorites-business-post';
+import usersDashboardGet from '../../apps/api/functions/users-dashboard-get';
+import gpsCheckinPost from '../../apps/api/functions/users-checkin-gps-post';
 import funnelGet from '../../apps/api/functions/business-analytics-funnel-get';
 import revenueGet from '../../apps/api/functions/platform-revenue-get';
 
@@ -127,6 +130,68 @@ it('enforces storefront products GET: non-owner forbidden, owner allowed', async
   expect(resOwner.status).toBe(200);
   const json = await resOwner.json();
   expect(Array.isArray(json.items)).toBe(true);
+});
+ 
+it('forbids favoriting a business for another user (non-owner)', async () => {
+  const res = await favoritesBusinessPost(
+    makeReq(path(`/api/users/${TEST_USER_1}/favorites/business`), 'POST', { business_id: TEST_BIZ_1 }, {
+      Authorization: bearer(TEST_USER_2),
+    })
+  );
+  expect(res.status).toBe(403);
+});
+
+it('allows favoriting a business for self', async () => {
+  // Use a UUID business id to satisfy schema
+  const BIZ_UUID = '00000000-0000-0000-0000-000000000001';
+  db.businesses.insert({ id: BIZ_UUID, owner_user_id: TEST_USER_1 });
+  const res = await favoritesBusinessPost(
+    makeReq(path(`/api/users/${TEST_USER_1}/favorites/business`), 'POST', { business_id: BIZ_UUID }, {
+      Authorization: bearer(TEST_USER_1),
+    })
+  );
+  expect(res.status).toBe(200);
+  const json = await res.json();
+  expect(json.ok).toBe(true);
+});
+
+it('forbids reading another user dashboard', async () => {
+  const res = await usersDashboardGet(
+    makeReq(path(`/api/users/${TEST_USER_1}/dashboard`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_2),
+    })
+  );
+  expect(res.status).toBe(403);
+});
+
+it('allows reading own dashboard', async () => {
+  const res = await usersDashboardGet(
+    makeReq(path(`/api/users/${TEST_USER_1}/dashboard`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1),
+    })
+  );
+  expect(res.status).toBe(200);
+  const json = await res.json();
+  expect(json.ok).toBe(true);
+});
+
+it('forbids GPS check-in for another user; allows self', async () => {
+  const BIZ_UUID = '00000000-0000-0000-0000-000000000002';
+  db.businesses.insert({ id: BIZ_UUID, owner_user_id: TEST_USER_1 });
+  // Forbidden for other user
+  const resForbid = await gpsCheckinPost(
+    makeReq(path(`/api/users/${TEST_USER_1}/checkin/gps`), 'POST', { business_id: BIZ_UUID, lat: 12.9, lng: 77.6 }, {
+      Authorization: bearer(TEST_USER_2),
+    })
+  );
+  expect(resForbid.status).toBe(403);
+  // Allowed for self
+  const resOk = await gpsCheckinPost(
+    makeReq(path(`/api/users/${TEST_USER_1}/checkin/gps`), 'POST', { business_id: BIZ_UUID, lat: 12.9, lng: 77.6 }, {
+      Authorization: bearer(TEST_USER_1),
+    })
+  );
+  expect(resOk.status).toBe(200);
 });
 
 

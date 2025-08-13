@@ -24,7 +24,7 @@
 
 [[redirects]]
   from = "/api-docs"
-  to = "/apps/web-react/public/api-docs.html"
+  to = "/api-docs.html"
   status = 200
 
 
@@ -55,7 +55,15 @@
 [[headers]]
   for = "/react"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; connect-src 'self' https://*.supabase.co; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'"
+    Content-Security-Policy = "default-src 'self'; connect-src 'self' https://*.supabase.co https://*.sentry.io; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+
+[[headers]]
+  for = "/api-docs.html"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://unpkg.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; frame-ancestors 'none'"
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "no-referrer"

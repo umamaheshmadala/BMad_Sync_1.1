@@ -22,6 +22,21 @@ SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 ```
 
+Optional (observability/tools):
+
+```
+# Sentry (frontend/backend)
+VITE_SENTRY_DSN=...
+SENTRY_DSN=...
+
+# CI tools
+SUPABASE_PAT=...
+SUPABASE_PROJECT_ID=...
+STRICT_ADVISORS=true
+EXPLAIN_MAX_ROWS=100000
+EXPLAIN_STRICT=true
+```
+
 ## Test quick calls (stubs)
 - PUT /api/users/{userId}/profile/interests
 - POST /api/users/{userId}/wishlist
@@ -33,11 +48,17 @@ SUPABASE_SERVICE_ROLE_KEY=...
 - GET /api/business/{businessId}/analytics/coupons
 - GET /api/platform/config
 - PUT /api/platform/config/runtime
+- GET /api/platform/revenue (owner only)
+- GET /api/platform/ratelimit (owner only; returns message if shared limiter disabled)
 - POST/GET /api/business/storefront
 
 ## Notes
 - Handlers return placeholder JSON until wired to Supabase
 - Shared helpers in `packages/shared/` provide mocks for config/notifications/auth
+
+## API Docs (Swagger UI)
+
+- Visit `/api-docs` on the deployed site to view the OpenAPI spec. The page shows the current spec version and links to the YAML (`docs/api/openapi.yaml`).
 
 ## cURL examples (replace tokens/ids)
 ```bash
@@ -72,6 +93,10 @@ curl -X POST "$BASE/api/business/$BUSINESS_ID/redeem" \
 # Business analytics
 curl "$BASE/api/business/$BUSINESS_ID/analytics/reviews"
 curl "$BASE/api/business/$BUSINESS_ID/analytics/coupons"
+
+# Platform (owner-only)
+curl -H "Authorization: Bearer $BIZJWT" "$BASE/api/platform/revenue"
+curl -H "Authorization: Bearer $BIZJWT" "$BASE/api/platform/ratelimit"
 ```
 
 ## Windows quickstart (PowerShell)
@@ -143,6 +168,9 @@ $platformCfg = Invoke-RestMethod -UseBasicParsing -Uri "$BASE/api/platform/confi
 $platformRun = Invoke-RestMethod -UseBasicParsing -Uri "$BASE/api/platform/config/runtime" -Method PUT -Headers $bizHeaders -Body '{"ads.carousel_slots":{"value":5}}'
 $platformRev = Invoke-RestMethod -UseBasicParsing -Uri "$BASE/api/platform/revenue" -Method GET
 
+# Owner-only ratelimit diagnostics
+$platformRate = Invoke-RestMethod -UseBasicParsing -Uri "$BASE/api/platform/ratelimit" -Method GET -Headers $bizHeaders
+
 [pscustomobject]@{
   interests = $r1.ok
   wishlist = $r2.ok
@@ -157,6 +185,11 @@ $platformRev = Invoke-RestMethod -UseBasicParsing -Uri "$BASE/api/platform/reven
   platformCfg = $platformCfg.'billing.mode'.value
   platformRun = $platformRun.ok
   platformRev = [bool]$platformRev.coupon_revenue
+  platformRate = $platformRate.ok
 } | ConvertTo-Json -Compress
 ```
+
+## Windows shell notes
+
+- PowerShell does not support `&&` for command chaining. Run commands separately (e.g., `npm run test` then `npm run build:web`).
 
