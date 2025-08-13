@@ -13,6 +13,13 @@ try {
       replaysSessionSampleRate: 0.0,
       replaysOnErrorSampleRate: 0.0,
       beforeSend(event) {
+        try {
+          const reqId = (window as any)?.lastMeta?.x_request_id;
+          if (reqId) {
+            // @ts-ignore
+            event.tags = { ...(event.tags || {}), 'x-request-id': reqId };
+          }
+        } catch {}
         // Remove potentially sensitive data
         if (event.request) {
           delete (event.request as any).cookies;
