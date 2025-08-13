@@ -790,6 +790,11 @@ paths:
           required: false
           schema: { type: string }
           description: Optional IANA timezone for bucketing; if omitted, uses UTC boundaries.
+        - in: query
+          name: fill
+          required: false
+          schema: { type: string, enum: ["true","false"] }
+          description: When `false`, disables zero-fill of missing days for smaller payloads (default `true`).
       responses:
         '200':
           description: OK

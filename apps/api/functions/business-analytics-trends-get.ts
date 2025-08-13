@@ -14,6 +14,8 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
   const businessId = url.searchParams.get('businessId') || '';
   const group = (url.searchParams.get('group') || '').toLowerCase();
   const tz = (url.searchParams.get('tz') || '').trim();
+  const fillParam = url.searchParams.get('fill');
+  const fill = fillParam == null ? true : String(fillParam).toLowerCase() !== 'false';
   const sinceDaysParam = url.searchParams.get('sinceDays');
   // Align default with UI for snappier responses
   const sinceDays = sinceDaysParam ? Math.max(1, Math.min(365, Number(sinceDaysParam))) : 7;
@@ -153,7 +155,8 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
     orderedCoupons[d] = c;
   }
 
-  const payload: any = { ok: true, trends: { reviews: orderedReviews, coupons: orderedCoupons } };
+  const trendsPayload = fill ? { reviews: orderedReviews, coupons: orderedCoupons } : { reviews: reviewTrend, coupons: couponTrend };
+  const payload: any = { ok: true, trends: trendsPayload };
   if (group === 'business') {
     payload.trendsByBusiness = { reviews: reviewByBusiness, coupons: couponByBusiness };
   }
