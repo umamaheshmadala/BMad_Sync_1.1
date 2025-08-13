@@ -65,6 +65,20 @@ components:
         title: { type: string }
         image_url: { type: string }
         cost_per_day: { type: number }
+    RateLimitCounter:
+      type: object
+      properties:
+        key: { type: string }
+        window_start: { type: integer, description: Epoch seconds window start }
+        count: { type: integer }
+    RateLimitDiagnostics:
+      type: object
+      properties:
+        ok: { type: boolean }
+        message: { type: string, nullable: true }
+        top_counters:
+          type: array
+          items: { $ref: '#/components/schemas/RateLimitCounter' }
     RevenueSummary:
       type: object
       properties:
@@ -782,6 +796,10 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitDiagnostics'
         '401':
           description: Unauthorized
           content:
