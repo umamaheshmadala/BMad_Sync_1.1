@@ -44,7 +44,22 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
     .select('id, business_id');
 
   function dateKey(iso?: string) {
-    try { return (iso || '').slice(0, 10); } catch { return ''; }
+    try {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (tz) {
+        // Shift to tz by deriving local date in that tz using offset approximation via Intl (runtime may not support).
+        try {
+          const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+          const parts = fmt.formatToParts(d);
+          const y = parts.find(p => p.type==='year')?.value;
+          const m = parts.find(p => p.type==='month')?.value;
+          const day = parts.find(p => p.type==='day')?.value;
+          if (y && m && day) return `${y}-${m}-${day}`;
+        } catch {}
+      }
+      return iso.slice(0, 10);
+    } catch { return ''; }
   }
   function dateKeysRange(startIso: string, endIso: string): string[] {
     try {

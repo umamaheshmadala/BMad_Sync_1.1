@@ -111,6 +111,19 @@ export default function App() {
   const [compactRows, setCompactRows] = useState(initialCompact as boolean);
   const offersDebounceRef = useRef(null as any);
   const couponsDebounceRef = useRef(null as any);
+  useEffect(() => {
+    // Prefill common ids
+    try {
+      const trendBiz = localStorage.getItem('sync_trend_biz_id') || '';
+      const funnelBiz = localStorage.getItem('sync_funnel_biz_id') || '';
+      const offerId = localStorage.getItem('sync_offer_id') || '';
+      const bizId = localStorage.getItem('sync_reviews_biz_id') || '';
+      if (trendBiz) { const el = document.getElementById('trendBizId') as HTMLInputElement | null; if (el) el.value = trendBiz; }
+      if (funnelBiz) { const el = document.getElementById('funnelBizId') as HTMLInputElement | null; if (el) el.value = funnelBiz; }
+      if (offerId) { const el = document.getElementById('offerId') as HTMLInputElement | null; if (el) el.value = offerId; }
+      if (bizId) { const el = document.getElementById('bizId') as HTMLInputElement | null; if (el) el.value = bizId; }
+    } catch {}
+  }, []);
 
   function buildCurl(url: string, init?: RequestInit): string {
     try {
@@ -863,7 +876,7 @@ export default function App() {
         {activeTab !== 'reviews' ? null : (
         <>
         <div style={{ display: 'flex', gap: 8 }}>
-          <input id="bizId" placeholder="businessId" />
+          <input id="bizId" placeholder="businessId" onChange={(e) => { try { localStorage.setItem('sync_reviews_biz_id', (e.target as HTMLInputElement).value || ''); } catch {} }} />
           <select className="input" value={reviewsPageSize as any} onChange={(e) => {
             const n = Number((e.target as HTMLSelectElement).value || 10);
             setReviewsPageSize(n);
@@ -1617,7 +1630,7 @@ export default function App() {
         {activeTab !== 'trends' ? null : (
         <>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input id="trendBizId" placeholder="businessId (optional)" aria-label="Trends businessId" />
+          <input id="trendBizId" placeholder="businessId (optional)" aria-label="Trends businessId" onChange={(e) => { try { localStorage.setItem('sync_trend_biz_id', (e.target as HTMLInputElement).value || ''); } catch {} }} />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <input type="checkbox" id="trendGroupBiz" aria-label="Group trends by business" /> group by business
           </label>
@@ -1708,7 +1721,7 @@ export default function App() {
         {activeTab !== 'funnel' ? null : (
         <>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input id="funnelBizId" className="input" placeholder="businessId (optional)" aria-label="Funnel businessId" />
+          <input id="funnelBizId" className="input" placeholder="businessId (optional)" aria-label="Funnel businessId" onChange={(e) => { try { localStorage.setItem('sync_funnel_biz_id', (e.target as HTMLInputElement).value || ''); } catch {} }} />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <input type="checkbox" id="funnelGroupBiz" aria-label="Group funnel by business" /> group by business
           </label>
