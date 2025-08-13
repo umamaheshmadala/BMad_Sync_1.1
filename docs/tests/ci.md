@@ -6,9 +6,12 @@ Date: 2025-08-11
 ## Pipeline Stages
 1. Lint & Typecheck
 2. Unit tests (parallel shards)
-3. Integration tests (DB container + mocked externals)
-4. E2E smoke (critical flows only) on PR/main
-5. Artifacts: coverage, JUnit XML, screenshots/logs for E2E
+3. Integration tests (mocked Supabase client)
+4. OpenAPI lint (Redocly)
+5. Build web
+6. Advisors and EXPLAIN (best-effort)
+7. Scheduled smoke (hourly) and light load (daily)
+8. Artifacts: coverage, JUnit XML, screenshots/logs for E2E (future)
 
 ## Policies
 - Fail on lint/type errors
@@ -28,6 +31,8 @@ Date: 2025-08-11
   - SUPABASE_URL: Project URL
   - SUPABASE_SERVICE_ROLE_KEY: Service role for EXPLAIN RPC
   - Note: EXPLAIN step is non-blocking by default; enable thresholds separately
+  - EXPLAIN_MAX_ROWS: number (e.g., 100000); when STRICT enabled, fail if any plan exceeds rows
+  - EXPLAIN_STRICT: true|false to enforce thresholds
 
 ## Caching
 - Node modules cache by lockfile hash
