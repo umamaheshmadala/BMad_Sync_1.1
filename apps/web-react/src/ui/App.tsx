@@ -1214,6 +1214,29 @@ export default function App() {
                 </div>
               </div>
             ) : null}
+            {/* Tiny bars by business if grouped */}
+            {funnelResult?.funnelByBusiness ? (
+              <div style={{ marginTop: 12 }}>
+                <div className="muted text-sm" style={{ marginBottom: 4 }}>Collected by business</div>
+                {(() => {
+                  const entries = Object.entries(funnelResult.funnelByBusiness as Record<string, any>);
+                  const maxY = entries.reduce((m, [_, v]) => Math.max(m, Number((v as any).collected||0)), 1);
+                  return (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', height: 120, borderBottom: '1px solid #333', padding: '6px 0' }}>
+                      {entries.map(([bizId, v]) => {
+                        const y = Number((v as any).collected||0);
+                        const h = Math.max(2, Math.round((y / (maxY || 1)) * 110));
+                        return (
+                          <div key={bizId} title={`${bizId}: ${y}`} style={{ width: 16, height: h, background: '#36c', position: 'relative' }}>
+                            <div style={{ position: 'absolute', bottom: -16, left: -8, width: 32, textAlign: 'center', fontSize: 10, opacity: 0.7, fontFamily: 'monospace' }}>{String(bizId).slice(0,4)}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : null}
           </div>
         ) : (
           <>
