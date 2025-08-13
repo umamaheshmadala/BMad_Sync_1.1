@@ -59,6 +59,13 @@ jobs:
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
           STRICT_ADVISORS: 'false'
         run: node scripts/advisors.mjs || true
+      - name: Open/update Advisors issue
+        env:
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/advisors-report.mjs || true
 
   explain-baseline:
     runs-on: ubuntu-latest
