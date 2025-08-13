@@ -35,6 +35,20 @@ export default function App() {
   const [analyticsSinceDays, setAnalyticsSinceDays] = useState(7 as number);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false as boolean);
   const [isLoadingFunnel, setIsLoadingFunnel] = useState(false as boolean);
+  const [lastMeta, setLastMeta] = useState(null as any);
+  function recordHeaders(res: Response) {
+    try {
+      setLastMeta({
+        url: (res as any).url || '',
+        status: res.status,
+        x_request_id: res.headers.get('x-request-id') || '',
+        ratelimit_limit: res.headers.get('RateLimit-Limit') || '',
+        ratelimit_remaining: res.headers.get('RateLimit-Remaining') || '',
+        ratelimit_reset: res.headers.get('RateLimit-Reset') || '',
+        cache_control: res.headers.get('Cache-Control') || '',
+      });
+    } catch {}
+  }
   const [pricingResult, setPricingResult] = useState(null as any);
   const [offersResult, setOffersResult] = useState(null as any);
   const [redeemResult, setRedeemResult] = useState(null as any);
@@ -209,6 +223,7 @@ export default function App() {
     if (!params.has('sinceDays')) params.set('sinceDays', String(analyticsSinceDays || 7));
     const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/business/analytics/trends${qs}`, { headers: { ...authHeaders } });
+    recordHeaders(res);
     const j = await res.json();
     setTrendsResult(j);
     if (!j?.ok) showToast(j?.error || 'Trends fetch error');
@@ -225,6 +240,7 @@ export default function App() {
     if (!params.has('sinceDays')) params.set('sinceDays', String(analyticsSinceDays || 7));
     const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`/api/business/analytics/funnel${qs}`, { headers: { ...authHeaders } });
+    recordHeaders(res);
     const j = await res.json();
     setFunnelResult(j);
     if (!j?.ok) showToast(j?.error || 'Funnel fetch error');
@@ -299,6 +315,7 @@ export default function App() {
   async function getNotifications(userId: string) {
     try {
       const res = await fetch(`/api/users/${userId}/notifications`, { headers: { ...authHeaders } });
+      recordHeaders(res);
       const text = await res.text();
       let j: any;
       try { j = text ? JSON.parse(text) : { ok: false, error: 'Empty response', status: res.status }; }
@@ -314,6 +331,7 @@ export default function App() {
   async function clearNotifications(userId: string) {
     try {
       const res = await fetch(`/api/users/${userId}/notifications`, { method: 'DELETE', headers: { ...authHeaders } });
+      recordHeaders(res);
       const text = await res.text();
       let j: any;
       try { j = text ? JSON.parse(text) : { ok: false, error: 'Empty response', status: res.status }; }
@@ -457,6 +475,14 @@ export default function App() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 6 }}>
             <div><strong>userId</strong>: {parseUserIdFromBearer() || sessionUserId || '(not set)'}</div>
             <div><strong>businessId</strong>: {sessionBusinessId || '(fetch storefront)'}</div>
+            {lastMeta ? (
+              <div className="muted text-sm" style={{ marginTop: 8 }}>
+                <div><strong>last request</strong>: {lastMeta?.url} → {lastMeta?.status}</div>
+                <div><strong>x-request-id</strong>: {lastMeta?.x_request_id || '(n/a)'}</div>
+                <div><strong>RateLimit</strong>: {lastMeta?.ratelimit_remaining}/{lastMeta?.ratelimit_limit} reset={lastMeta?.ratelimit_reset}</div>
+                <div><strong>Cache-Control</strong>: {lastMeta?.cache_control || '(n/a)'}</div>
+              </div>
+            ) : null}
           </div>
         </>
         )}
