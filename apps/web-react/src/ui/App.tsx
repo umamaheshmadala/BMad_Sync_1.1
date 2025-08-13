@@ -646,6 +646,12 @@ export default function App() {
             <div><strong>userId</strong>: {parseUserIdFromBearer() || sessionUserId || '(not set)'}</div>
             <div><strong>businessId</strong>: {sessionBusinessId || '(fetch storefront)'}</div>
             {lastMeta ? (
+              <div className="flex" style={{ gap: 8 }}>
+                <span className="badge">RL {lastMeta?.ratelimit_remaining ?? ''}/{lastMeta?.ratelimit_limit ?? ''}</span>
+                <span className="badge">cache {String(lastMeta?.cache_control || 'off')}</span>
+              </div>
+            ) : null}
+            {lastMeta ? (
               <div className="muted text-sm" style={{ marginTop: 8 }}>
                 <div><strong>last request</strong>: {lastMeta?.url} → {lastMeta?.status}</div>
                 <div><strong>x-request-id</strong>: {lastMeta?.x_request_id || '(n/a)'}</div>
