@@ -30,10 +30,13 @@
   - public.rate_limits(key text pk, window_start int, count int)
   - Enable via FEATURE_SHARED_RATELIMIT=true
   - Keep in-memory fallback if disabled
+  - Diagnostics (owner-only): GET /api/platform/ratelimit (shows top 50 counters when shared limiter enabled)
 
 #### Logging & tracing
 - x-request-id header added to all responses from wrapped handlers
 - Server logs include reqId, method, path, status, latency
+ - CI surfaces Supabase Advisors findings in a GitHub issue labeled `advisors`
+ - EXPLAIN baselines: thresholds via EXPLAIN_MAX_ROWS and EXPLAIN_STRICT (CI env)
 
 #### Common runbooks
 1) Elevated error rates (429/5xx)

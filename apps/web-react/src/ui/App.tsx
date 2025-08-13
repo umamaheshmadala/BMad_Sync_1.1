@@ -260,11 +260,19 @@ export default function App() {
     if (group) params.set('group', group);
     if (!params.has('sinceDays')) params.set('sinceDays', String(analyticsSinceDays || 7));
     const qs = params.toString() ? `?${params.toString()}` : '';
-    const res = await apiFetch(`/api/business/analytics/trends${qs}`, { headers: { ...authHeaders } });
-    recordHeaders(res);
-    const j = await res.json();
-    setTrendsResult(j);
-    if (!j?.ok) showToast(j?.error || 'Trends fetch error');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await apiFetch(`/api/business/analytics/trends${qs}`, { headers: { ...authHeaders }, signal: controller.signal });
+      recordHeaders(res);
+      const j = await res.json();
+      setTrendsResult(j);
+      if (!j?.ok) showToast(j?.error || 'Trends fetch error');
+    } catch (e: any) {
+      showToast(e?.name === 'AbortError' ? 'Trends timeout' : (e?.message || 'Trends error'));
+    } finally {
+      clearTimeout(timer);
+    }
     setIsLoadingTrends(false);
   }
 
@@ -277,11 +285,19 @@ export default function App() {
     if (group) params.set('group', group);
     if (!params.has('sinceDays')) params.set('sinceDays', String(analyticsSinceDays || 7));
     const qs = params.toString() ? `?${params.toString()}` : '';
-    const res = await apiFetch(`/api/business/analytics/funnel${qs}`, { headers: { ...authHeaders } });
-    recordHeaders(res);
-    const j = await res.json();
-    setFunnelResult(j);
-    if (!j?.ok) showToast(j?.error || 'Funnel fetch error');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await apiFetch(`/api/business/analytics/funnel${qs}`, { headers: { ...authHeaders }, signal: controller.signal });
+      recordHeaders(res);
+      const j = await res.json();
+      setFunnelResult(j);
+      if (!j?.ok) showToast(j?.error || 'Funnel fetch error');
+    } catch (e: any) {
+      showToast(e?.name === 'AbortError' ? 'Funnel timeout' : (e?.message || 'Funnel error'));
+    } finally {
+      clearTimeout(timer);
+    }
     setIsLoadingFunnel(false);
   }
 
