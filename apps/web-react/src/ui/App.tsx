@@ -124,6 +124,7 @@ export default function App() {
   const [platformConfigResult, setPlatformConfigResult] = useState(null as any);
   const [ratelimitResult, setRatelimitResult] = useState(null as any);
   const [couponAnalytics, setCouponAnalytics] = useState(null as any);
+  const [healthResult, setHealthResult] = useState(null as any);
   const [authResult, setAuthResult] = useState(null as any);
   const initialSbUrl = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_URL || ''; } catch { return ''; } })();
   const initialSbAnon = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_ANON_KEY || ''; } catch { return ''; } })();
@@ -325,6 +326,22 @@ export default function App() {
     }
   }
 
+  function exportRateLimitJson() {
+    try {
+      const data = ratelimitResult ?? {};
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ratelimit_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Exported JSON', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'JSON export error');
+    }
+  }
+
   async function getPlatformConfig() {
     const res = await actionFetch('platform:config', '/api/platform/config', { headers: { ...authHeaders } });
     const j = await res.json();
@@ -510,7 +527,9 @@ export default function App() {
 
 	function showToast(message: string, type: 'success' | 'error' = 'error') {
     try { if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current as any); } catch {}
-    setToast({ text: message, type });
+    let text = message;
+    try { if (type === 'error' && lastMeta?.x_request_id) text = `${message} (req ${lastMeta.x_request_id})`; } catch {}
+    setToast({ text, type });
     try { setCurlOpen(type === 'error'); } catch {}
     try {
       const id = window.setTimeout(() => setToast(null), 3000);
@@ -1105,6 +1124,7 @@ export default function App() {
           <div className="flex gap-2">
             <button className="btn" onClick={getRateLimitDiagnostics}>GET ratelimit</button>
             <CopyCurlButton tag={'platform:ratelimit'} getCurl={getCurl} />
+            <button className="btn" onClick={exportRateLimitJson} disabled={!ratelimitResult}>export JSON</button>
             <button className="btn" onClick={exportRateLimitCsv} disabled={!Array.isArray((ratelimitResult as any)?.top_counters) || !(ratelimitResult as any)?.top_counters?.length}>export CSV</button>
             <button className="btn" onClick={() => setRatelimitResult(null as any)}>clear</button>
           </div>
@@ -1120,11 +1140,21 @@ export default function App() {
           <button onClick={async () => {
             const res = await apiFetch('/api/platform/health');
             const j = await res.json();
-            setPricingResult(j);
+            setHealthResult(j);
           }}>GET health</button>
-          <button className="btn" onClick={() => setPricingResult(null as any)}>clear</button>
-          <CopyButton getText={() => JSON.stringify(pricingResult, null, 2)} />
-          <pre>{JSON.stringify(pricingResult, null, 2)}</pre>
+          <button className="btn" onClick={() => setHealthResult(null as any)}>clear</button>
+          {healthResult?.features ? (
+            <div style={{ marginTop: 8 }}>
+              <div className="muted text-sm">Flags</div>
+              <ul>
+                {Object.entries(healthResult.features as Record<string, boolean>).map(([k, v]) => (
+                  <li key={k}><span style={{ color: v ? '#2a2' : '#a22' }}>{v ? '●' : '○'}</span> {k}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <CopyButton getText={() => JSON.stringify(healthResult, null, 2)} />
+          <pre>{JSON.stringify(healthResult, null, 2)}</pre>
         </>
         )}
       </Section>
