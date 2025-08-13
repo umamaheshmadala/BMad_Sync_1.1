@@ -35,8 +35,9 @@ export default function App() {
   const [analyticsSinceDays, setAnalyticsSinceDays] = useState(7 as number);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false as boolean);
   const [isLoadingFunnel, setIsLoadingFunnel] = useState(false as boolean);
-  const [lastMeta, setLastMeta] = useState(null as any);
+	const [lastMeta, setLastMeta] = useState(null as any);
   const [lastCurl, setLastCurl] = useState('' as string);
+	const [curlOpen, setCurlOpen] = useState(false as boolean);
 
   function buildCurl(url: string, init?: RequestInit): string {
     try {
@@ -428,9 +429,10 @@ export default function App() {
     try { return new Date(ts).toLocaleString(); } catch { return ts; }
   }
 
-  function showToast(message: string, type: 'success' | 'error' = 'error') {
+	function showToast(message: string, type: 'success' | 'error' = 'error') {
     try { if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current as any); } catch {}
     setToast({ text: message, type });
+    try { setCurlOpen(type === 'error'); } catch {}
     try {
       const id = window.setTimeout(() => setToast(null), 3000);
       // @ts-ignore
@@ -547,7 +549,7 @@ export default function App() {
               <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL'); } }} disabled={!lastCurl}>Copy last cURL</button>
             </div>
             {lastCurl ? (
-              <details style={{ marginTop: 8 }}>
+              <details style={{ marginTop: 8 }} open={curlOpen} onToggle={(e) => setCurlOpen((e.target as HTMLDetailsElement).open)}>
                 <summary className="muted text-sm">View last cURL</summary>
                 <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{lastCurl}</pre>
               </details>
