@@ -11,6 +11,8 @@ on:
         required: false
   push:
     branches: [ main ]
+  schedule:
+    - cron: '0 * * * *'  # hourly
 
 jobs:
   smoke:
@@ -29,8 +31,10 @@ jobs:
 
       - name: Run smoke tests
         env:
-          BASE_URL: ${{ github.event.inputs.base_url }}
-          TOKEN: ${{ github.event.inputs.token }}
-        run: npm run smoke
+          BASE_URL: ${{ github.event.inputs.base_url || secrets.DEPLOYED_BASE_URL }}
+          TOKEN: ${{ github.event.inputs.token || '' }}
+        run: |
+          if [ -z "$BASE_URL" ]; then echo "BASE_URL not provided and no secret set"; exit 1; fi
+          npm run smoke
 
 
