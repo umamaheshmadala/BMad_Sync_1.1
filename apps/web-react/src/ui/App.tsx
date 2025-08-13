@@ -104,7 +104,7 @@ export default function App() {
   }
   function recordHeaders(res: Response) {
     try {
-      setLastMeta({
+      const meta = {
         url: (res as any).url || '',
         status: res.status,
         x_request_id: res.headers.get('x-request-id') || '',
@@ -112,7 +112,9 @@ export default function App() {
         ratelimit_remaining: res.headers.get('RateLimit-Remaining') || '',
         ratelimit_reset: res.headers.get('RateLimit-Reset') || '',
         cache_control: res.headers.get('Cache-Control') || '',
-      });
+      };
+      setLastMeta(meta);
+      try { (window as any).lastMeta = meta; } catch {}
     } catch {}
   }
   const [pricingResult, setPricingResult] = useState(null as any);
@@ -532,7 +534,10 @@ export default function App() {
     <div className={`min-h-screen mx-auto max-w-5xl p-6 theme-${theme}`}
       data-build="funnel-theme"
     >
-      <h2 className="text-xl font-semibold">SynC React UI (v0.1.8)</h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+        <h2 className="text-xl font-semibold" style={{ margin: 0 }}>SynC React UI (v0.1.8)</h2>
+        <a href="/api-docs" target="_blank" rel="noreferrer" className="btn" title="Open API Docs">API Docs</a>
+      </div>
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-3">
         {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','funnel','pricing','ratelimit','health'].map((t) => (
