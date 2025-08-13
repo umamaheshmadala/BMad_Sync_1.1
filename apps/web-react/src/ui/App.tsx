@@ -1135,6 +1135,28 @@ export default function App() {
             <button className="btn" onClick={() => setRatelimitResult(null as any)}>clear</button>
           </div>
           <div className="muted text-sm" style={{ marginTop: 6 }}>Shared limiter requires table <code>public.rate_limits</code> and <code>FEATURE_SHARED_RATELIMIT=true</code>. When disabled, diagnostics run in memory mode.</div>
+          {Array.isArray((ratelimitResult as any)?.top_counters) && (ratelimitResult as any)?.top_counters?.length ? (
+            <div style={{ marginTop: 10, overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>Key</th>
+                    <th style={{ textAlign: 'right', borderBottom: '1px solid #333', padding: '6px 8px' }}>Count</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>Window start</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {((ratelimitResult as any).top_counters as Array<any>).map((row: any, idx: number) => (
+                    <tr key={idx}>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', whiteSpace: 'nowrap' }}>{row?.key || ''}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', textAlign: 'right' }}>{row?.count ?? ''}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>{(() => { try { const t = Number(row?.window_start || 0) * 1000; return isFinite(t) && t > 0 ? new Date(t).toLocaleString() : String(row?.window_start || ''); } catch { return String(row?.window_start || ''); } })()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
           <CopyButton getText={() => JSON.stringify(ratelimitResult, null, 2)} />
           <pre>{JSON.stringify(ratelimitResult, null, 2)}</pre>
         </>
