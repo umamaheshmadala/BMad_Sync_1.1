@@ -10,6 +10,19 @@ function Section({ title, children }: { title: string; children: any }) {
   );
 }
 
+function CopyButton({ getText }: { getText: () => string }) {
+  return (
+    <button
+      className="btn"
+      onClick={() => {
+        try { const txt = getText(); if (txt) { (navigator as any)?.clipboard?.writeText(txt); } } catch {}
+      }}
+      style={{ marginBottom: 6 }}
+      title="Copy"
+    >copy</button>
+  );
+}
+
 export default function App() {
   const [token, setToken] = useState(() => {
     try { return localStorage.getItem('sync_token') || ''; } catch { return ''; }
@@ -526,6 +539,7 @@ export default function App() {
             </div>
           </div>
         </div>
+        <CopyButton getText={() => JSON.stringify(authResult, null, 2)} />
         <pre>{JSON.stringify(authResult, null, 2)}</pre>
         </>
         )}
@@ -566,6 +580,7 @@ export default function App() {
           <button onClick={postStorefront}>POST upsert</button>
           <button onClick={getStorefront}>GET</button>
         </div>
+        <CopyButton getText={() => JSON.stringify(storefront, null, 2)} />
         <pre>{JSON.stringify(storefront, null, 2)}</pre>
         </>
         )}
@@ -600,7 +615,9 @@ export default function App() {
             GET reviews
           </button>
         </div>
+        <CopyButton getText={() => JSON.stringify(reviewResult, null, 2)} />
         <pre>{JSON.stringify(reviewResult, null, 2)}</pre>
+        <CopyButton getText={() => JSON.stringify(reviewsList, null, 2)} />
         <pre>{JSON.stringify(reviewsList, null, 2)}</pre>
         {reviewsSummary?.ok && (
           <div style={{ marginTop: 8 }}>
@@ -627,6 +644,7 @@ export default function App() {
             GET matches
           </button>
         </div>
+        <CopyButton getText={() => JSON.stringify(wishlistMatches, null, 2)} />
         <pre>{JSON.stringify(wishlistMatches, null, 2)}</pre>
         </>
         )}
@@ -690,7 +708,10 @@ export default function App() {
               <div style={{ color: '#666' }}>(no notifications)</div>
             )
           ) : (
-            <pre>{JSON.stringify(notifications, null, 2)}</pre>
+            <>
+              <CopyButton getText={() => JSON.stringify(notifications, null, 2)} />
+              <pre>{JSON.stringify(notifications, null, 2)}</pre>
+            </>
           )}
         </div>
         </>
@@ -775,6 +796,7 @@ export default function App() {
             POST product
           </button>
         </div>
+        <CopyButton getText={() => JSON.stringify(products, null, 2)} />
         <pre>{JSON.stringify(products, null, 2)}</pre>
         </>
         )}
@@ -791,6 +813,7 @@ export default function App() {
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button onClick={postAd}>POST ad</button>
         </div>
+        <CopyButton getText={() => JSON.stringify(adsResult, null, 2)} />
         <pre>{JSON.stringify(adsResult, null, 2)}</pre>
         </>
         )}
@@ -823,9 +846,13 @@ export default function App() {
           <button className="btn" onClick={getRevenue}>GET revenue</button>
           <button className="btn" onClick={getCouponAnalytics}>GET coupon analytics</button>
         </div>
+        <CopyButton getText={() => JSON.stringify(offersResult, null, 2)} />
         <pre>{JSON.stringify(offersResult, null, 2)}</pre>
+        <CopyButton getText={() => JSON.stringify(redeemResult, null, 2)} />
         <pre>{JSON.stringify(redeemResult, null, 2)}</pre>
+        <CopyButton getText={() => JSON.stringify(revenueResult, null, 2)} />
         <pre>{JSON.stringify(revenueResult, null, 2)}</pre>
+        <CopyButton getText={() => JSON.stringify(couponAnalytics, null, 2)} />
         <pre>{JSON.stringify(couponAnalytics, null, 2)}</pre>
         </>
         )}
@@ -852,11 +879,15 @@ export default function App() {
             />
           </label>
           <button onClick={getTrends}>GET trends</button>
+          <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
         </div>
         {isLoadingTrends ? (
           <div className="muted text-sm" style={{ marginTop: 8 }}>Loading trends…</div>
         ) : (
-          <pre>{JSON.stringify(trendsResult, null, 2)}</pre>
+          <>
+            <CopyButton getText={() => JSON.stringify(trendsResult, null, 2)} />
+            <pre>{JSON.stringify(trendsResult, null, 2)}</pre>
+          </>
         )}
         </>
         )}
@@ -883,6 +914,7 @@ export default function App() {
             />
           </label>
           <button className="btn" onClick={getFunnel}>GET funnel</button>
+          <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
         </div>
         {isLoadingFunnel ? (
           <div className="muted text-sm" style={{ marginTop: 8 }}>Loading funnel…</div>
@@ -941,7 +973,10 @@ export default function App() {
             ) : null}
           </div>
         ) : (
-          <pre>{typeof funnelResult === 'object' ? JSON.stringify(funnelResult, null, 2) : (funnelResult ?? '')}</pre>
+          <>
+            <CopyButton getText={() => (typeof funnelResult === 'object' ? JSON.stringify(funnelResult, null, 2) : String(funnelResult ?? ''))} />
+            <pre>{typeof funnelResult === 'object' ? JSON.stringify(funnelResult, null, 2) : (funnelResult ?? '')}</pre>
+          </>
         )}
         </>
         )}
@@ -954,6 +989,7 @@ export default function App() {
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button onClick={putPricing}>PUT pricing</button>
         </div>
+        <CopyButton getText={() => JSON.stringify(pricingResult, null, 2)} />
         <pre>{JSON.stringify(pricingResult, null, 2)}</pre>
         </>
         )}
@@ -967,6 +1003,7 @@ export default function App() {
             const j = await res.json();
             setPricingResult(j);
           }}>GET health</button>
+          <CopyButton getText={() => JSON.stringify(pricingResult, null, 2)} />
           <pre>{JSON.stringify(pricingResult, null, 2)}</pre>
         </>
         )}
