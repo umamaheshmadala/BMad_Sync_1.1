@@ -1,16 +1,19 @@
 Version v0.1.8
 
-UI
-- Added request recorder wrapper for API calls, capturing response headers and building a cURL command.
-- Session tab: added "Copy last cURL" and inline collapsible cURL preview.
-- Standardized toast notifications with success/error variants; wired to key flows (auth, ads/offers/products, pricing, reviews, notifications).
-- Replaced Tailwind @apply utilities with plain CSS variables to resolve build warnings.
+Highlights
+- UI: cURL generation/copy; unified toasts with x-request-id; analytics loading with 10s timeout; Rate Limit export JSON/CSV; optional Sentry FE tags x-request-id.
+- API: Owner-only revenue and rate limit diagnostics; owner/business-owner analytics (reviews/coupons) with Cache-Control; x-request-id on all responses; optional Sentry BE.
+- OpenAPI: 0.1.8; production server URL; 401/403 for analytics; ratelimit diagnostics schema.
+- DB: Analytics indexes; shared rate limiter table support.
+- CI/CD: Tests/build; OpenAPI lint; Advisors/EXPLAIN (strict togglable); hourly smoke; daily load.
 
-Build/Tests
-- Tests: green (28/28).
-- Web build: successful; CSS compiled with new variables.
+Status
+- Tests: green (42/42)
+- Web build: successful
+- Smoke: OK against production
 
-Ops
-- Smoke tests passed on production URL.
+Operational Notes
+- Shared limiter enabled: FEATURE_SHARED_RATELIMIT=true. Diagnostics at GET /api/platform/ratelimit (owner).
+- Repo vars recommended for strict gates: STRICT_ADVISORS=true, EXPLAIN_STRICT=true, EXPLAIN_MAX_ROWS=100000, DEPLOYED_BASE_URL set to site URL.
 
 
