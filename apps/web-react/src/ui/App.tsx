@@ -298,6 +298,31 @@ export default function App() {
     if (!j?.ok) showToast(j?.error || 'Rate limit diagnostics error');
   }
 
+  function exportRateLimitCsv() {
+    try {
+      const rows: any[] = Array.isArray((ratelimitResult as any)?.top_counters) ? (ratelimitResult as any).top_counters : [];
+      if (!rows.length) { showToast('No counters to export'); return; }
+      const headers = Object.keys(rows[0] || {});
+      const escape = (v: any) => {
+        const s = v == null ? '' : String(v);
+        // Use JSON.stringify for robust escaping of quotes/commas/newlines
+        return JSON.stringify(s);
+      };
+      const lines = [headers.join(',')].concat(rows.map(r => headers.map(h => escape((r as any)[h])).join(',')));
+      const csv = lines.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ratelimit_counters_${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Exported CSV', 'success');
+    } catch (e: any) {
+      showToast(e?.message || 'CSV export error');
+    }
+  }
+
   async function getPlatformConfig() {
     const res = await actionFetch('platform:config', '/api/platform/config', { headers: { ...authHeaders } });
     const j = await res.json();
@@ -1075,6 +1100,7 @@ export default function App() {
           <div className="flex gap-2">
             <button className="btn" onClick={getRateLimitDiagnostics}>GET ratelimit</button>
             <CopyCurlButton tag={'platform:ratelimit'} getCurl={getCurl} />
+            <button className="btn" onClick={exportRateLimitCsv} disabled={!Array.isArray((ratelimitResult as any)?.top_counters) || !(ratelimitResult as any)?.top_counters?.length}>export CSV</button>
             <button className="btn" onClick={() => setRatelimitResult(null as any)}>clear</button>
           </div>
           <CopyButton getText={() => JSON.stringify(ratelimitResult, null, 2)} />
