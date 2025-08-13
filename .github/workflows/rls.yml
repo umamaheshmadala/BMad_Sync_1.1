@@ -1,0 +1,28 @@
+name: RLS Checks (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_url:
+        description: Supabase URL
+        required: true
+      anon_key:
+        description: Supabase anon key
+        required: true
+
+jobs:
+  rls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: RLS smoke (read-only)
+        env:
+          SUPABASE_URL: ${{ github.event.inputs.project_url }}
+          SUPABASE_ANON_KEY: ${{ github.event.inputs.anon_key }}
+        run: |
+          node -e "(async()=>{const { createClient } = await import('@supabase/supabase-js'); const c=createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY); let ok=true; try{await c.from('notifications').select('id').limit(1);}catch(e){ok=false;} console.log('RLS notifications select allowed?', ok); })()"
+

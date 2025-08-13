@@ -42,6 +42,24 @@ jobs:
           files: |
             docs/api/openapi.yaml
 
+  supabase-advisors:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install deps
+        run: npm ci
+      - name: Run advisors (non-blocking)
+        env:
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          STRICT_ADVISORS: 'false'
+        run: node scripts/advisors.mjs || true
+
   preview-smoke:
     needs: [build-and-test]
     runs-on: ubuntu-latest
