@@ -1,0 +1,49 @@
+name: Load Test (light)
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Base URL to test (e.g., https://tiny-bombolone-8f8acf.netlify.app)
+        required: false
+      token:
+        description: Optional Authorization header value (e.g., Bearer <JWT>)
+        required: false
+      concurrency:
+        description: Parallel requests
+        required: false
+        default: '5'
+      iterations:
+        description: Requests per worker
+        required: false
+        default: '50'
+  schedule:
+    - cron: '0 3 * * *' # daily at 03:00 UTC
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run light load test
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || secrets.DEPLOYED_BASE_URL }}
+          TOKEN: ${{ github.event.inputs.token || secrets.PROD_BEARER_TOKEN }}
+          CONCURRENCY: ${{ github.event.inputs.concurrency || '5' }}
+          ITERATIONS: ${{ github.event.inputs.iterations || '50' }}
+        run: |
+          if [ -z "$BASE_URL" ]; then echo "BASE_URL not provided and no secret set"; exit 1; fi
+          echo "Running load: CONCURRENCY=$CONCURRENCY ITERATIONS=$ITERATIONS BASE_URL=$BASE_URL"
+          node scripts/load-test.mjs
+
+
