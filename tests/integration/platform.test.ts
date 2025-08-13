@@ -68,6 +68,7 @@ it('returns platform health with flags and version', async () => {
   expect(typeof json.version).toBe('string');
   expect(json.features).toHaveProperty('FEATURE_SUPABASE_AUTH');
   expect(json.features).toHaveProperty('FEATURE_DEV_AUTH');
+  expect(json.features).toHaveProperty('FEATURE_SHARED_RATELIMIT');
 });
 
 it('persists runtime config and returns it from GET', async () => {
