@@ -742,8 +742,61 @@ export default function App() {
         </div>
         <CopyButton getText={() => JSON.stringify(reviewResult, null, 2)} />
         <pre>{JSON.stringify(reviewResult, null, 2)}</pre>
-        <CopyButton getText={() => JSON.stringify(reviewsList, null, 2)} />
-        <pre>{JSON.stringify(reviewsList, null, 2)}</pre>
+        {/* Reviews table */}
+        {Array.isArray(reviewsList?.items) && (reviewsList.items as any[]).length ? (
+          <div style={{ marginTop: 8 }}>
+            <div className="flex gap-2" style={{ marginBottom: 6 }}>
+              <button className="btn" onClick={() => {
+                try {
+                  const items = [...(reviewsList.items as any[])];
+                  items.sort((a: any, b: any) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+                  setReviewsList({ items });
+                } catch {}
+              }}>sort newest</button>
+              <button className="btn" onClick={() => {
+                try {
+                  const items = [...(reviewsList.items as any[])];
+                  items.sort((a: any, b: any) => (Number(b.recommend_status||0) - Number(a.recommend_status||0)));
+                  setReviewsList({ items });
+                } catch {}
+              }}>sort recommend first</button>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>id</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>user</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>created</th>
+                    <th style={{ textAlign: 'center', borderBottom: '1px solid #333', padding: '6px 8px' }}>recommend</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>text</th>
+                    <th style={{ textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>copy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(reviewsList.items as any[]).map((r: any) => (
+                    <tr key={r.id}>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', fontFamily: 'monospace' }}>{r.id}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', fontFamily: 'monospace' }}>{r.user_id}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>{formatTs(r.created_at)}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', textAlign: 'center' }}>{r.recommend_status ? '✓' : '✗'}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>{r.review_text || ''}</td>
+                      <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>
+                        <button className="btn" onClick={() => { try { (navigator as any)?.clipboard?.writeText(String(r.id)); showToast('copied id','success'); } catch {} }}>copy id</button>
+                        <button className="btn" onClick={() => { try { (navigator as any)?.clipboard?.writeText(String(r.user_id)); showToast('copied user','success'); } catch {} }} style={{ marginLeft: 6 }}>copy user</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <>
+            <CopyButton getText={() => JSON.stringify(reviewsList, null, 2)} />
+            <pre>{JSON.stringify(reviewsList, null, 2)}</pre>
+          </>
+        )}
         {reviewsSummary?.ok && (
           <div style={{ marginTop: 8 }}>
             <strong>Summary:</strong>{' '}
