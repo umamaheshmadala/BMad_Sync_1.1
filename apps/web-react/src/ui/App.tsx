@@ -43,7 +43,8 @@ export default function App() {
   const authHeaders = useMemo(() => (token ? { Authorization: token } : {}), [token]);
 
   const [storefront, setStorefront] = useState(null as any);
-  const [activeTab, setActiveTab] = useState('auth');
+  const initialTab = (() => { try { return localStorage.getItem('sync_active_tab') || 'auth'; } catch { return 'auth'; } })();
+  const [activeTab, setActiveTab] = useState(initialTab as string);
   const [toast, setToast] = useState(null as null | { text: string; type: 'success' | 'error' });
   const toastTimerRef = useRef(null as any);
   const [sessionUserId, setSessionUserId] = useState('');
@@ -127,6 +128,12 @@ export default function App() {
   const [couponAnalytics, setCouponAnalytics] = useState(null as any);
   const [healthResult, setHealthResult] = useState(null as any);
   const [authResult, setAuthResult] = useState(null as any);
+  const [offersPage, setOffersPage] = useState(1 as number);
+  const [offersPageSize, setOffersPageSize] = useState(10 as number);
+  const [reviewsPage, setReviewsPage] = useState(1 as number);
+  const [reviewsPageSize, setReviewsPageSize] = useState(10 as number);
+  const [rateKeyFilter, setRateKeyFilter] = useState('' as string);
+  const [reviewsFilterText, setReviewsFilterText] = useState('' as string);
   const initialSbUrl = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_URL || ''; } catch { return ''; } })();
   const initialSbAnon = (() => { try { const anyImport: any = (import.meta as any); return anyImport?.env?.VITE_SUPABASE_ANON_KEY || ''; } catch { return ''; } })();
   const [sbUrl, setSbUrl] = useState(initialSbUrl as string);
@@ -576,7 +583,7 @@ export default function App() {
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-3">
         {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','funnel','pricing','ratelimit','health'].map((t) => (
-          <button key={t} onClick={() => setActiveTab(t as any)} className={`btn ${activeTab===t ? 'opacity-100' : 'opacity-70'}`}>{t}</button>
+          <button key={t} onClick={() => { setActiveTab(t as any); try { localStorage.setItem('sync_active_tab', String(t)); } catch {} }} className={`btn ${activeTab===t ? 'opacity-100' : 'opacity-70'}`}>{t}</button>
         ))}
       </div>
       {/* Theme selector */}
@@ -760,6 +767,7 @@ export default function App() {
                   setReviewsList({ items });
                 } catch {}
               }}>sort recommend first</button>
+              <input className="input" placeholder="filter text" value={reviewsFilterText} onChange={(e) => setReviewsFilterText((e.target as HTMLInputElement).value)} style={{ maxWidth: 220 }} />
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -774,7 +782,16 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(reviewsList.items as any[]).map((r: any) => (
+                  {(reviewsList.items as any[])
+                    .filter((r: any) => {
+                      const q = (reviewsFilterText || '').trim().toLowerCase();
+                      if (!q) return true;
+                      try {
+                        const hay = `${r?.review_text||''} ${r?.user_id||''} ${r?.id||''}`.toLowerCase();
+                        return hay.includes(q);
+                      } catch { return true; }
+                    })
+                    .map((r: any) => (
                     <tr key={r.id}>
                       <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', fontFamily: 'monospace' }}>{r.id}</td>
                       <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', fontFamily: 'monospace' }}>{r.user_id}</td>
