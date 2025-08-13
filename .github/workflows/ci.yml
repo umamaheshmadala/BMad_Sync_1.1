@@ -7,6 +7,61 @@ on:
     branches: [ main ]
 
 jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc -p tsconfig.json --noEmit
+
+      - name: Run tests
+        run: npm test
+
+      - name: Validate OpenAPI
+        run: npx --yes @redocly/cli@latest lint docs/api/openapi.yaml
+
+      - name: Supabase Advisors (optional)
+        run: node scripts/advisors.mjs
+        env:
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          STRICT_ADVISORS: ${{ secrets.STRICT_ADVISORS }}
+
+      - name: EXPLAIN baselines (optional)
+        if: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        run: node scripts/explain.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EXPLAIN_MAX_ROWS: ${{ secrets.EXPLAIN_MAX_ROWS }}
+          EXPLAIN_STRICT: ${{ secrets.EXPLAIN_STRICT }}
+
+      - name: Preview smoke against deployed URL (optional)
+        if: ${{ secrets.DEPLOYED_BASE_URL != '' }}
+        run: node scripts/smoke.mjs
+        env:
+          BASE_URL: ${{ secrets.DEPLOYED_BASE_URL }}
+
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
