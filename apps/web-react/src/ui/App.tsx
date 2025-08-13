@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { createClient as createSupabaseBrowserClient } from '@supabase/supabase-js';
 
 function Section({ title, children }: { title: string; children: any }) {
@@ -18,7 +18,7 @@ export default function App() {
 
   const [storefront, setStorefront] = useState(null as any);
   const [activeTab, setActiveTab] = useState('auth');
-  const [toast, setToast] = useState('');
+  const [toast, setToast] = useState(null as null | { text: string; type: 'success' | 'error' });
   const toastTimerRef = useRef(null as any);
   const [sessionUserId, setSessionUserId] = useState('');
   const [sessionBusinessId, setSessionBusinessId] = useState('');
@@ -36,6 +36,34 @@ export default function App() {
   const [isLoadingTrends, setIsLoadingTrends] = useState(false as boolean);
   const [isLoadingFunnel, setIsLoadingFunnel] = useState(false as boolean);
   const [lastMeta, setLastMeta] = useState(null as any);
+  const [lastCurl, setLastCurl] = useState('' as string);
+
+  function buildCurl(url: string, init?: RequestInit): string {
+    try {
+      const method = (init?.method || 'GET').toUpperCase();
+      const absUrl = new URL(url, window.location.origin).toString();
+      const headers = new Headers(init?.headers || {});
+      const parts: string[] = [];
+      parts.push(`curl -X ${method} "${absUrl}"`);
+      headers.forEach((value, key) => {
+        parts.push(`-H "${key}: ${value}"`);
+      });
+      const body: any = (init as any)?.body;
+      if (typeof body === 'string' && body.length > 0) {
+        parts.push(`--data-raw '${body}'`);
+      }
+      return parts.join(' ');
+    } catch {
+      return '';
+    }
+  }
+
+  async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
+    const res = await fetch(url, init);
+    try { setLastCurl(buildCurl(url, init)); } catch {}
+    recordHeaders(res);
+    return res;
+  }
   function recordHeaders(res: Response) {
     try {
       setLastMeta({
@@ -66,7 +94,7 @@ export default function App() {
   });
 
   async function postStorefront() {
-    const res = await fetch('/api/business/storefront', {
+    const res = await apiFetch('/api/business/storefront', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ description: 'React SF', theme: 'light', is_open: true }),
@@ -74,19 +102,21 @@ export default function App() {
     const j = await res.json();
     setStorefront(j);
     if (j?.storefront?.business_id) setSessionBusinessId(String(j.storefront.business_id));
-    if (!j?.ok) showToast(j?.error || 'Storefront error');
+    if (j?.ok) showToast('Storefront upserted', 'success');
+    else showToast(j?.error || 'Storefront error', 'error');
   }
 
   async function signup() {
     const email = (document.getElementById('authEmail') as HTMLInputElement)?.value?.trim();
     const role = (document.getElementById('authRole') as HTMLInputElement)?.value?.trim();
     if (!email) { alert('email required'); return; }
-    const res = await fetch('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, role }) });
+    const res = await apiFetch('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, role }) });
     const j = await res.json();
     setAuthResult(j);
     if (j?.bearer) {
       setToken(j.bearer);
       try { localStorage.setItem('sync_token', j.bearer); } catch {}
+      showToast('Signed up', 'success');
     }
   }
 
@@ -94,12 +124,13 @@ export default function App() {
     const email = (document.getElementById('authEmail') as HTMLInputElement)?.value?.trim();
     const role = (document.getElementById('authRole') as HTMLInputElement)?.value?.trim();
     if (!email) { alert('email required'); return; }
-    const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, role }) });
+    const res = await apiFetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, role }) });
     const j = await res.json();
     setAuthResult(j);
     if (j?.bearer) {
       setToken(j.bearer);
       try { localStorage.setItem('sync_token', j.bearer); } catch {}
+      showToast('Logged in', 'success');
     }
   }
 
@@ -132,12 +163,15 @@ export default function App() {
     const description = (document.getElementById('adDesc') as HTMLInputElement)?.value?.trim();
     const image = (document.getElementById('adImg') as HTMLInputElement)?.value?.trim();
     if (!title) { alert('title required'); return; }
-    const res = await fetch('/api/business/ads', {
+    const res = await apiFetch('/api/business/ads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ title, description, image_url: image || null })
     });
-    setAdsResult(await res.json());
+    const j = await res.json();
+    setAdsResult(j);
+    if (j?.ok) showToast('Ad created', 'success');
+    else showToast(j?.error || 'Ads create error', 'error');
   }
 
   async function createOffer() {
@@ -145,14 +179,15 @@ export default function App() {
     const qtyStr = (document.getElementById('offerQty') as HTMLInputElement)?.value?.trim();
     if (!title) { showToast('title required'); return; }
     const total_quantity = qtyStr && !Number.isNaN(Number(qtyStr)) ? Number(qtyStr) : undefined;
-    const res = await fetch('/api/business/offers', {
+    const res = await apiFetch('/api/business/offers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ title, total_quantity })
     });
     const j = await res.json();
     setOffersResult(j);
-    if (!j?.ok) showToast(j?.error || 'Offer create error');
+    if (j?.ok) showToast('Offer created', 'success');
+    else showToast(j?.error || 'Offer create error', 'error');
   }
 
   async function generateOfferCoupons() {
@@ -160,14 +195,15 @@ export default function App() {
     const qtyStr = (document.getElementById('offerGenQty') as HTMLInputElement)?.value?.trim();
     if (!offerId) { showToast('offerId required'); return; }
     const total_quantity = qtyStr && !Number.isNaN(Number(qtyStr)) ? Number(qtyStr) : undefined;
-    const res = await fetch(`/api/business/offers/${offerId}/coupons`, {
+    const res = await apiFetch(`/api/business/offers/${offerId}/coupons`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ total_quantity })
     });
     const j = await res.json();
     setOffersResult(j);
-    if (!j?.ok) showToast(j?.error || 'Generate coupons error');
+    if (j?.ok) showToast('Coupons generated', 'success');
+    else showToast(j?.error || 'Generate coupons error', 'error');
   }
 
   async function collectCoupon() {
@@ -175,32 +211,34 @@ export default function App() {
     const userId = parseUserIdFromBearer();
     if (!userId) { showToast('Set a valid Bearer token (Auth tab)'); return; }
     if (!couponId) { showToast('coupon_id required'); return; }
-    const res = await fetch(`/api/users/${userId}/coupons/collect`, {
+    const res = await apiFetch(`/api/users/${userId}/coupons/collect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ coupon_id: couponId })
     });
     const j = await res.json();
     setOffersResult(j);
-    if (!j?.ok) showToast(j?.error || 'Collect error');
+    if (j?.ok) showToast('Collected to wallet', 'success');
+    else showToast(j?.error || 'Collect error', 'error');
   }
 
   async function redeemAtBusiness() {
     const unique = (document.getElementById('redeemCode') as HTMLInputElement)?.value?.trim();
     const biz = (document.getElementById('redeemBizId') as HTMLInputElement)?.value?.trim();
     if (!unique || !biz) { showToast('unique_code and businessId required'); return; }
-    const res = await fetch(`/api/business/${biz}/redeem`, {
+    const res = await apiFetch(`/api/business/${biz}/redeem`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ unique_code: unique })
     });
     const j = await res.json();
     setRedeemResult(j);
-    if (!j?.ok) showToast(j?.error || 'Redeem error');
+    if (j?.ok) showToast('Redeemed successfully', 'success');
+    else showToast(j?.error || 'Redeem error', 'error');
   }
 
   async function getRevenue() {
-    const res = await fetch('/api/platform/revenue', { headers: { ...authHeaders } });
+    const res = await apiFetch('/api/platform/revenue', { headers: { ...authHeaders } });
     const j = await res.json();
     setRevenueResult(j);
   }
@@ -208,7 +246,7 @@ export default function App() {
   async function getCouponAnalytics() {
     const biz = (document.getElementById('redeemBizId') as HTMLInputElement)?.value?.trim();
     if (!biz) { showToast('businessId required'); return; }
-    const res = await fetch(`/api/business/${biz}/analytics/coupons`, { headers: { ...authHeaders } });
+    const res = await apiFetch(`/api/business/${biz}/analytics/coupons`, { headers: { ...authHeaders } });
     const j = await res.json();
     setCouponAnalytics(j);
   }
@@ -222,7 +260,7 @@ export default function App() {
     if (group) params.set('group', group);
     if (!params.has('sinceDays')) params.set('sinceDays', String(analyticsSinceDays || 7));
     const qs = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(`/api/business/analytics/trends${qs}`, { headers: { ...authHeaders } });
+    const res = await apiFetch(`/api/business/analytics/trends${qs}`, { headers: { ...authHeaders } });
     recordHeaders(res);
     const j = await res.json();
     setTrendsResult(j);
@@ -239,7 +277,7 @@ export default function App() {
     if (group) params.set('group', group);
     if (!params.has('sinceDays')) params.set('sinceDays', String(analyticsSinceDays || 7));
     const qs = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(`/api/business/analytics/funnel${qs}`, { headers: { ...authHeaders } });
+    const res = await apiFetch(`/api/business/analytics/funnel${qs}`, { headers: { ...authHeaders } });
     recordHeaders(res);
     const j = await res.json();
     setFunnelResult(j);
@@ -251,33 +289,35 @@ export default function App() {
     const txt = (document.getElementById('pricingJson') as HTMLTextAreaElement)?.value;
     let payload: any;
     try { payload = JSON.parse(txt || '{}'); } catch { alert('Invalid JSON'); return; }
-    const res = await fetch('/api/platform/config/pricing', {
+    const res = await apiFetch('/api/platform/config/pricing', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify(payload),
     });
     const j = await res.json();
     setPricingResult(j);
-    if (!j?.ok) showToast(j?.error || 'Pricing error');
+    if (j?.ok) showToast('Pricing updated', 'success');
+    else showToast(j?.error || 'Pricing error', 'error');
   }
 
   async function getStorefront() {
-    const res = await fetch('/api/business/storefront', { headers: { ...authHeaders } });
+    const res = await apiFetch('/api/business/storefront', { headers: { ...authHeaders } });
     const j = await res.json();
     setStorefront(j);
     if (j?.storefront?.business_id) setSessionBusinessId(String(j.storefront.business_id));
-    if (!j?.ok) showToast(j?.error || 'Storefront fetch error');
+    if (!j?.ok) showToast(j?.error || 'Storefront fetch error', 'error');
   }
 
   async function postReview(businessId: string) {
-    const res = await fetch(`/api/business/${businessId}/reviews`, {
+    const res = await apiFetch(`/api/business/${businessId}/reviews`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ recommend_status: true, review_text: 'Great place!' }),
     });
     const j = await res.json();
     setReviewResult(j);
-    if (!j?.ok) showToast(j?.error || 'Review error');
+    if (j?.ok) showToast('Review submitted', 'success');
+    else showToast(j?.error || 'Review error', 'error');
   }
 
   async function getReviews(businessId: string) {
@@ -289,27 +329,27 @@ export default function App() {
     if (limit) params.set('limit', String(limit));
     if (offset) params.set('offset', String(offset));
     const qs = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(`/api/business/${businessId}/reviews${qs}`, { headers: { ...authHeaders } });
+    const res = await apiFetch(`/api/business/${businessId}/reviews${qs}`, { headers: { ...authHeaders } });
     const list = await res.json();
     setReviewsList(list);
-    if (!list?.ok) showToast(list?.error || 'Reviews fetch error');
+    if (!list?.ok) showToast(list?.error || 'Reviews fetch error', 'error');
     // Fetch summary
-    const resSum = await fetch(`/api/business/${businessId}/analytics/reviews`, { headers: { ...authHeaders } });
+    const resSum = await apiFetch(`/api/business/${businessId}/analytics/reviews`, { headers: { ...authHeaders } });
     setReviewsSummary(await resSum.json());
   }
 
   async function getWishlistMatches(userId: string) {
-    const res = await fetch(`/api/users/${userId}/wishlist/matches`, { headers: { ...authHeaders } });
+    const res = await apiFetch(`/api/users/${userId}/wishlist/matches`, { headers: { ...authHeaders } });
     const j = await res.json();
     setWishlistMatches(j);
-    if (!j?.ok) showToast(j?.error || 'Matches fetch error');
+    if (!j?.ok) showToast(j?.error || 'Matches fetch error', 'error');
   }
 
   async function getProducts(storefrontId: string) {
-    const res = await fetch(`/api/storefronts/${storefrontId}/products`, { headers: { ...authHeaders } });
+    const res = await apiFetch(`/api/storefronts/${storefrontId}/products`, { headers: { ...authHeaders } });
     const j = await res.json();
     setProducts(j);
-    if (!j?.ok) showToast(j?.error || 'Products fetch error');
+    if (!j?.ok) showToast(j?.error || 'Products fetch error', 'error');
   }
 
   async function getNotifications(userId: string) {
@@ -348,7 +388,8 @@ export default function App() {
     const j = await res.json();
     setNotifications(j);
     await refreshUnread(userId);
-    if (!j?.ok) showToast(j?.error || 'Mark read error');
+    if (j?.ok) showToast('Marked all read', 'success');
+    else showToast(j?.error || 'Mark read error', 'error');
   }
 
   async function markItemRead(userId: string, notificationId: string) {
@@ -356,7 +397,8 @@ export default function App() {
     const j = await res.json();
     setNotifications(j);
     await refreshUnread(userId);
-    if (!j?.ok) showToast(j?.error || 'Mark item read error');
+    if (j?.ok) showToast('Marked read', 'success');
+    else showToast(j?.error || 'Mark item read error', 'error');
   }
 
   async function refreshUnread(userId: string) {
@@ -370,11 +412,11 @@ export default function App() {
     try { return new Date(ts).toLocaleString(); } catch { return ts; }
   }
 
-  function showToast(message: string) {
+  function showToast(message: string, type: 'success' | 'error' = 'error') {
     try { if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current as any); } catch {}
-    setToast(message);
+    setToast({ text: message, type });
     try {
-      const id = window.setTimeout(() => setToast(''), 3000);
+      const id = window.setTimeout(() => setToast(null), 3000);
       // @ts-ignore
       toastTimerRef.current = id as any;
     } catch {}
@@ -395,7 +437,7 @@ export default function App() {
     <div className={`min-h-screen mx-auto max-w-5xl p-6 theme-${theme}`}
       data-build="funnel-theme"
     >
-      <h2 className="text-xl font-semibold">SynC React UI (v0.1.7+funnel+theme)</h2>
+      <h2 className="text-xl font-semibold">SynC React UI (v0.1.8)</h2>
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-3">
         {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','funnel','pricing','health'].map((t) => (
@@ -422,7 +464,9 @@ export default function App() {
       </div>
 
       {toast ? (
-        <div style={{ background:'#fee', color:'#900', padding: 8, border: '1px solid #f99', borderRadius: 6, marginBottom: 12 }}>{toast}</div>
+        <div className={`toast ${toast.type === 'success' ? 'toast-success' : 'toast-error'}`}>
+          {toast.text}
+        </div>
       ) : null}
 
       <Section title="Auth">
@@ -482,6 +526,15 @@ export default function App() {
                 <div><strong>RateLimit</strong>: {lastMeta?.ratelimit_remaining}/{lastMeta?.ratelimit_limit} reset={lastMeta?.ratelimit_reset}</div>
                 <div><strong>Cache-Control</strong>: {lastMeta?.cache_control || '(n/a)'}</div>
               </div>
+            ) : null}
+            <div className="flex gap-2" style={{ marginTop: 8 }}>
+              <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL'); } }} disabled={!lastCurl}>Copy last cURL</button>
+            </div>
+            {lastCurl ? (
+              <details style={{ marginTop: 8 }}>
+                <summary className="muted text-sm">View last cURL</summary>
+                <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{lastCurl}</pre>
+              </details>
             ) : null}
           </div>
         </>
@@ -687,7 +740,7 @@ export default function App() {
                 suggested: !!suggested,
               };
 
-              const res = await fetch(`/api/storefronts/${sfId}/products`, {
+      const res = await apiFetch(`/api/storefronts/${sfId}/products`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHeaders },
                 body: JSON.stringify({ items: [payload] }),
@@ -696,6 +749,7 @@ export default function App() {
               // Refresh list after successful post
               if (j?.ok) {
                 await getProducts(sfId);
+                showToast('Product added', 'success');
               }
               setProducts(j);
             }}
@@ -891,7 +945,7 @@ export default function App() {
         {activeTab !== 'health' ? null : (
         <>
           <button onClick={async () => {
-            const res = await fetch('/api/platform/health');
+            const res = await apiFetch('/api/platform/health');
             const j = await res.json();
             setPricingResult(j);
           }}>GET health</button>
