@@ -69,11 +69,20 @@
   from = "/api/auth/login"
   to = "/.netlify/functions/auth-login"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/api/auth/signup"
   to = "/.netlify/functions/auth-signup"
   status = 200
+  force = true
+
+# Catch-all API mapping to functions (preview-safe)
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
 
 
 [[headers]]
