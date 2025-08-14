@@ -3,6 +3,7 @@ import { isPlatformOwner, getUserIdFromRequest } from '../../../packages/shared/
 import { withRequestLogging } from '../../../packages/shared/logging';
 import { withRateLimit } from '../../../packages/shared/ratelimit';
 import { json, errorJson } from '../../../packages/shared/http';
+import { weakEtagForObject } from '../../../packages/shared/cache';
 import { withErrorHandling } from '../../../packages/shared/errors';
 
 type FunnelCounts = { issued: number; collected: number; shared: number; redeemed: number };
@@ -179,7 +180,10 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
         return new Response(undefined, { status: 304, headers: { 'Last-Modified': lastModified, 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessIdFilter||''}` } });
       }
     }
-    return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified, 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessIdFilter||''}` } });
+    const etagCsv = weakEtagForObject(csv);
+    const headersCsv: Record<string, string> = { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified, 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessIdFilter||''}` };
+    if (etagCsv) headersCsv['ETag'] = etagCsv;
+    return new Response(csv, { status: 200, headers: headersCsv });
   }
   const etag = (() => {
     try {

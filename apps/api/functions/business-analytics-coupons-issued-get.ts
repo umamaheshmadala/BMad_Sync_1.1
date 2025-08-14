@@ -4,6 +4,7 @@ import { withErrorHandling } from '../../../packages/shared/errors';
 import { withRequestLogging } from '../../../packages/shared/logging';
 import { withRateLimit } from '../../../packages/shared/ratelimit';
 import { json, errorJson } from '../../../packages/shared/http';
+import { weakEtagForObject } from '../../../packages/shared/cache';
 
 export default withRequestLogging('business-analytics-coupons-issued', withRateLimit('business-analytics-coupons-issued-get', { limit: 120, windowMs: 60_000 }, withErrorHandling(async (req: Request) => {
   if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
@@ -118,7 +119,10 @@ export default withRequestLogging('business-analytics-coupons-issued', withRateL
         return new Response(undefined, { status: 304, headers: { 'Last-Modified': lastModified, 'Cache-Control': `public, max-age=0, s-maxage=${ttlCsv}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttlCsv}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessId||''}` } });
       }
     }
-    return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': `public, max-age=0, s-maxage=${ttlCsv}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttlCsv}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified, 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessId||''}` } });
+    const etagCsv = weakEtagForObject(csv);
+    const headersCsv: Record<string, string> = { 'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': `public, max-age=0, s-maxage=${ttlCsv}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttlCsv}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified, 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessId||''}` };
+    if (etagCsv) headersCsv['ETag'] = etagCsv;
+    return new Response(csv, { status: 200, headers: headersCsv });
   }
 
   const series = Object.keys(byDay).sort().map((day) => ({ day, issued: byDay[day].issued }));

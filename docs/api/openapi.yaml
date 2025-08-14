@@ -946,6 +946,10 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            ETag: { description: Weak ETag for cache revalidation, schema: { type: string } }
+            Last-Modified: { description: Last modified time derived from newest series day, schema: { type: string } }
+            Vary: { description: 'Accept, Accept-Encoding, Authorization', schema: { type: string } }
         '400':
           description: Bad Request (range exceeds cap when fill=true or invalid tz)
         '401':

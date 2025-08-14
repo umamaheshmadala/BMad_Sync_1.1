@@ -3,6 +3,7 @@ import { isPlatformOwner, getUserIdFromRequest } from '../../../packages/shared/
 import { withRequestLogging } from '../../../packages/shared/logging';
 import { withRateLimit } from '../../../packages/shared/ratelimit';
 import { json, errorJson } from '../../../packages/shared/http';
+import { weakEtagForObject } from '../../../packages/shared/cache';
 import { withErrorHandling } from '../../../packages/shared/errors';
 
 export default withRequestLogging('business-analytics-trends', withRateLimit('analytics-trends', { limit: 60, windowMs: 60_000 }, withErrorHandling(async (req: Request) => {
@@ -194,7 +195,10 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
         return new Response(undefined, { status: 304, headers: { 'Last-Modified': lastModified, 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessId||''}` } });
       }
     }
-    return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified, 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessId||''}` } });
+    const etagCsv = weakEtagForObject(csv);
+    const headersCsv: Record<string, string> = { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified, 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessId||''}` };
+    if (etagCsv) headersCsv['ETag'] = etagCsv;
+    return new Response(csv, { status: 200, headers: headersCsv });
   }
   // Compute a simple ETag based on inputs and payload shape (stable across identical responses)
   const etag = (() => {
