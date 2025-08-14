@@ -184,7 +184,9 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
     const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
     const csv = [headers.join(',')].concat(rows.map(r => headers.map(h => escape((r as any)[h])).join(','))).join('\n');
     const ttl = Math.min(300, Math.max(30, sinceDays * 5));
-    return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120` } });
+    const lastKey = keys[keys.length - 1];
+    const lastModified = (() => { try { return new Date(`${lastKey}T23:59:59Z`).toUTCString(); } catch { return new Date().toUTCString(); } })();
+    return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified } });
   }
   // Compute a simple ETag based on inputs and payload shape (stable across identical responses)
   const etag = (() => {
@@ -201,7 +203,12 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
     'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`,
     'Vary': 'Accept, Accept-Encoding, Authorization',
   });
-  headers.set('Last-Modified', new Date().toUTCString());
+  try {
+    const keys = Object.keys((trendsPayload as any).reviews || {}).sort();
+    const lastKey = keys[keys.length - 1];
+    const lm = lastKey ? new Date(`${lastKey}T23:59:59Z`).toUTCString() : new Date().toUTCString();
+    headers.set('Last-Modified', lm);
+  } catch { headers.set('Last-Modified', new Date().toUTCString()); }
   if (etag) headers.set('ETag', etag);
   const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
   const ifModifiedSince = new Headers((req as any).headers || {}).get('if-modified-since');

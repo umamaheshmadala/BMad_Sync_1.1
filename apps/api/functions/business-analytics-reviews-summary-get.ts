@@ -88,7 +88,9 @@ export default withRequestLogging('business-analytics-reviews-summary', withRate
     const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
     const csv = [headers.join(',')].concat(series.map(r => headers.map(h => escape((r as any)[h])).join(','))).join('\n');
     const ttl = Math.min(300, Math.max(30, sinceDays * 5));
-    return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120` } });
+    const last = series.length ? series[series.length - 1].day : undefined;
+    const lastModified = (() => { try { return new Date(`${last}T23:59:59Z`).toUTCString(); } catch { return new Date().toUTCString(); } })();
+    return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified } });
   }
   const payload = { ok: true, summary: { recommend: totalRecommend, not_recommend: totalNotRecommend }, byDay: series };
   const etag = (() => {
@@ -105,7 +107,11 @@ export default withRequestLogging('business-analytics-reviews-summary', withRate
     'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`,
     'Vary': 'Accept, Accept-Encoding, Authorization',
   });
-  headers.set('Last-Modified', new Date().toUTCString());
+  try {
+    const last = series.length ? series[series.length - 1].day : undefined;
+    const lm = last ? new Date(`${last}T23:59:59Z`).toUTCString() : new Date().toUTCString();
+    headers.set('Last-Modified', lm);
+  } catch { headers.set('Last-Modified', new Date().toUTCString()); }
   if (etag) headers.set('ETag', etag);
   const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
   const ifModifiedSince = new Headers((req as any).headers || {}).get('if-modified-since');

@@ -100,7 +100,17 @@ export default withRequestLogging('business-analytics-coupons-issued', withRateL
     }
     const csv = lines.join('\n');
     const ttlCsv = Math.min(300, Math.max(30, sinceDays * 5));
-    return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': `public, max-age=0, s-maxage=${ttlCsv}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttlCsv}, stale-while-revalidate=120` } });
+    const lastKey = (() => {
+      try {
+        if (group === 'business') {
+          const all = Object.values(byBusiness || {}).flatMap((m: any) => Object.keys(m || {}));
+          return all.sort().pop();
+        }
+        return Object.keys(byDay || {}).sort().pop();
+      } catch { return undefined; }
+    })();
+    const lastModified = (() => { try { return new Date(`${lastKey}T23:59:59Z`).toUTCString(); } catch { return new Date().toUTCString(); } })();
+    return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': `public, max-age=0, s-maxage=${ttlCsv}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttlCsv}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified } });
   }
 
   const series = Object.keys(byDay).sort().map((day) => ({ day, issued: byDay[day].issued }));
@@ -120,7 +130,14 @@ export default withRequestLogging('business-analytics-coupons-issued', withRateL
     'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`,
     'Vary': 'Accept, Accept-Encoding, Authorization',
   });
-  headers.set('Last-Modified', new Date().toUTCString());
+  try {
+    const lastKey = (() => {
+      const all = Object.keys(byDay || {});
+      return all.sort().pop();
+    })();
+    const lm = lastKey ? new Date(`${lastKey}T23:59:59Z`).toUTCString() : new Date().toUTCString();
+    headers.set('Last-Modified', lm);
+  } catch { headers.set('Last-Modified', new Date().toUTCString()); }
   if (etag) headers.set('ETag', etag);
   const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
   const ifModifiedSince = new Headers((req as any).headers || {}).get('if-modified-since');
