@@ -9,6 +9,10 @@ import Reset from './ui/auth/Reset';
 import RequireAuth from './ui/auth/RequireAuth';
 import ProfilePage from './ui/auth/Profile';
 import BusinessPortal from './ui/business/Portal';
+import BusinessProfilePage from './ui/business/BusinessProfile';
+import StorefrontPage from './ui/business/Storefront';
+import BusinessProductsPage from './ui/business/Products';
+import StorefrontPublicView from './ui/public/StorefrontView';
 import { LocaleProvider } from './ui/i18n';
 // Sentry init (no-op if DSN not provided)
 try {
@@ -61,6 +65,31 @@ createRoot(container).render(
               </RequireAuth>
             }
           />
+          <Route
+            path="/business/portal/profile"
+            element={
+              <RequireAuth>
+                <BusinessProfilePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/business/portal/storefront"
+            element={
+              <RequireAuth>
+                <StorefrontPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/business/portal/products"
+            element={
+              <RequireAuth>
+                <BusinessProductsPage />
+              </RequireAuth>
+            }
+          />
+          <Route path="/storefront" element={<StorefrontPublicView />} />
           <Route
             path="/dashboard"
             element={
