@@ -62,6 +62,21 @@ async function main() {
     }
   }
 
+  // Coupons Issued JSON+CSV (requires owner token when grouped)
+  if (TOKEN) {
+    const { res } = await get('/api/business/analytics/coupons-issued?group=business&sinceDays=1');
+    if (!res.ok) {
+      failures.push(`coupons-issued: status=${res.status}`);
+    }
+    const csv = await get('/api/business/analytics/coupons-issued?group=business&sinceDays=1&format=csv');
+    if (csv.res.ok) {
+      const cc = csv.res.headers.get('Cache-Control') || '';
+      if (!cc.includes('s-maxage=')) {
+        failures.push('coupons-issued: missing cache headers on CSV');
+      }
+    }
+  }
+
   // Optional: if TOKEN present, try a lightweight authorized call
   if (TOKEN) {
     const { res } = await get('/api/users/test-user-1/notifications?limit=1');

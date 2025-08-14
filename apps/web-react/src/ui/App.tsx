@@ -2012,6 +2012,11 @@ export default function App() {
         )}
       </Section>
 
+      <Section title="Coupons Issued (owner)">
+        {activeTab !== 'funnel' ? null : null}
+        {activeTab !== 'funnel' ? null : null}
+      </Section>
+
       <Section title="Platform Pricing (owner)">
         {activeTab !== 'pricing' ? null : (
         <>

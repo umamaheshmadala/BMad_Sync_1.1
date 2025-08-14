@@ -118,11 +118,23 @@ export default withRequestLogging('business-analytics-coupons-issued', withRateL
   const headers = new Headers({
     'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`,
     'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`,
+    'Vary': 'Accept, Accept-Encoding, Authorization',
   });
+  headers.set('Last-Modified', new Date().toUTCString());
   if (etag) headers.set('ETag', etag);
   const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
+  const ifModifiedSince = new Headers((req as any).headers || {}).get('if-modified-since');
   if (etag && ifNoneMatch === etag) {
     return new Response(undefined, { status: 304, headers });
+  }
+  if (ifModifiedSince) {
+    const since = Date.parse(ifModifiedSince);
+    if (!Number.isNaN(since)) {
+      const last = Date.now();
+      if (last - since < 60_000) {
+        return new Response(undefined, { status: 304, headers });
+      }
+    }
   }
   return json(payload, { headers });
 })));
