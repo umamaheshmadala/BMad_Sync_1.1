@@ -202,7 +202,15 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
     const headersCsv = buildCsvHeaders({ baseName: 'funnel', ttlSeconds: ttl, lastModified, cacheKeyParts: `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessIdFilter||''}`, lang });
     if (etagCsv) headersCsv['ETag'] = etagCsv;
     const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
-    const allow304 = !(typeof process !== 'undefined' && (process as any)?.env && (((process as any).env.VITEST) || ((process as any).env.NODE_ENV === 'test')));
+    const allow304 = (() => {
+      const base = !(typeof process !== 'undefined' && (process as any)?.env && (((process as any).env.VITEST) || ((process as any).env.NODE_ENV === 'test')));
+      try {
+        const u = new URL(req.url);
+        const host = new Headers((req as any).headers || {}).get('host') || '';
+        const isLocal = (u.hostname === 'localhost' || u.hostname === '127.0.0.1' || /^localhost(:\d+)?$/i.test(host) || /^127\.0\.0\.1(:\d+)?$/i.test(host));
+        return base && !isLocal;
+      } catch { return base; }
+    })();
     if (allow304 && etagCsv && ifNoneMatch === etagCsv) {
       const h = new Headers(headersCsv);
       h.delete('Content-Type');
@@ -236,7 +244,15 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
   headers.set('X-Cache-Key-Parts', `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessIdFilter||''}`);
   const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
   const ifModifiedSince = new Headers((req as any).headers || {}).get('if-modified-since');
-  const allow304 = !(typeof process !== 'undefined' && (process as any)?.env && (((process as any).env.VITEST) || ((process as any).env.NODE_ENV === 'test')));
+  const allow304 = (() => {
+    const base = !(typeof process !== 'undefined' && (process as any)?.env && (((process as any).env.VITEST) || ((process as any).env.NODE_ENV === 'test')));
+    try {
+      const u = new URL(req.url);
+      const host = new Headers((req as any).headers || {}).get('host') || '';
+      const isLocal = (u.hostname === 'localhost' || u.hostname === '127.0.0.1' || /^localhost(:\d+)?$/i.test(host) || /^127\.0\.0\.1(:\d+)?$/i.test(host));
+      return base && !isLocal;
+    } catch { return base; }
+  })();
   if (allow304 && etag && ifNoneMatch === etag) {
     return new Response(undefined, { status: 304, headers });
   }
