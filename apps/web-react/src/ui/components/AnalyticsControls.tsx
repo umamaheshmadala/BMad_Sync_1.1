@@ -35,9 +35,10 @@ export function AnalyticsControls({ sinceDays, setSinceDays, tz, setTz, fill, se
           <button key={d} className="btn" aria-pressed={sinceDays===d ? (true as any) : (false as any)} onClick={() => { setSinceDays(d); try { localStorage.setItem('sync_analytics_since_days', String(d)); } catch {} }}>{d}</button>
         ))}
       </div>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6 }} htmlFor="sinceDaysInput">
         <span className="muted text-sm">{t('sinceDays')}</span>
         <input
+          id="sinceDaysInput"
           type="number"
           min={1 as any}
           max={365 as any}
@@ -52,22 +53,22 @@ export function AnalyticsControls({ sinceDays, setSinceDays, tz, setTz, fill, se
           aria-label={t('sinceDays')}
         />
       </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span className="muted text-sm">{t('tz')}</span>
-        <select className="input" value={tz || ''} onChange={(e) => { const v=(e.target as HTMLSelectElement).value; setTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 220 }} aria-label={t('timezonePreset')}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6 }} htmlFor="tzPreset">
+        <span className="muted text-sm" id="tzLabel">{t('tz')}</span>
+        <select id="tzPreset" className="input" aria-labelledby="tzLabel" value={tz || ''} onChange={(e) => { const v=(e.target as HTMLSelectElement).value; setTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 220 }} aria-label={t('timezonePreset')}>
           {(() => {
             const tzs = ['', 'UTC', 'America/Los_Angeles', 'America/New_York', 'Europe/London', 'Europe/Berlin', 'Asia/Kolkata', 'Asia/Singapore', 'Australia/Sydney'];
             return tzs.map((z) => (<option key={z || 'none'} value={z}>{z ? z : t('none')}</option>));
           })()}
         </select>
-        <input className="input" placeholder={t('customTimezone')} value={tz} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 180 }} aria-label={t('customTimezone')} />
+        <input id="tzCustom" className="input" placeholder={t('customTimezone')} value={tz} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 180 }} aria-label={t('customTimezone')} />
       </label>
       <label style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Zero-fill missing days">
         <input type="checkbox" checked={fill} onChange={(e) => { const v=(e.target as HTMLInputElement).checked; setFill(v); try { localStorage.setItem('sync_analytics_fill', v ? '1' : ''); } catch {} }} /> {t('fill')}
       </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6 }} title={t('csvJsonLocale')}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6 }} htmlFor="localeSelect" title={t('csvJsonLocale')}>
         <span className="muted text-sm">{t('locale')}</span>
-        <select className="input" value={locale || ''} onChange={(e) => { const v=(e.target as HTMLSelectElement).value; if (setLocale) setLocale(v as any); try { localStorage.setItem('sync_analytics_locale', v); } catch {} }} style={{ width: 120 }} aria-label={t('locale')}>
+        <select id="localeSelect" className="input" value={locale || ''} onChange={(e) => { const v=(e.target as HTMLSelectElement).value; if (setLocale) setLocale(v as any); try { localStorage.setItem('sync_analytics_locale', v); } catch {} }} style={{ width: 120 }} aria-label={t('locale')}>
           {['en','es','fr','pt'].map(l => (<option key={l} value={l}>{l}</option>))}
         </select>
       </label>

@@ -86,7 +86,7 @@ body {
   line-height: 1.25rem;
   font-weight: 500;
   background-color: var(--primary);
-  color: var(--primary-fg);
+  color: #000; /* ensure strong contrast on primary background */
   border-radius: 6px;
   box-shadow: 0 0 32px rgba(124, 92, 255, 0.25);
   transition: opacity 150ms ease-in-out;
