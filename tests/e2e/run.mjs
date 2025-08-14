@@ -31,7 +31,8 @@ async function csvChecks(path, lang) {
   if (lang && !cl) throw new Error('Missing Content-Language');
   await save(path.replaceAll(/[\/?&=]/g,'_') + '.csv', r1.text);
   const et = r1.res.headers.get('ETag');
-  if (et) {
+  const isLocal = /^https?:\/\/localhost(:\d+)?/.test(BASE_URL || '');
+  if (et && !isLocal) {
     const h2 = Object.assign({}, h, { 'If-None-Match': et });
     const r2 = await fetch(url(path), { headers: h2 });
     if (r2.status !== 304) throw new Error('Expected 304 on ETag');
