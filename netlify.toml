@@ -64,6 +64,17 @@
   to = "/index.html"
   status = 200
 
+# API routes → Netlify Functions (explicit mappings used by UI)
+[[redirects]]
+  from = "/api/auth/login"
+  to = "/.netlify/functions/auth-login"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/signup"
+  to = "/.netlify/functions/auth-signup"
+  status = 200
+
 
 [[headers]]
   for = "/index.html"
