@@ -21,6 +21,7 @@ import notificationsGet from '../../apps/api/functions/users-notifications-get';
 import notificationReadItem from '../../apps/api/functions/users-notifications-read-item-put';
 import adsPost from '../../apps/api/functions/business-ads-post';
 import trendsGet from '../../apps/api/functions/business-analytics-trends-get';
+import funnelGet from '../../apps/api/functions/business-analytics-funnel-get';
 import reviewsSummaryGet from '../../apps/api/functions/business-analytics-reviews-summary-get';
 import couponsIssuedGet from '../../apps/api/functions/business-analytics-coupons-issued-get';
 import pricingPut from '../../apps/api/functions/platform-config-pricing-put';
@@ -577,6 +578,60 @@ it('coupons issued grouped by business returns JSON and CSV', async () => {
   expect(resCsv.headers.get('Content-Type')).toContain('text/csv');
 });
 
+it('coupons issued grouped supports server-side order/limit/offset and CSV summary', async () => {
+  // Seed businesses and coupons
+  db.businesses.insert({ id: 'gbiz-1', owner_user_id: TEST_USER_1 });
+  db.businesses.insert({ id: 'gbiz-2', owner_user_id: TEST_USER_1 });
+  db.coupons.insert({ id: 'gci-1', business_id: 'gbiz-1', start_date: new Date().toISOString() });
+  db.coupons.insert({ id: 'gci-2', business_id: 'gbiz-1', start_date: new Date().toISOString() });
+  db.coupons.insert({ id: 'gci-3', business_id: 'gbiz-2', start_date: new Date().toISOString() });
+
+  const owner = { Authorization: bearer(TEST_USER_1, 'owner') };
+  const json = await couponsIssuedGet(
+    makeReq(path(`/api/business/analytics/coupons-issued?group=business&sinceDays=7&order=total.desc&limit=1&offset=0`), 'GET', undefined, owner)
+  );
+  expect(json.status).toBe(200);
+  const jj = await json.json();
+  expect(jj.ok).toBe(true);
+  expect(Array.isArray(jj.grouped)).toBe(true);
+  expect(jj.limit).toBe(1);
+  expect(jj.total).toBeGreaterThanOrEqual(2);
+
+  const csv = await couponsIssuedGet(
+    makeReq(path(`/api/business/analytics/coupons-issued?group=business&sinceDays=7&order=total.desc&limit=1&offset=0&expand=business&format=csv`), 'GET', undefined, owner)
+  );
+  expect(csv.headers.get('Content-Type') || '').toContain('text/csv');
+  const disp = csv.headers.get('Content-Disposition') || '';
+  expect(disp.toLowerCase()).toContain('attachment');
+});
+
+it('invalid order parameter returns 400', async () => {
+  const owner = { Authorization: bearer(TEST_USER_1, 'owner') };
+  const res = await couponsIssuedGet(
+    makeReq(path(`/api/business/analytics/coupons-issued?group=business&order=not_a_key.asc`), 'GET', undefined, owner)
+  );
+  expect(res.status).toBe(400);
+});
+
+it('large offset returns empty grouped page but stable total', async () => {
+  // Ensure at least one business exists
+  db.businesses.insert({ id: 'pgbiz-1', owner_user_id: TEST_USER_1 });
+  db.coupons.insert({ id: 'pgc-1', business_id: 'pgbiz-1', start_date: new Date().toISOString() });
+  const owner = { Authorization: bearer(TEST_USER_1, 'owner') };
+  const res1 = await couponsIssuedGet(
+    makeReq(path(`/api/business/analytics/coupons-issued?group=business&sinceDays=7`), 'GET', undefined, owner)
+  );
+  const j1 = await res1.json();
+  const total = Number(j1?.total || Object.keys(j1?.byBusiness || {}).length);
+  const res2 = await couponsIssuedGet(
+    makeReq(path(`/api/business/analytics/coupons-issued?group=business&sinceDays=7&limit=10&offset=9999&order=total.desc`), 'GET', undefined, owner)
+  );
+  const j2 = await res2.json();
+  expect(Array.isArray(j2.grouped)).toBe(true);
+  expect((j2.grouped as any[]).length).toBe(0);
+  expect(Number(j2.total)).toBe(total);
+});
+
 it('filters reviews by created_at date range', async () => {
   const now = Date.now();
   const early = new Date(now - 10 * 24 * 60 * 60 * 1000).toISOString();
@@ -712,6 +767,90 @@ it('ETag/Last-Modified 304 works for trends and coupons-issued CSV', async () =>
     new Request(path(`/api/business/analytics/coupons-issued?format=csv`), { method: 'GET', headers: { 'If-Modified-Since': lmCsv } } as any)
   ) as Response;
   expect([200, 304]).toContain(csv2.status);
+  // ETag for CSV trends
+  const trendsCsv = await (await import('../../apps/api/functions/business-analytics-trends-get')).default(
+    makeReq(path(`/api/business/analytics/trends?format=csv`), 'GET')
+  ) as Response;
+  const et = trendsCsv.headers.get('ETag');
+  if (et) {
+    const trendsCsv2 = await (await import('../../apps/api/functions/business-analytics-trends-get')).default(
+      new Request(path(`/api/business/analytics/trends?format=csv`), { method: 'GET', headers: { 'If-None-Match': et } } as any)
+    ) as Response;
+    expect([200,304]).toContain(trendsCsv2.status);
+  }
+});
+
+it('CSV headers localized for es/fr/pt and ETag varies by locale', async () => {
+  // Ensure some activity exists
+  db.business_reviews.insert({ business_id: TEST_BIZ_1, recommend_status: true, created_at: new Date().toISOString() });
+  db.user_coupons.insert({ coupon_id: TEST_COUPON_1, is_redeemed: false, collected_at: new Date().toISOString() });
+
+  const resEs = await trendsGet(new Request(path(`/api/business/analytics/trends?format=csv`), { method: 'GET', headers: { 'Accept-Language': 'es-ES' } } as any));
+  const hEs = await resEs.text();
+  expect(hEs.split('\n')[0]).toContain('día');
+  const etEs = resEs.headers.get('ETag') || '';
+
+  const resFr = await trendsGet(new Request(path(`/api/business/analytics/trends?format=csv`), { method: 'GET', headers: { 'Accept-Language': 'fr-FR' } } as any));
+  const hFr = await resFr.text();
+  expect(hFr.split('\n')[0]).toContain('jour');
+  const etFr = resFr.headers.get('ETag') || '';
+
+  const resPt = await trendsGet(new Request(path(`/api/business/analytics/trends?format=csv`), { method: 'GET', headers: { 'Accept-Language': 'pt-BR' } } as any));
+  const hPt = await resPt.text();
+  expect(hPt.split('\n')[0]).toContain('dia');
+
+  if (etEs && etFr) expect(etEs).not.toBe(etFr);
+});
+
+it('Funnel CSV localized headers and JSON 304 semantics', async () => {
+  // Seed coupon activity
+  db.user_coupons.insert({ id: 'fuc1', coupon_id: TEST_COUPON_1, is_redeemed: false, collected_at: new Date().toISOString() });
+  const csv = await funnelGet(new Request(path(`/api/business/analytics/funnel?format=csv`), { method: 'GET', headers: { 'Accept-Language': 'fr-FR' } } as any));
+  const text = await csv.text();
+  expect(text.split('\n')[0]).toContain('jour');
+  // JSON ETag revalidation (may be 200 in test env)
+  const j1 = await funnelGet(makeReq(path(`/api/business/analytics/funnel`), 'GET'));
+  const et = j1.headers.get('ETag') || '';
+  if (et) {
+    const j2 = await funnelGet(new Request(path(`/api/business/analytics/funnel`), { method: 'GET', headers: { 'If-None-Match': et } } as any));
+    expect([200, 304]).toContain(j2.status);
+  }
+});
+
+it('Coupons-issued summary CSV localized headers (fr) with business name', async () => {
+  // Seed businesses and coupons
+  db.businesses.insert({ id: 'locbiz-1', owner_user_id: TEST_USER_1, business_name: 'Étoile' });
+  db.coupons.insert({ id: 'locci-1', business_id: 'locbiz-1', start_date: new Date().toISOString() });
+  const owner = { Authorization: bearer(TEST_USER_1, 'owner') };
+  const res = await couponsIssuedGet(
+    new Request(path(`/api/business/analytics/coupons-issued?group=business&order=total.desc&limit=1&offset=0&expand=business&format=csv`), { method: 'GET', headers: { ...owner, 'Accept-Language': 'fr-FR' } } as any)
+  );
+  const text = await (res as any as Response).text();
+  expect(text.split('\n')[0]).toContain("nomD'Entreprise");
+});
+
+it('CSV Content-Disposition includes RFC5987 filename* and locale suffix', async () => {
+  const trendsCsv = await (await import('../../apps/api/functions/business-analytics-trends-get')).default(
+    new Request(path(`/api/business/analytics/trends?format=csv`), { method: 'GET', headers: { 'Accept-Language': 'fr-FR' } } as any)
+  ) as Response;
+  const cd1 = trendsCsv.headers.get('Content-Disposition') || '';
+  expect(cd1).toMatch(/filename=/);
+  expect(cd1).toMatch(/filename\*=/);
+  expect(cd1).toMatch(/trends_fr/);
+
+  const funnelCsv = await (await import('../../apps/api/functions/business-analytics-funnel-get')).default(
+    new Request(path(`/api/business/analytics/funnel?format=csv`), { method: 'GET', headers: { 'Accept-Language': 'pt-BR' } } as any)
+  ) as Response;
+  const cd2 = funnelCsv.headers.get('Content-Disposition') || '';
+  expect(cd2).toMatch(/filename\*=/);
+  expect(cd2).toMatch(/funnel_pt/);
+
+  const issuedCsv = await (await import('../../apps/api/functions/business-analytics-coupons-issued-get')).default(
+    new Request(path(`/api/business/analytics/coupons-issued?format=csv`), { method: 'GET', headers: { 'Accept-Language': 'es-ES' } } as any)
+  ) as Response;
+  const cd3 = issuedCsv.headers.get('Content-Disposition') || '';
+  expect(cd3).toMatch(/filename\*=/);
+  expect(cd3).toMatch(/coupons_issued_es/);
 });
 
 

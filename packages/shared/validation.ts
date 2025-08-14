@@ -145,3 +145,28 @@ export const PlatformRuntimeConfigShapeSchema = z
 
 export type PlatformRuntimeConfigShape = z.infer<typeof PlatformRuntimeConfigShapeSchema>;
 
+// Query param helpers for pagination and sorting
+export function parseLimitParam(value: string | number | null | undefined, min: number = 1, max: number = 500): number | undefined {
+  if (value == null || value === '') return undefined;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return undefined;
+  return Math.max(min, Math.min(max, Math.floor(n)));
+}
+
+export function parseOffsetParam(value: string | number | null | undefined): number | undefined {
+  if (value == null || value === '') return undefined;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return undefined;
+  return Math.max(0, Math.floor(n));
+}
+
+export function normalizeOrderParam(value: string | null | undefined): string {
+  return String(value || '').trim().toLowerCase();
+}
+
+export function validateOrderParam(orderParam: string | null | undefined, allowed: ReadonlySet<string>): { ok: boolean; normalized: string } {
+  const normalized = normalizeOrderParam(orderParam);
+  if (!normalized) return { ok: true, normalized };
+  return { ok: allowed.has(normalized), normalized };
+}
+

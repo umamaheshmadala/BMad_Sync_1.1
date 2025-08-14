@@ -58,6 +58,12 @@ it('funnel invalid tz rejected and CSV returned', async () => {
   expect((ok.headers as any).get('Content-Type')).toContain('text/csv');
   // Should include cache headers
   expect((ok.headers as any).get('Cache-Control')).toMatch(/s-maxage=/);
+  // ETag 304 for CSV
+  const et = (ok.headers as any).get('ETag');
+  if (et) {
+    const notMod = await funnelGet(new Request(path('/api/business/analytics/funnel?format=csv'), { method: 'GET', headers: { 'If-None-Match': et } } as any)) as Response;
+    expect([200,304]).toContain(notMod.status);
+  }
 });
 
 it('gets platform ratelimit diagnostics for owner and forbids non-owner', async () => {

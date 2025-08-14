@@ -103,6 +103,12 @@ components:
     RateLimit-Reset:
       description: Epoch seconds when the current window resets
       schema: { type: integer }
+    Vary:
+      description: Response varies by the listed headers (includes Accept-Language for localized responses)
+      schema: { type: string }
+    Content-Language:
+      description: IANA language tag of the response content when localized
+      schema: { type: string }
 paths:
   /api/auth/signup:
     post:
@@ -949,7 +955,7 @@ paths:
           headers:
             ETag: { description: Weak ETag for cache revalidation, schema: { type: string } }
             Last-Modified: { description: Last modified time derived from newest series day, schema: { type: string } }
-            Vary: { description: 'Accept, Accept-Encoding, Authorization', schema: { type: string } }
+            Vary: { description: 'Accept, Accept-Encoding, Authorization, Accept-Language', schema: { type: string } }
         '400':
           description: Bad Request (range exceeds cap when fill=true or invalid tz)
         '401':
@@ -981,7 +987,30 @@ paths:
           name: group
           required: false
           schema: { type: string, enum: [business] }
-          description: Group result by business (platform owner only when omitting businessId).
+          description: Group result by business (platform owner only when omitting businessId). When grouped, JSON includes `byBusiness` map and CSV format returns rows with `businessId,day,issued`.
+        - in: query
+          name: expand
+          required: false
+          schema: { type: string }
+          description: Optional `expand=business` adds `businesses` map to JSON and `businessName` column in CSV for grouped output.
+        - in: query
+          name: order
+          required: false
+          schema:
+            type: string
+            description: Server-side sort for grouped output. Default `total.desc`.
+            enum: ["total.asc","total.desc","avgPerDay.asc","avgPerDay.desc","businessId.asc","businessId.desc","businessName.asc","businessName.desc","firstDay.asc","firstDay.desc","lastDay.asc","lastDay.desc"]
+          description: Applies only when `group=business`. Affects JSON `grouped` array and CSV summary when `limit/offset` or `order` used.
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 500 }
+          description: Applies only when `group=business`. Limits number of grouped rows; pairs with `offset`.
+        - in: query
+          name: offset
+          required: false
+          schema: { type: integer, minimum: 0 }
+          description: Applies only when `group=business`. Offset for grouped rows.
         - in: query
           name: sinceDays
           required: false
@@ -1001,15 +1030,55 @@ paths:
           name: format
           required: false
           schema: { type: string, enum: [csv] }
-          description: When `csv`, returns text/csv.
+          description: When `csv`, returns text/csv with cache headers (ETag, Last-Modified). For grouped output includes `businessId`.
       responses:
-        '200': { description: OK }
-        '400': { description: Bad Request }
-        '401': { description: Unauthorized }
-        '403': { description: Forbidden }
-
-      
-
+        '200':
+          description: OK
+          headers:
+            ETag: { description: Weak ETag for cache revalidation, schema: { type: string } }
+            Last-Modified: { description: Last modified time derived from newest series day, schema: { type: string } }
+            Vary: { description: 'Accept, Accept-Encoding, Authorization', schema: { type: string } }
+          content:
+            application/json:
+              examples:
+                grouped:
+                  summary: Grouped by business (owner)
+                  value:
+                    ok: true
+                    byDay:
+                      - { day: '2025-08-10', issued: 3 }
+                      - { day: '2025-08-11', issued: 5 }
+                    byBusiness:
+                      biz-1:
+                        '2025-08-10': { issued: 2 }
+                        '2025-08-11': { issued: 1 }
+                      biz-2:
+                        '2025-08-11': { issued: 4 }
+                    grouped:
+                      - { businessId: 'biz-1', total: 3, avgPerDay: 1.5, firstDay: '2025-08-10', lastDay: '2025-08-11' }
+                      - { businessId: 'biz-2', total: 4, avgPerDay: 4, firstDay: '2025-08-11', lastDay: '2025-08-11' }
+                    total: 2
+                    limit: 20
+                    offset: 0
+                    order: 'total.desc'
+                    businesses:
+                      biz-1: { business_name: 'Cafe Alpha' }
+                      biz-2: { business_name: 'Books Beta' }
+            text/csv:
+              examples:
+                groupedCsvPerDay:
+                  summary: Grouped CSV per-day rows with businessName
+                  value: |
+                    businessId,businessName,day,issued
+                    biz-1,Cafe Alpha,2025-08-10,2
+                    biz-1,Cafe Alpha,2025-08-11,1
+                    biz-2,Books Beta,2025-08-11,4
+                groupedCsvSummary:
+                  summary: Grouped CSV summary when order/limit/offset present
+                  value: |
+                    businessId,businessName,total,avgPerDay,firstDay,lastDay
+                    biz-1,Cafe Alpha,3,1.5,2025-08-10,2025-08-11
+                    biz-2,Books Beta,4,4,2025-08-11,2025-08-11
   /api/platform/revenue:
     get:
       security: [ { bearerAuth: [] } ]

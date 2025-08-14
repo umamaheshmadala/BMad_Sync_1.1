@@ -10,6 +10,7 @@ export function MiniBars({
   border = '1px solid #333',
   padding = '6px 0',
   legend,
+  showTooltips = true,
 }: {
   entries: Array<[string, any]>;
   maxY: number;
@@ -20,6 +21,7 @@ export function MiniBars({
   border?: string;
   padding?: string;
   legend?: React.ReactNode;
+  showTooltips?: boolean;
 }) {
   const scaled = (v: number) => Math.max(2, Math.round((v / (maxY || 1)) * (height - 10)));
   return (
@@ -27,7 +29,7 @@ export function MiniBars({
       {legend ? (<div style={{ marginBottom: 4 }}>{legend}</div>) : null}
       <div style={{ display: 'flex', gap, alignItems: 'flex-end', height, borderBottom: border, padding }}>
         {entries.map(([day, v]) => (
-          <div key={day} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width }}>
+          <div key={day} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width }} title={showTooltips ? String(day) : undefined}>
             {renderBar(day, v, scaled)}
           </div>
         ))}

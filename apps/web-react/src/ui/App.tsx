@@ -1,5 +1,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { MiniBars } from './components/MiniBars';
+import { AnalyticsControls } from './components/AnalyticsControls';
+import { AnalyticsCsvButton } from './components/AnalyticsCsvButton';
 import { createClient as createSupabaseBrowserClient } from '@supabase/supabase-js';
 
 function Section({ title, children }: { title: string; children: any }) {
@@ -163,6 +165,8 @@ export default function App() {
   const [features, setFeatures] = useState({} as any);
   const initialKbShortcuts = (() => { try { return (localStorage.getItem('sync_kb_shortcuts') || '1') === '1'; } catch { return true; } })();
   const [kbShortcuts, setKbShortcuts] = useState(initialKbShortcuts as boolean);
+  const initialTooltips = (() => { try { return (localStorage.getItem('sync_tooltips') || '1') === '1'; } catch { return true; } })();
+  const [showTooltips, setShowTooltips] = useState(initialTooltips as boolean);
   const [authResult, setAuthResult] = useState(null as any);
   const initialOffersSearch = (() => { try { return localStorage.getItem('sync_offers_search') || ''; } catch { return ''; } })();
   const [offersSearch, setOffersSearch] = useState(initialOffersSearch as string);
@@ -1685,31 +1689,9 @@ export default function App() {
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <input type="checkbox" id="trendGroupBiz" aria-label="Group trends by business" onChange={(e) => { try { localStorage.setItem('sync_trend_group', (e.target as HTMLInputElement).checked ? '1' : ''); } catch {} }} /> group by business
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="muted text-sm">sinceDays</span>
-            <input
-              type="number"
-              min={1 as any}
-              max={365 as any}
-              value={analyticsSinceDays as any}
-              onChange={(e) => { const n = Math.max(1, Math.min(365, Number((e.target as HTMLInputElement).value || 7))); setAnalyticsSinceDays(n); try { localStorage.setItem('sync_analytics_since_days', String(n)); } catch {} }}
-              style={{ width: 90 }}
-              className="input"
-              aria-label="Trends sinceDays"
-            />
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="muted text-sm">tz</span>
-            <select className="input" value={analyticsTz || ''} onChange={(e) => { const v=(e.target as HTMLSelectElement).value; setAnalyticsTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 220 }} aria-label="Timezone preset">
-              {(() => {
-                const tzs = ['', 'UTC', 'America/Los_Angeles', 'America/New_York', 'Europe/London', 'Europe/Berlin', 'Asia/Kolkata', 'Asia/Singapore', 'Australia/Sydney'];
-                return tzs.map((z) => (<option key={z || 'none'} value={z}>{z ? z : '— none —'}</option>));
-              })()}
-            </select>
-            <input className="input" placeholder="custom tz (IANA)" value={analyticsTz} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setAnalyticsTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 180 }} aria-label="Custom timezone" />
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Zero-fill missing days">
-            <input type="checkbox" checked={analyticsFill} onChange={(e) => { const v=(e.target as HTMLInputElement).checked; setAnalyticsFill(v); try { localStorage.setItem('sync_analytics_fill', v ? '1' : ''); } catch {} }} /> fill
+          <AnalyticsControls sinceDays={analyticsSinceDays} setSinceDays={setAnalyticsSinceDays} tz={analyticsTz} setTz={setAnalyticsTz} fill={analyticsFill} setFill={setAnalyticsFill} locale={(() => { try { const p=new URL(window.location.href).searchParams.get('locale'); return p || localStorage.getItem('sync_analytics_locale') || 'en'; } catch { return 'en'; } })()} setLocale={(v) => { try { localStorage.setItem('sync_analytics_locale', v); const u=new URL(window.location.href); if (v) u.searchParams.set('locale', v); else u.searchParams.delete('locale'); window.history.replaceState(null, '', u.toString()); } catch {} }} onReset={() => { /* no-op additional */ }} />
+          <label className="muted text-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input type="checkbox" checked={showTooltips} onChange={(e) => { const v=(e.target as HTMLInputElement).checked; setShowTooltips(v); try { localStorage.setItem('sync_tooltips', v ? '1' : ''); } catch {} }} /> tooltips
           </label>
           <button onClick={getTrends}>GET trends</button>
           {trendsError ? (
@@ -1719,22 +1701,8 @@ export default function App() {
               <button className="btn" style={{ marginLeft: 6 }} onClick={() => { setAnalyticsTz(''); try { localStorage.setItem('sync_analytics_tz', ''); } catch {}; }}>clear tz</button>
             </div>
           ) : null}
-          <button className="btn" title="Reset analytics controls" onClick={() => { setAnalyticsSinceDays(7); setAnalyticsTz(''); setAnalyticsFill(true); try { localStorage.setItem('sync_analytics_since_days','7'); localStorage.setItem('sync_analytics_tz',''); localStorage.setItem('sync_analytics_fill','1'); } catch {} }}>reset</button>
-          <button className="btn" onClick={async () => {
-            try {
-              const bizId = (document.getElementById('trendBizId') as HTMLInputElement)?.value?.trim();
-              const group = (document.getElementById('trendGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
-              const params = new URLSearchParams();
-              if (bizId) params.set('businessId', bizId);
-              if (group) params.set('group', group);
-              if (analyticsSinceDays) params.set('sinceDays', String(analyticsSinceDays));
-              if (analyticsTz) params.set('tz', analyticsTz);
-              if (!analyticsFill) params.set('fill', 'false');
-              params.set('format', 'csv');
-              const qs = params.toString() ? `?${params.toString()}` : '';
-              window.open(`/api/business/analytics/trends${qs}`, '_blank');
-            } catch {}
-          }}>export CSV</button>
+          {/* Reset now handled by AnalyticsControls */}
+          <AnalyticsCsvButton endpoint={'/api/business/analytics/trends'} params={{ businessId: (document.getElementById('trendBizId') as HTMLInputElement)?.value?.trim() || '', group: (document.getElementById('trendGroupBiz') as HTMLInputElement)?.checked ? 'business' : '', sinceDays: analyticsSinceDays, tz: analyticsTz, fill: analyticsFill }} acceptLanguage={(() => { try { const p=new URL(window.location.href).searchParams.get('locale'); return p || localStorage.getItem('sync_analytics_locale') || 'en'; } catch { return 'en'; } })()} />
           <CopyCurlButton tag={'analytics:trends'} getCurl={getCurl} />
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
           <button className="btn" onClick={() => setTrendsResult(null as any)}>clear</button>
@@ -1765,9 +1733,10 @@ export default function App() {
                   return (
                     <div key={series}>
                       <div className="muted text-sm" style={{ marginBottom: 2 }}>{series} per day</div>
-                      <MiniBars
+                       <MiniBars
                         entries={entries}
                         maxY={maxY}
+                         showTooltips={showTooltips}
                         legend={legend}
                         renderBar={(day, v, scaled) => (
                           series === 'reviews' ? (
@@ -1777,7 +1746,7 @@ export default function App() {
                               const rh = scaled(rec);
                               const nh = scaled(nrec);
                               return (
-                                <div title={`${day}: ✓=${rec} ✗=${nrec}`}>
+                                 <div title={showTooltips ? `${day}: ✓=${rec} ✗=${nrec}` : undefined}>
                                   <div style={{ width: 8, height: nh, background: '#c62828', marginBottom: 2 }}></div>
                                   <div style={{ width: 8, height: rh, background: '#2e7d32' }}></div>
                                 </div>
@@ -1787,7 +1756,7 @@ export default function App() {
                             (() => {
                               const y = Number((v as any).collected || 0);
                               const h = scaled(y);
-                              return (<div title={`${day}: ${y}`} style={{ width: 10, height: h, background: '#7c4dff' }}></div>);
+                               return (<div title={showTooltips ? `${day}: ${y}` : undefined} style={{ width: 10, height: h, background: '#7c4dff' }}></div>);
                             })()
                           )
                         )}
@@ -1812,32 +1781,7 @@ export default function App() {
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <input type="checkbox" id="funnelGroupBiz" aria-label="Group funnel by business" onChange={(e) => { try { localStorage.setItem('sync_funnel_group', (e.target as HTMLInputElement).checked ? '1' : ''); } catch {} }} /> group by business
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="muted text-sm">sinceDays</span>
-            <input
-              type="number"
-              min={1 as any}
-              max={365 as any}
-              value={analyticsSinceDays as any}
-              onChange={(e) => { const n = Math.max(1, Math.min(365, Number((e.target as HTMLInputElement).value || 7))); setAnalyticsSinceDays(n); try { localStorage.setItem('sync_analytics_since_days', String(n)); } catch {} }}
-              style={{ width: 90 }}
-              className="input"
-              aria-label="Funnel sinceDays"
-            />
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="muted text-sm">tz</span>
-            <select className="input" value={analyticsTz || ''} onChange={(e) => { const v=(e.target as HTMLSelectElement).value; setAnalyticsTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 220 }} aria-label="Timezone preset">
-              {(() => {
-                const tzs = ['', 'UTC', 'America/Los_Angeles', 'America/New_York', 'Europe/London', 'Europe/Berlin', 'Asia/Kolkata', 'Asia/Singapore', 'Australia/Sydney'];
-                return tzs.map((z) => (<option key={z || 'none'} value={z}>{z ? z : '— none —'}</option>));
-              })()}
-            </select>
-            <input className="input" placeholder="custom tz (IANA)" value={analyticsTz} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setAnalyticsTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 180 }} aria-label="Custom timezone" />
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Zero-fill missing days">
-            <input type="checkbox" checked={analyticsFill} onChange={(e) => { const v=(e.target as HTMLInputElement).checked; setAnalyticsFill(v); try { localStorage.setItem('sync_analytics_fill', v ? '1' : ''); } catch {} }} /> fill
-          </label>
+          <AnalyticsControls sinceDays={analyticsSinceDays} setSinceDays={setAnalyticsSinceDays} tz={analyticsTz} setTz={setAnalyticsTz} fill={analyticsFill} setFill={setAnalyticsFill} locale={(() => { try { const p=new URL(window.location.href).searchParams.get('locale'); return p || localStorage.getItem('sync_analytics_locale') || 'en'; } catch { return 'en'; } })()} setLocale={(v) => { try { localStorage.setItem('sync_analytics_locale', v); const u=new URL(window.location.href); if (v) u.searchParams.set('locale', v); else u.searchParams.delete('locale'); window.history.replaceState(null, '', u.toString()); } catch {} }} onReset={() => { /* no-op */ }} />
           <button className="btn" onClick={getFunnel}>GET funnel</button>
           {funnelError ? (
             <div className="badge" style={{ background: 'var(--error-bg)', color: 'var(--error-fg)' }}>
@@ -1847,21 +1791,7 @@ export default function App() {
             </div>
           ) : null}
           <button className="btn" title="Reset analytics controls" onClick={() => { setAnalyticsSinceDays(7); setAnalyticsTz(''); setAnalyticsFill(true); try { localStorage.setItem('sync_analytics_since_days','7'); localStorage.setItem('sync_analytics_tz',''); localStorage.setItem('sync_analytics_fill','1'); } catch {} }}>reset</button>
-          <button className="btn" onClick={async () => {
-            try {
-              const bizId = (document.getElementById('funnelBizId') as HTMLInputElement)?.value?.trim();
-              const group = (document.getElementById('funnelGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
-              const params = new URLSearchParams();
-              if (bizId) params.set('businessId', bizId);
-              if (group) params.set('group', group);
-              if (analyticsSinceDays) params.set('sinceDays', String(analyticsSinceDays));
-              if (analyticsTz) params.set('tz', analyticsTz);
-              if (!analyticsFill) params.set('fill', 'false');
-              params.set('format', 'csv');
-              const qs = params.toString() ? `?${params.toString()}` : '';
-              window.open(`/api/business/analytics/funnel${qs}`, '_blank');
-            } catch {}
-          }}>export CSV</button>
+          <AnalyticsCsvButton endpoint={'/api/business/analytics/funnel'} params={{ businessId: (document.getElementById('funnelBizId') as HTMLInputElement)?.value?.trim() || '', group: (document.getElementById('funnelGroupBiz') as HTMLInputElement)?.checked ? 'business' : '', sinceDays: analyticsSinceDays, tz: analyticsTz, fill: analyticsFill }} acceptLanguage={(() => { try { const p=new URL(window.location.href).searchParams.get('locale'); return p || localStorage.getItem('sync_analytics_locale') || 'en'; } catch { return 'en'; } })()} />
           <CopyCurlButton tag={'analytics:funnel'} getCurl={getCurl} />
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
           <button className="btn" onClick={() => setFunnelResult(null as any)}>clear</button>
@@ -1908,7 +1838,7 @@ export default function App() {
                   <span style={{ display: 'inline-block', width: 8, height: 8, background: '#7c4dff', marginRight: 4 }}></span>collected
                   <span style={{ display: 'inline-block', width: 8, height: 8, background: '#26a69a', margin: '0 4px 0 8px' }}></span>redeemed
                 </div>
-                {(() => {
+                 {(() => {
                   const entries = Object.entries((trendsResult.trends as any).coupons || {}) as Array<[string, any]>;
                   if (!entries.length) return (<div className="muted text-sm">(no data)</div>);
                   const maxY = entries.reduce((m, [_, v]) => Math.max(m, Number((v as any).collected||0), Number((v as any).redeemed||0)), 1);
@@ -1920,7 +1850,7 @@ export default function App() {
                         const ch = Math.max(2, Math.round((c / (maxY || 1)) * 110));
                         const rh = Math.max(2, Math.round((r / (maxY || 1)) * 110));
                         return (
-                          <div key={day} title={`${day}: C=${c} R=${r}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 16 }}>
+                           <div key={day} title={showTooltips ? `${day}: C=${c} R=${r}` : undefined} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 16 }}>
                             <div style={{ width: 6, height: rh, background: '#26a69a', marginBottom: 2 }}></div>
                             <div style={{ width: 6, height: ch, background: '#7c4dff' }}></div>
                           </div>
@@ -1956,7 +1886,7 @@ export default function App() {
             {funnelResult?.funnelByBusiness ? (
               <div style={{ marginTop: 12 }}>
                 <div className="muted text-sm" style={{ marginBottom: 4 }}>Collected by business</div>
-                {(() => {
+                 {(() => {
                   const entries = Object.entries(funnelResult.funnelByBusiness as Record<string, any>);
                   const maxY = entries.reduce((m, [_, v]) => Math.max(m, Number((v as any).collected||0)), 1);
                   return (
@@ -2021,26 +1951,93 @@ export default function App() {
             <input type="checkbox" id="issuedGroupBiz" aria-label="Group issued by business" /> group by business
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="muted text-sm">sinceDays</span>
-            <input type="number" className="input" style={{ width: 90 }} min={1 as any} max={365 as any} value={analyticsSinceDays as any} onChange={(e) => { const n=Math.max(1,Math.min(365,Number((e.target as HTMLInputElement).value||7))); setAnalyticsSinceDays(n); try { localStorage.setItem('sync_analytics_since_days', String(n)); } catch {} }} />
+            <span className="muted text-sm">order</span>
+            <select id="issuedOrder" className="input" defaultValue={((): string => { try { return localStorage.getItem('sync_issued_order') || 'total.desc'; } catch { return 'total.desc'; } })()} onChange={(e) => { try { localStorage.setItem('sync_issued_order', (e.target as HTMLSelectElement).value); } catch {} }}>
+              <option value="total.desc">total.desc</option>
+              <option value="total.asc">total.asc</option>
+              <option value="avgPerDay.desc">avgPerDay.desc</option>
+              <option value="avgPerDay.asc">avgPerDay.asc</option>
+              <option value="businessId.asc">businessId.asc</option>
+              <option value="businessId.desc">businessId.desc</option>
+              <option value="businessName.asc">businessName.asc</option>
+              <option value="businessName.desc">businessName.desc</option>
+              <option value="firstDay.asc">firstDay.asc</option>
+              <option value="firstDay.desc">firstDay.desc</option>
+              <option value="lastDay.asc">lastDay.asc</option>
+              <option value="lastDay.desc">lastDay.desc</option>
+            </select>
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="muted text-sm">tz</span>
-            <select className="input" value={analyticsTz || ''} onChange={(e) => { const v=(e.target as HTMLSelectElement).value; setAnalyticsTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 220 }} aria-label="Timezone preset">
-              {(() => { const tzs=['','UTC','America/Los_Angeles','America/New_York','Europe/London','Europe/Berlin','Asia/Kolkata','Asia/Singapore','Australia/Sydney']; return tzs.map(z=>(<option key={z||'none'} value={z}>{z?z:'— none —'}</option>)); })()}
-            </select>
-            <input className="input" placeholder="custom tz (IANA)" value={analyticsTz} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setAnalyticsTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 180 }} aria-label="Custom timezone" />
+            <span className="muted text-sm">limit</span>
+            <input id="issuedLimit" className="input" type="number" min={1 as any} max={500 as any} defaultValue={((): any => { try { return Number(localStorage.getItem('sync_issued_limit')||20); } catch { return 20; } })()} onChange={(e) => { try { localStorage.setItem('sync_issued_limit', String(Math.max(1, Math.min(500, Number((e.target as HTMLInputElement).value||20))))); } catch {} }} style={{ width: 90 }} aria-label="Issued limit" />
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Zero-fill missing days">
-            <input type="checkbox" checked={analyticsFill} onChange={(e) => { const v=(e.target as HTMLInputElement).checked; setAnalyticsFill(v); try { localStorage.setItem('sync_analytics_fill', v ? '1' : ''); } catch {} }} /> fill
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="muted text-sm">offset</span>
+            <input id="issuedOffset" className="input" type="number" min={0 as any} defaultValue={((): any => { try { return Number(localStorage.getItem('sync_issued_offset')||0); } catch { return 0; } })()} onChange={(e) => { try { localStorage.setItem('sync_issued_offset', String(Math.max(0, Number((e.target as HTMLInputElement).value||0)))); } catch {} }} style={{ width: 90 }} aria-label="Issued offset" />
           </label>
+          <AnalyticsControls sinceDays={analyticsSinceDays} setSinceDays={setAnalyticsSinceDays} tz={analyticsTz} setTz={setAnalyticsTz} fill={analyticsFill} setFill={setAnalyticsFill} locale={(() => { try { const p=new URL(window.location.href).searchParams.get('locale'); return p || localStorage.getItem('sync_analytics_locale') || 'en'; } catch { return 'en'; } })()} setLocale={(v) => { try { localStorage.setItem('sync_analytics_locale', v); const u=new URL(window.location.href); if (v) u.searchParams.set('locale', v); else u.searchParams.delete('locale'); window.history.replaceState(null, '', u.toString()); } catch {} }} onReset={() => { /* no-op */ }} />
+          <div className="flex gap-2" role="navigation" aria-label="pagination" tabIndex={0 as any} onKeyDown={(e) => {
+            try {
+              const lim = Math.max(1, Math.min(500, Number((document.getElementById('issuedLimit') as HTMLInputElement)?.value || 20)));
+              const el = (document.getElementById('issuedOffset') as HTMLInputElement);
+              const cur = Math.max(0, Number(el.value||0));
+              if ((e as any).key === 'ArrowLeft') {
+                const next = Math.max(0, cur - lim); el.value = String(next); localStorage.setItem('sync_issued_offset', String(next));
+              } else if ((e as any).key === 'ArrowRight') {
+                const next = cur + lim; el.value = String(next); localStorage.setItem('sync_issued_offset', String(next));
+              }
+            } catch {}
+          }}>
+            {(() => {
+              const total = Number(((window as any).issuedResult?.total) || 0);
+              const lim = Math.max(1, Math.min(500, Number((document.getElementById('issuedLimit') as HTMLInputElement)?.value || 20)));
+              const curOff = Math.max(0, Number((document.getElementById('issuedOffset') as HTMLInputElement)?.value || 0));
+              const curPage = Math.floor(curOff / lim) + 1;
+              const maxPage = total > 0 ? Math.max(1, Math.ceil(total / lim)) : undefined;
+              const canPrev = curOff > 0;
+              const canNext = maxPage ? curPage < maxPage : true;
+              return (
+                <>
+                  <button className="btn" disabled={!canPrev} aria-disabled={!canPrev} onClick={() => { try { (document.getElementById('issuedOffset') as HTMLInputElement).value = '0'; localStorage.setItem('sync_issued_offset','0'); } catch {} }}>First</button>
+                  <button className="btn" disabled={!canPrev} aria-disabled={!canPrev} onClick={() => { try { const el = (document.getElementById('issuedOffset') as HTMLInputElement); const cur = Math.max(0, Number(el.value||0)); const next = Math.max(0, cur - lim); el.value = String(next); localStorage.setItem('sync_issued_offset', String(next)); } catch {} }}>Prev</button>
+                  <button className="btn" disabled={!canNext} aria-disabled={!canNext} onClick={() => { try { const el = (document.getElementById('issuedOffset') as HTMLInputElement); const cur = Math.max(0, Number(el.value||0)); const next = cur + lim; el.value = String(next); localStorage.setItem('sync_issued_offset', String(next)); } catch {} }}>Next</button>
+                  <button className="btn" disabled={!maxPage || !canNext} aria-disabled={!maxPage || !canNext} onClick={() => { try { const el = (document.getElementById('issuedOffset') as HTMLInputElement); const lastPage = Math.max(1, Number(maxPage||1)); const lastOffset = (lastPage - 1) * lim; el.value = String(lastOffset); localStorage.setItem('sync_issued_offset', String(lastOffset)); } catch {} }}>Last</button>
+                  <span className="muted text-sm" role="status" aria-live="polite" style={{ marginLeft: 6 }}>{maxPage ? `Page ${curPage} of ${maxPage}` : `Page ${curPage}`}{total ? ` • Total ${total}` : ''}</span>
+                  <label className="muted text-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
+                    <span>Go to</span>
+                    <input id="issuedGoPage" className="input" type="number" min={1 as any} style={{ width: 80 }} aria-label="Go to page" defaultValue={curPage as any} />
+                    <button className="btn" onClick={() => {
+                      try {
+                        const total = Number(((window as any).issuedResult?.total) || 0);
+                        const lim = Math.max(1, Math.min(500, Number((document.getElementById('issuedLimit') as HTMLInputElement)?.value || 20)));
+                        const maxPage = total > 0 ? Math.max(1, Math.ceil(total / lim)) : undefined;
+                        const el = (document.getElementById('issuedGoPage') as HTMLInputElement);
+                        let p = Math.max(1, Number(el.value || 1));
+                        if (maxPage) p = Math.min(p, maxPage);
+                        const newOffset = (p - 1) * lim;
+                        (document.getElementById('issuedOffset') as HTMLInputElement).value = String(newOffset);
+                        try { localStorage.setItem('sync_issued_offset', String(newOffset)); } catch {}
+                      } catch {}
+                    }}>Go</button>
+                  </label>
+                  <button className="btn" onClick={() => { try { (document.getElementById('issuedOffset') as HTMLInputElement).value = '0'; localStorage.setItem('sync_issued_offset','0'); } catch {} }}>Reset paging</button>
+                </>
+              );
+            })()}
+          </div>
           <button className="btn" onClick={async () => {
             try {
               const bizId = (document.getElementById('issuedBizId') as HTMLInputElement)?.value?.trim();
               const group = (document.getElementById('issuedGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
+              const order = (document.getElementById('issuedOrder') as HTMLSelectElement)?.value || '';
+              const limit = Number((document.getElementById('issuedLimit') as HTMLInputElement)?.value || '') || undefined;
+              const offset = Number((document.getElementById('issuedOffset') as HTMLInputElement)?.value || '') || undefined;
               const params = new URLSearchParams();
               if (bizId) params.set('businessId', bizId);
               if (group) params.set('group', group);
+              if (order) params.set('order', order);
+              if (limit != null) params.set('limit', String(limit));
+              if (offset != null) params.set('offset', String(offset));
               if (analyticsSinceDays) params.set('sinceDays', String(analyticsSinceDays));
               if (analyticsTz) params.set('tz', analyticsTz);
               if (!analyticsFill) params.set('fill', 'false');
@@ -2051,24 +2048,101 @@ export default function App() {
               showToast(j?.ok ? 'Loaded' : (j?.error || 'Error'));
             } catch (e: any) { showToast(e?.message || 'Error', 'error'); }
           }}>GET issued</button>
-          <button className="btn" onClick={async () => {
-            try {
-              const bizId = (document.getElementById('issuedBizId') as HTMLInputElement)?.value?.trim();
-              const group = (document.getElementById('issuedGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
-              const params = new URLSearchParams();
-              if (bizId) params.set('businessId', bizId);
-              if (group) params.set('group', group);
-              if (analyticsSinceDays) params.set('sinceDays', String(analyticsSinceDays));
-              if (analyticsTz) params.set('tz', analyticsTz);
-              if (!analyticsFill) params.set('fill', 'false');
-              params.set('format','csv');
-              const qs = params.toString() ? `?${params.toString()}` : '';
-              window.open(`/api/business/analytics/coupons-issued${qs}`, '_blank');
-            } catch {}
-          }}>export CSV</button>
+          <AnalyticsCsvButton endpoint={'/api/business/analytics/coupons-issued'} params={{ businessId: (document.getElementById('issuedBizId') as HTMLInputElement)?.value?.trim() || '', group: (document.getElementById('issuedGroupBiz') as HTMLInputElement)?.checked ? 'business' : '', order: (document.getElementById('issuedOrder') as HTMLSelectElement)?.value || '', limit: (document.getElementById('issuedLimit') as HTMLInputElement)?.value || '', offset: (document.getElementById('issuedOffset') as HTMLInputElement)?.value || '', sinceDays: analyticsSinceDays, tz: analyticsTz, fill: analyticsFill }} acceptLanguage={(() => { try { const p=new URL(window.location.href).searchParams.get('locale'); return p || localStorage.getItem('sync_analytics_locale') || 'en'; } catch { return 'en'; } })()} />
           <CopyCurlButton tag={'analytics:issued'} getCurl={getCurl} />
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
         </div>
+        {/* Grouped table when byBusiness present */}
+        {(() => {
+          const r: any = (window as any).issuedResult;
+          const byBiz: Record<string, Record<string, { issued: number }>> = r?.byBusiness || {};
+          const bizMap: Record<string, { business_name?: string }> = r?.businesses || {};
+          const hasServerGrouped = Array.isArray(r?.grouped);
+          if (!hasServerGrouped && Object.keys(byBiz || {}).length === 0) return null;
+          type Row = { businessId: string; total: number; days: number; avgPerDay: number; firstDay?: string; lastDay?: string };
+          const rows: Row[] = hasServerGrouped ? (r.grouped as Row[]) : ((): Row[] => {
+            const bizIds = Object.keys(byBiz || {});
+            return bizIds.map((biz) => {
+              const days = Object.keys(byBiz[biz] || {}).sort();
+              const total = days.reduce((m, d) => m + Number((byBiz[biz][d] as any)?.issued || 0), 0);
+              const nDays = Math.max(1, days.length);
+              const avg = Math.round((total / nDays) * 10) / 10;
+              return { businessId: biz, total, days: nDays, avgPerDay: avg, firstDay: days[0], lastDay: days[days.length - 1] };
+            });
+          })();
+          const [sortCol, setSortCol] = React.useState<'businessId'|'total'|'avgPerDay'|'firstDay'|'lastDay'>('total');
+          const [sortDir, setSortDir] = React.useState<'asc'|'desc'>('desc');
+          const sorted = [...rows].sort((a, b) => {
+            const key = sortCol;
+            const av = (a as any)[key];
+            const bv = (b as any)[key];
+            if (av === bv) return 0;
+            const cmp = av > bv ? 1 : -1;
+            return sortDir === 'asc' ? cmp : -cmp;
+          });
+          const toggle = (col: typeof sortCol) => {
+            if (sortCol === col) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+            else { setSortCol(col); setSortDir(col === 'businessId' ? 'asc' : 'desc'); }
+          };
+          const sortCaret = (col: typeof sortCol) => sortCol === col ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+          const exportGroupedCsv = () => {
+            try {
+              const headers = ['businessId','total','avgPerDay','firstDay','lastDay'];
+              const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
+              const lines = [headers.join(',')].concat(sorted.map(r => headers.map(h => escape((r as any)[h])).join(',')));
+              const csv = lines.join('\n');
+              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+              const u = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = u;
+              a.download = `issued_grouped_${Date.now()}.csv`;
+              a.click();
+              URL.revokeObjectURL(u);
+              showToast('Exported grouped CSV', 'success');
+            } catch (e: any) { showToast(e?.message || 'CSV export error', 'error'); }
+          };
+          return (
+            <div style={{ marginTop: 12 }}>
+              <div className="flex gap-2" style={{ marginBottom: 6 }}>
+                <span className="muted text-sm">Grouped by business</span>
+                <button className="btn" onClick={exportGroupedCsv}>export grouped CSV</button>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }} className={compactRows ? 'compact' : ''}>
+                  <thead>
+                    <tr>
+                      <th aria-sort={sortCol==='businessId' ? (sortDir==='asc'?'ascending':'descending') : 'none'} style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px', cursor: 'pointer' }} onClick={() => toggle('businessId')}>business{sortCaret('businessId')}</th>
+                      <th aria-sort={sortCol==='total' ? (sortDir==='asc'?'ascending':'descending') : 'none'} style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'right', borderBottom: '1px solid #333', padding: '6px 8px', cursor: 'pointer' }} onClick={() => toggle('total')}>total{sortCaret('total')}</th>
+                      <th aria-sort={sortCol==='avgPerDay' ? (sortDir==='asc'?'ascending':'descending') : 'none'} style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'right', borderBottom: '1px solid #333', padding: '6px 8px', cursor: 'pointer' }} onClick={() => toggle('avgPerDay')}>issued/day{sortCaret('avgPerDay')}</th>
+                      <th aria-sort={sortCol==='firstDay' ? (sortDir==='asc'?'ascending':'descending') : 'none'} style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px', cursor: 'pointer' }} onClick={() => toggle('firstDay')}>first{sortCaret('firstDay')}</th>
+                      <th aria-sort={sortCol==='lastDay' ? (sortDir==='asc'?'ascending':'descending') : 'none'} style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px', cursor: 'pointer' }} onClick={() => toggle('lastDay')}>last{sortCaret('lastDay')}</th>
+                      <th style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--card)', textAlign: 'left', borderBottom: '1px solid #333', padding: '6px 8px' }}>copy</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((row) => (
+                      <tr key={row.businessId}>
+                        <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <span style={{ fontFamily: 'monospace' }}>{row.businessId}</span>
+                            {bizMap[row.businessId]?.business_name ? (<span className="muted text-xs">{bizMap[row.businessId]?.business_name}</span>) : null}
+                          </div>
+                        </td>
+                        <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', textAlign: 'right' }}>{row.total}</td>
+                        <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', textAlign: 'right' }}>{row.avgPerDay}</td>
+                        <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>{row.firstDay || ''}</td>
+                        <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>{row.lastDay || ''}</td>
+                        <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>
+                          <button className="btn" onClick={() => { try { (navigator as any)?.clipboard?.writeText(row.businessId); showToast('copied business id','success'); } catch {} }}>copy id</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
         {/* Tiny chart for issued per day using trends if available */}
         {(() => {
           const series = ((window as any).issuedResult?.byDay || []) as Array<{ day: string; issued: number }>;
@@ -2082,11 +2156,12 @@ export default function App() {
               <MiniBars
                 entries={entries}
                 maxY={maxY}
+                showTooltips={showTooltips}
                 legend={<div className="muted text-xs"><span style={{ display: 'inline-block', width: 8, height: 8, background: '#8e24aa', marginRight: 4 }}></span>issued</div>}
                 renderBar={(day, v, scaled) => {
                   const y = Number((v as any).issued || 0);
                   const h = scaled(y);
-                  return (<div title={`${day}: ${y}`} style={{ width: 10, height: h, background: '#8e24aa' }}></div>);
+                  return (<div title={showTooltips ? `${day}: ${y}` : undefined} style={{ width: 10, height: h, background: '#8e24aa' }}></div>);
                 }}
               />
             </div>

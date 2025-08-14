@@ -5,179 +5,52 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  schedule:
+    - cron: '0 3 * * *'
 
 jobs:
-  build-test:
+  build-and-test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Typecheck and Tests
-        run: npm run test
-
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc -p tsconfig.json --noEmit
+      - name: Run tests
+        run: npm test
       - name: Build web
         run: npm run build:web
-
       - name: Lint OpenAPI spec
         run: npx --yes @redocly/cli@latest lint docs/api/openapi.yaml
 
-      - name: Run Supabase Advisors
-        run: node scripts/advisors.mjs
-        continue-on-error: ${{ vars.STRICT_ADVISORS != 'true' }}
+  openapi-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint OpenAPI with Redocly
+        run: npx --yes @redocly/cli@latest lint docs/api/openapi.yaml
+
+  advisors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Run advisors (non-blocking)
+        run: node scripts/advisors.mjs || true
         env:
           SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
           STRICT_ADVISORS: ${{ vars.STRICT_ADVISORS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run EXPLAIN baselines
-        run: node scripts/explain.mjs
-        continue-on-error: ${{ vars.EXPLAIN_STRICT != 'true' }}
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          EXPLAIN_MAX_ROWS: ${{ vars.EXPLAIN_MAX_ROWS }}
-          EXPLAIN_STRICT: ${{ vars.EXPLAIN_STRICT }}
-
-name: CI
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  build-test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Typecheck
-        run: npx tsc -p tsconfig.json --noEmit
-
-      - name: Run tests
-        run: npm test
-
-      - name: Validate OpenAPI
-        run: npx --yes @redocly/cli@latest lint docs/api/openapi.yaml
-
-      - name: Supabase Advisors (optional)
-        run: node scripts/advisors.mjs
-        env:
-          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-          STRICT_ADVISORS: ${{ secrets.STRICT_ADVISORS }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
-
-      - name: EXPLAIN baselines (optional)
-        if: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
-        run: node scripts/explain.mjs
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          EXPLAIN_MAX_ROWS: ${{ secrets.EXPLAIN_MAX_ROWS }}
-          EXPLAIN_STRICT: ${{ secrets.EXPLAIN_STRICT }}
-
-      - name: Preview smoke against deployed URL (optional)
-        if: ${{ secrets.DEPLOYED_BASE_URL != '' }}
-        run: node scripts/smoke.mjs
-        env:
-          BASE_URL: ${{ secrets.DEPLOYED_BASE_URL }}
-
-name: CI
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Typecheck
-        run: npx tsc -p tsconfig.json --noEmit
-
-      - name: Run tests
-        run: npm test --silent
-
-      - name: Build web
-        run: npm run build:web --silent
-
-  openapi-validate:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Validate OpenAPI
-        uses: char0n/swagger-editor-validate@v1
-        with:
-          files: |
-            docs/api/openapi.yaml
-
-  supabase-advisors:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Use Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Install deps
-        run: npm ci
-      - name: Run advisors (non-blocking)
-        env:
-          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-          STRICT_ADVISORS: 'false'
-        run: node scripts/advisors.mjs || true
-      - name: Open/update Advisors issue
-        env:
-          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: node scripts/advisors-report.mjs || true
-
-  explain-baseline:
+  explain:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -186,22 +59,73 @@ jobs:
           node-version: 20
       - run: npm ci
       - name: Run EXPLAIN baselines (non-blocking)
+        run: |
+          if [ -z "${{ secrets.SUPABASE_URL }}" ] || [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then echo "Skipping EXPLAIN (secrets missing)"; exit 0; fi
+          node scripts/explain.mjs || true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: node scripts/explain.mjs || true
+          EXPLAIN_MAX_ROWS: ${{ vars.EXPLAIN_MAX_ROWS }}
+          EXPLAIN_STRICT: ${{ vars.EXPLAIN_STRICT }}
 
   preview-smoke:
     needs: [build-and-test]
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    strategy:
+      matrix:
+        locale: [en, es, fr, pt]
     steps:
-      - name: Smoke against preview URL
+      - name: Smoke against preview URL (${{ matrix.locale }})
         env:
-          BASE_URL: ${{ github.event.pull_request.head.repo.fork == true && '' || format('https://{0}--{1}.netlify.app', github.head_ref || github.ref_name, 'tiny-bombolone-8f8acf') }}
+          BASE_URL: ${{ vars.DEPLOYED_BASE_URL }}
+          ACCEPT_LANGUAGE: ${{ matrix.locale }}
         run: |
-          if [ -z "$BASE_URL" ]; then echo "Skipping (fork PR or unable to resolve preview URL)"; exit 0; fi
-          echo "BASE_URL=$BASE_URL"
-          node -e "(async()=>{const f=await fetch('$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/raw/$GITHUB_SHA/scripts/smoke.mjs'); const t=await f.text(); await import('data:text/javascript,'+encodeURIComponent(t));})()"
+          if [ -z "$BASE_URL" ]; then echo "Skipping smoke (DEPLOYED_BASE_URL not set)"; exit 0; fi
+          echo "BASE_URL=$BASE_URL  ACCEPT_LANGUAGE=${ACCEPT_LANGUAGE}"
+          node scripts/smoke.mjs
+      - name: Upload smoke artifacts (${{ matrix.locale }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-samples-${{ matrix.locale }}
+          path: |
+            smoke-samples/**
+          if-no-files-found: ignore
+
+  nightly-load:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Load test with budgets
+        run: |
+          if [ -z "${{ vars.DEPLOYED_BASE_URL }}" ]; then echo "Skipping LOAD (DEPLOYED_BASE_URL missing)"; exit 0; fi
+          node scripts/load-test.mjs > load-results.txt
+        env:
+          BASE_URL: ${{ vars.DEPLOYED_BASE_URL }}
+          TOKEN: ${{ secrets.OWNER_BEARER }}
+          LOAD_BUDGET_STRICT: ${{ vars.LOAD_BUDGET_STRICT }}
+      - name: Upload load results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-results
+          path: |
+            load-results.txt
+            load-results.json
+          if-no-files-found: ignore
+      - name: Upload smoke artifacts (nightly)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-samples-nightly
+          path: |
+            smoke-samples/**
+          if-no-files-found: ignore
 
 

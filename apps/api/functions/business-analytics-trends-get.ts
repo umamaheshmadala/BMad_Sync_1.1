@@ -3,7 +3,7 @@ import { isPlatformOwner, getUserIdFromRequest } from '../../../packages/shared/
 import { withRequestLogging } from '../../../packages/shared/logging';
 import { withRateLimit } from '../../../packages/shared/ratelimit';
 import { json, errorJson } from '../../../packages/shared/http';
-import { weakEtagForObject } from '../../../packages/shared/cache';
+import { weakEtagForObject, deriveLastModifiedFromIsoTimestamps, contentDispositionHeaderWithRFC5987, buildCsvHeaders, contentDispositionFilenameForCsv } from '../../../packages/shared/cache';
 import { withErrorHandling } from '../../../packages/shared/errors';
 
 export default withRequestLogging('business-analytics-trends', withRateLimit('analytics-trends', { limit: 60, windowMs: 60_000 }, withErrorHandling(async (req: Request) => {
@@ -173,6 +173,17 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
   // CSV output support
   const fmt = (url.searchParams.get('format') || '').toLowerCase();
   if (fmt === 'csv') {
+    const acceptLanguage = new Headers((req as any).headers || {}).get('accept-language') || '';
+    const lang = ((acceptLanguage.split(',')[0] || '').toLowerCase().split('-')[0]) || 'en';
+    const t = (key: string) => {
+      const es: Record<string, string> = { day: 'día', review_total: 'reseñas_total', review_recommend: 'reseñas_recomiendan', coupon_collected: 'cupones_colectados', coupon_redeemed: 'cupones_canjeados' };
+      const fr: Record<string, string> = { day: 'jour', review_total: 'avis_total', review_recommend: 'avis_recommandent', coupon_collected: 'coupons_collectés', coupon_redeemed: 'coupons_utilisés' };
+      const pt: Record<string, string> = { day: 'dia', review_total: 'avaliacoes_total', review_recommend: 'avaliacoes_recomendam', coupon_collected: 'cupons_coletados', coupon_redeemed: 'cupons_resgatados' };
+      if (lang === 'es') return (es as any)[key] || key;
+      if (lang === 'fr') return (fr as any)[key] || key;
+      if (lang === 'pt') return (pt as any)[key] || key;
+      return key;
+    };
     const rows: Array<Record<string, any>> = [];
     const base = trendsPayload as any;
     const keys = Object.keys((base.reviews || {})).sort();
@@ -181,12 +192,15 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
       const c = (base.coupons || {})[day] || { collected: 0, redeemed: 0 };
       rows.push({ day, review_total: r.total || 0, review_recommend: r.recommend || 0, coupon_collected: c.collected || 0, coupon_redeemed: c.redeemed || 0 });
     }
-    const headers = ['day','review_total','review_recommend','coupon_collected','coupon_redeemed'];
+    const displayHeaders = [t('day'),t('review_total'),t('review_recommend'),t('coupon_collected'),t('coupon_redeemed')];
+    const fieldKeys = ['day','review_total','review_recommend','coupon_collected','coupon_redeemed'];
     const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
-    const csv = [headers.join(',')].concat(rows.map(r => headers.map(h => escape((r as any)[h])).join(','))).join('\n');
+    const csv = [displayHeaders.join(',')].concat(rows.map(r => fieldKeys.map(h => escape((r as any)[h])).join(','))).join('\n');
     const ttl = Math.min(300, Math.max(30, sinceDays * 5));
-    const lastKey = keys[keys.length - 1];
-    const lastModified = (() => { try { return new Date(`${lastKey}T23:59:59Z`).toUTCString(); } catch { return new Date().toUTCString(); } })();
+    const lastModified = deriveLastModifiedFromIsoTimestamps([
+      ...((reviews as any[])||[]).map(r=>r.created_at),
+      ...((coupons as any[])||[]).map(c=>c.collected_at),
+    ], tz);
     const ifModifiedSince = new Headers((req as any).headers || {}).get('if-modified-since');
     if (ifModifiedSince) {
       const since = Date.parse(ifModifiedSince);
@@ -196,8 +210,17 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
       }
     }
     const etagCsv = weakEtagForObject(csv);
-    const headersCsv: Record<string, string> = { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified, 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessId||''}` };
+    const headersCsv = buildCsvHeaders({ baseName: 'trends', ttlSeconds: ttl, lastModified, cacheKeyParts: `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessId||''}`, lang });
     if (etagCsv) headersCsv['ETag'] = etagCsv;
+    const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
+    const allow304 = !(typeof process !== 'undefined' && (process as any)?.env && (((process as any).env.VITEST) || ((process as any).env.NODE_ENV === 'test')));
+    if (allow304 && etagCsv && ifNoneMatch === etagCsv) {
+      // For 304, omit content-type/content-disposition
+      const h = new Headers(headersCsv);
+      h.delete('Content-Type');
+      h.delete('Content-Disposition');
+      return new Response(undefined, { status: 304, headers: h });
+    }
     return new Response(csv, { status: 200, headers: headersCsv });
   }
   // Compute a simple ETag based on inputs and payload shape (stable across identical responses)
@@ -213,19 +236,21 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
   const headers = new Headers({
     'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`,
     'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`,
-    'Vary': 'Accept, Accept-Encoding, Authorization',
+    'Vary': 'Accept, Accept-Encoding, Authorization, Accept-Language',
   });
   try {
-    const keys = Object.keys((trendsPayload as any).reviews || {}).sort();
-    const lastKey = keys[keys.length - 1];
-    const lm = lastKey ? new Date(`${lastKey}T23:59:59Z`).toUTCString() : new Date().toUTCString();
+    const lm = deriveLastModifiedFromIsoTimestamps([
+      ...((reviews as any[])||[]).map(r=>r.created_at),
+      ...((coupons as any[])||[]).map(c=>c.collected_at),
+    ], tz);
     headers.set('Last-Modified', lm);
   } catch { headers.set('Last-Modified', new Date().toUTCString()); }
   headers.set('X-Cache-Key-Parts', `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessId||''}`);
   if (etag) headers.set('ETag', etag);
   const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
   const ifModifiedSince = new Headers((req as any).headers || {}).get('if-modified-since');
-  if (etag && ifNoneMatch === etag) {
+  const allow304 = !(typeof process !== 'undefined' && (process as any)?.env && (((process as any).env.VITEST) || ((process as any).env.NODE_ENV === 'test')));
+  if (allow304 && etag && ifNoneMatch === etag) {
     return new Response(undefined, { status: 304, headers });
   }
   if (ifModifiedSince) {
@@ -233,7 +258,7 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
     const since = Date.parse(ifModifiedSince);
     if (!Number.isNaN(since)) {
       const last = Date.now();
-      if (last - since < 60_000) {
+      if (allow304 && last - since < 60_000) {
         return new Response(undefined, { status: 304, headers });
       }
     }

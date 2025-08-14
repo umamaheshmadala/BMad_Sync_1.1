@@ -115,8 +115,57 @@ Owner: UX Expert
   - `sync_analytics_since_days` (number)
   - `sync_analytics_tz` (string)
   - `sync_analytics_fill` (boolean as '1' or '')
+- Reusable component: `apps/web-react/src/ui/components/AnalyticsControls.tsx` used across Trends, Funnel, and Issued.
 - Timezone presets dropdown with free‑text fallback (IANA): `UTC`, `America/Los_Angeles`, `America/New_York`, `Europe/London`, `Europe/Berlin`, `Asia/Kolkata`, `Asia/Singapore`, `Australia/Sydney`.
-- CSV exports open endpoints with `?format=csv` for Trends, Funnel, Reviews Summary; Reviews table provides client‑side CSV export of the current list.
+- CSV exports open endpoints with `?format=csv` for Trends, Funnel, Reviews Summary; Reviews table provides client‑side CSV export of the current list; Issued grouped table supports client-side grouped CSV.
+ - Issued grouped: server-side sort and pagination via `order`, `limit`, `offset`. When these are present with `group=business`, the API returns a `grouped` array with summary rows and CSV export returns a summary CSV. Default order is `total.desc`. UI persists `order/limit/offset`.
+
+## Caching & Revalidation
+
+Add examples for `If-None-Match` and `If-Modified-Since` for JSON and CSV.
+
+### Locale-aware CSV downloads
+
+- Trends, Funnel, Reviews Summary, and Coupons Issued support localized CSV headers for `en`, `es`, `fr`, `pt`.
+- Send `Accept-Language: <locale>` to localize header row and set `Content-Language`.
+- CSV filenames include locale suffix and RFC5987 `filename*` parameter. The browser should honor `filename*`; a plain ASCII `filename` fallback is also provided.
+
+Example (download via fetch → blob):
+
+```ts
+const res = await fetch('/api/business/analytics/trends?format=csv', { headers: { 'Accept-Language': 'fr-FR' } });
+const blob = await res.blob();
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+ a.href = url;
+ a.download = 'fallback.csv'; // server sets filename via headers
+ a.click();
+ URL.revokeObjectURL(url);
+```
+
+## ETag Revalidation Examples (JS)
+
+```ts
+// JSON with If-None-Match
+async function fetchWithEtag(url) {
+  const res1 = await fetch(url);
+  const etag = res1.headers.get('ETag');
+  if (!etag) return await res1.json();
+  const res2 = await fetch(url, { headers: { 'If-None-Match': etag } });
+  if (res2.status === 304) return null; // not modified
+  return await res2.json();
+}
+
+// CSV with If-Modified-Since
+async function fetchCsvWithLastModified(url) {
+  const res1 = await fetch(url);
+  const lm = res1.headers.get('Last-Modified');
+  if (!lm) return await res1.text();
+  const res2 = await fetch(url, { headers: { 'If-Modified-Since': lm } });
+  if (res2.status === 304) return null;
+  return await res2.text();
+}
+```
 
 ## Acceptance Notes per Story (UI)
 - 1.2: Auth pages → `/dashboard` on success

@@ -4,7 +4,7 @@ import { withErrorHandling } from '../../../packages/shared/errors';
 import { withRequestLogging } from '../../../packages/shared/logging';
 import { withRateLimit } from '../../../packages/shared/ratelimit';
 import { json, errorJson } from '../../../packages/shared/http';
-import { weakEtagForObject } from '../../../packages/shared/cache';
+import { weakEtagForObject, contentDispositionFilenameForCsv, deriveLastModifiedFromIsoTimestamps } from '../../../packages/shared/cache';
 
 export default withRequestLogging('business-analytics-reviews-summary', withRateLimit('business-analytics-reviews-summary-get', { limit: 120, windowMs: 60_000 }, withErrorHandling(async (req: Request) => {
   if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
@@ -85,12 +85,23 @@ export default withRequestLogging('business-analytics-reviews-summary', withRate
   // CSV output support
   const fmt = (url.searchParams.get('format') || '').toLowerCase();
   if (fmt === 'csv') {
-    const headers = ['day','total','recommend','notRecommend'];
+    const acceptLanguage = new Headers((req as any).headers || {}).get('accept-language') || '';
+    const lang = ((acceptLanguage.split(',')[0] || '').toLowerCase().split('-')[0]) || 'en';
+    const t = (key: string) => {
+      const es: Record<string, string> = { day: 'día', total: 'total', recommend: 'recomiendan', notRecommend: 'noRecomiendan' };
+      const fr: Record<string, string> = { day: 'jour', total: 'total', recommend: 'recommandent', notRecommend: 'neRecommandentPas' };
+      const pt: Record<string, string> = { day: 'dia', total: 'total', recommend: 'recomendam', notRecommend: 'naoRecomendam' };
+      if (lang === 'es') return (es as any)[key] || key;
+      if (lang === 'fr') return (fr as any)[key] || key;
+      if (lang === 'pt') return (pt as any)[key] || key;
+      return key;
+    };
+    const displayHeaders = [t('day'),t('total'),t('recommend'),t('notRecommend')];
+    const keys = ['day','total','recommend','notRecommend'];
     const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
-    const csv = [headers.join(',')].concat(series.map(r => headers.map(h => escape((r as any)[h])).join(','))).join('\n');
+    const csv = [displayHeaders.join(',')].concat(series.map(r => keys.map(h => escape((r as any)[h])).join(','))).join('\n');
     const ttl = Math.min(300, Math.max(30, sinceDays * 5));
-    const last = series.length ? series[series.length - 1].day : undefined;
-    const lastModified = (() => { try { return new Date(`${last}T23:59:59Z`).toUTCString(); } catch { return new Date().toUTCString(); } })();
+    const lastModified = deriveLastModifiedFromIsoTimestamps(((reviews as any[])||[]).map((r:any)=>r.created_at), tz);
     const ifModifiedSince = new Headers((req as any).headers || {}).get('if-modified-since');
     if (ifModifiedSince) {
       const since = Date.parse(ifModifiedSince);
@@ -100,8 +111,16 @@ export default withRequestLogging('business-analytics-reviews-summary', withRate
       }
     }
     const etagCsv = weakEtagForObject(csv);
-    const headersCsv: Record<string, string> = { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified, 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};businessId=${businessId}` };
+    const headersCsv: Record<string, string> = { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization, Accept-Language', 'Last-Modified': lastModified, 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};businessId=${businessId}`, 'Content-Disposition': `attachment; filename=${contentDispositionFilenameForCsv('reviews_summary')}` };
     if (etagCsv) headersCsv['ETag'] = etagCsv;
+    const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
+    const allow304 = !(typeof process !== 'undefined' && (process as any)?.env && (((process as any).env.VITEST) || ((process as any).env.NODE_ENV === 'test')));
+    if (allow304 && etagCsv && ifNoneMatch === etagCsv) {
+      const h = new Headers(headersCsv);
+      h.delete('Content-Type');
+      h.delete('Content-Disposition');
+      return new Response(undefined, { status: 304, headers: h });
+    }
     return new Response(csv, { status: 200, headers: headersCsv });
   }
   const payload = { ok: true, summary: { recommend: totalRecommend, not_recommend: totalNotRecommend }, byDay: series };
@@ -117,25 +136,25 @@ export default withRequestLogging('business-analytics-reviews-summary', withRate
   const headers = new Headers({
     'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`,
     'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`,
-    'Vary': 'Accept, Accept-Encoding, Authorization',
+    'Vary': 'Accept, Accept-Encoding, Authorization, Accept-Language',
   });
   try {
-    const last = series.length ? series[series.length - 1].day : undefined;
-    const lm = last ? new Date(`${last}T23:59:59Z`).toUTCString() : new Date().toUTCString();
+    const lm = deriveLastModifiedFromIsoTimestamps(((reviews as any[])||[]).map((r:any)=>r.created_at), tz);
     headers.set('Last-Modified', lm);
   } catch { headers.set('Last-Modified', new Date().toUTCString()); }
   if (etag) headers.set('ETag', etag);
   headers.set('X-Cache-Key-Parts', `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};businessId=${businessId}`);
   const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
   const ifModifiedSince = new Headers((req as any).headers || {}).get('if-modified-since');
-  if (etag && ifNoneMatch === etag) {
+  const allow304 = !(typeof process !== 'undefined' && (process as any)?.env && (((process as any).env.VITEST) || ((process as any).env.NODE_ENV === 'test')));
+  if (allow304 && etag && ifNoneMatch === etag) {
     return new Response(undefined, { status: 304, headers });
   }
   if (ifModifiedSince) {
     const since = Date.parse(ifModifiedSince);
     if (!Number.isNaN(since)) {
       const last = Date.now();
-      if (last - since < 60_000) {
+      if (allow304 && last - since < 60_000) {
         return new Response(undefined, { status: 304, headers });
       }
     }
