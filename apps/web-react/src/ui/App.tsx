@@ -755,8 +755,9 @@ export default function App() {
       </div>
       {/* Theme selector */}
       <div className="mb-3" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <span className="muted text-sm">Theme</span>
+        <label htmlFor="themeSelect" className="muted text-sm">Theme</label>
         <select
+          id="themeSelect"
           className="input"
           style={{ maxWidth: 180 }}
           value={theme}
@@ -765,6 +766,7 @@ export default function App() {
             setTheme(next);
             try { localStorage.setItem('sync_theme', next); } catch {}
           }}
+          aria-label="Theme"
         >
           <option value="cosmic">Cosmic</option>
           <option value="daylight">Daylight</option>
