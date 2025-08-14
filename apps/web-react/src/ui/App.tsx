@@ -828,7 +828,7 @@ export default function App() {
             <input className="input" placeholder="password" type="password" value={loginPwd} onChange={(e) => setLoginPwd((e.target as HTMLInputElement).value)} />
             <div className="flex gap-2">
               <button className="btn" onClick={loginSupabase}>login with Supabase</button>
-              <button className="btn" onClick={() => { setToken(''); try { localStorage.removeItem('sync_token'); } catch {} }}>sign out</button>
+              <button className="btn" onClick={() => { setToken(''); try { localStorage.removeItem('sync_token'); } catch {} try { window.location.assign('/auth/login'); } catch {} }}>sign out</button>
             </div>
           </div>
         </div>

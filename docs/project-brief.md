@@ -114,6 +114,6 @@ Note: Detailed stories/acceptance criteria will be formalized in the PRD and arc
 - 2025‑08‑11 v1.0 — Initial project brief created from stakeholder idea and integrated research
 
 ---
-Next: Create PRD (`docs/prd.md`) from this brief, then Front‑End Spec (`docs/front-end-spec.md`), then Full‑Stack Architecture (`docs/fullstack-architecture.md`).
+Next: Create PRD (`docs/prd.md`) from this brief, then Front‑End Spec (`docs/front-end-spec.md`), then Full‑Stack Architecture (`docs/architecture.md`).
 
 

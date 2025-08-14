@@ -11,7 +11,7 @@ async function runAxe(path) {
   await page.addScriptTag({ url: 'https://unpkg.com/axe-core@4.9.1/axe.min.js' });
   const results = await page.evaluate(async () => {
     // @ts-ignore
-    return await window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] } });
+    return await window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] }, resultTypes: ['violations'] });
   });
   await browser.close();
   return results;
@@ -19,13 +19,13 @@ async function runAxe(path) {
 
 async function main() {
   if (!BASE_URL) { console.log('A11Y: BASE_URL not set, skipping'); return; }
-  const targets = ['/react'];
+  const targets = ['/react2'];
   // Optionally expand to more routes later
   const violations = [];
   for (const t of targets) {
     const r = await runAxe(t);
     if (r.violations?.length) {
-      violations.push({ path: t, count: r.violations.length, rules: r.violations.map(v => v.id) });
+      violations.push({ path: t, count: r.violations.length, rules: r.violations.map(v => v.id), details: r.violations.map(v => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes?.slice(0, 5)?.map(n => ({ html: n.html, target: n.target })) })) });
     }
   }
   if (violations.length) {

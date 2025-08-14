@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "trends": {
+    "reviews": {
+      "2025-08-13": {
+        "total": 3,
+        "recommend": 3
+      },
+      "2025-08-14": {
+        "total": 0,
+        "recommend": 0
+      }
+    },
+    "coupons": {
+      "2025-08-13": {
+        "collected": 0,
+        "redeemed": 0
+      },
+      "2025-08-14": {
+        "collected": 0,
+        "redeemed": 0
+      }
+    }
+  }
+}

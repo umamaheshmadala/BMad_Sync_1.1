@@ -242,4 +242,4 @@ Integrated into brief and PRD: qualitative interviews/focus groups; observationa
 - 2025‑08‑11 v1.3 — Consolidated PRD generated from current brief; prepared for sharding
 
 ---
-Next: UX Expert to produce Front‑End Specification (`docs/front-end-spec.md`) from this PRD; Architect to produce Full‑Stack Architecture (`docs/fullstack-architecture.md`); PO to run validation checklist and shard documents for IDE development.
+Next: UX Expert to produce Front‑End Specification (`docs/front-end-spec.md`) from this PRD; Architect to produce Full‑Stack Architecture (`docs/architecture.md`); PO to run validation checklist and shard documents for IDE development.

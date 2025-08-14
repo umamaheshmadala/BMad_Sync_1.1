@@ -21,29 +21,29 @@
     "size-limit": "npx --yes size-limit || true"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.13.0",
+    "@playwright/test": "^1.47.1",
+    "@size-limit/file": "^11.1.4",
     "@tailwindcss/postcss": "^4.1.11",
     "@types/node": "^20.12.12",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.21",
+    "axe-core": "^4.9.1",
+    "conventional-changelog-cli": "^5.0.0",
     "cross-env": "^7.0.3",
+    "husky": "^9.0.11",
+    "jsdom": "^24.1.0",
+    "lint-staged": "^15.2.9",
     "netlify-cli": "^17.34.3",
     "postcss": "^8.5.6",
+    "size-limit": "^11.1.4",
     "supabase": "^2.33.9",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.4.5",
     "vite": "^5.4.1",
-    "vitest": "^1.6.0",
-    "axe-core": "^4.9.1",
-    "jsdom": "^24.1.0",
-    "@playwright/test": "^1.47.1",
-    "husky": "^9.0.11",
-    "lint-staged": "^15.2.9",
-    "conventional-changelog-cli": "^5.0.0",
-    "@lhci/cli": "^0.13.0",
-    "size-limit": "^11.1.4",
-    "@size-limit/file": "^11.1.4"
+    "vitest": "^1.6.0"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
@@ -52,11 +52,12 @@
     ]
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.4",
     "@sentry/node": "^7.119.0",
     "@sentry/react": "^7.119.0",
+    "@supabase/supabase-js": "^2.45.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.1",
     "zod": "^3.23.8"
   }
 }

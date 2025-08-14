@@ -1,0 +1,26 @@
+# SynC — Front-End Specification
+
+## Table of Contents
+
+- [SynC — Front-End Specification](#table-of-contents)
+  - [Goals](#goals)
+  - [Tech & Libraries](#tech-libraries)
+  - [App Structure](#app-structure)
+  - [Navigation & Global UI](#navigation-global-ui)
+  - [Key Screens (MVP)](#key-screens-mvp)
+  - [Components (selected)](#components-selected)
+  - [State & Data](#state-data)
+  - [Realtime & Notifications](#realtime-notifications)
+  - [Accessibility](#accessibility)
+  - [Performance](#performance)
+  - [Error & Empty States](#error-empty-states)
+  - [Theming](#theming)
+  - [Dev UX](#dev-ux)
+  - [Analytics Hooks (UI)](#analytics-hooks-ui)
+  - [Table Behavior (Dev UI)](#table-behavior-dev-ui)
+  - [Mini-Charts](#mini-charts)
+  - [Analytics Controls (UI)](#analytics-controls-ui)
+  - [Caching & Revalidation](#caching-revalidation)
+  - [ETag Revalidation Examples (JS)](#etag-revalidation-examples-js)
+  - [Acceptance Notes per Story (UI)](#acceptance-notes-per-story-ui)
+  - [Open UI Decisions](#open-ui-decisions)
