@@ -892,7 +892,7 @@ export default function App() {
         <div style={{ display: 'flex', gap: 8 }}>
           <input id="bizId" placeholder="businessId" onChange={(e) => { try { localStorage.setItem('sync_reviews_biz_id', (e.target as HTMLInputElement).value || ''); } catch {} }} />
           <label htmlFor="reviewsPageSize" className="muted text-sm" style={{ display: 'none' }}>Reviews page size</label>
-          <select id="reviewsPageSize" className="input" value={reviewsPageSize as any} onChange={(e) => {
+          <select id="reviewsPageSize" className="input" aria-label="Reviews page size" value={reviewsPageSize as any} onChange={(e) => {
             const n = Number((e.target as HTMLSelectElement).value || 10);
             setReviewsPageSize(n);
             setReviewsPage(1);
@@ -954,7 +954,7 @@ export default function App() {
           </button>
           <CopyCurlButton tag={'reviews:post'} getCurl={getCurl} />
            <label htmlFor="revFilter" className="muted text-sm" style={{ display: 'none' }}>Reviews filter</label>
-           <select id="revFilter" defaultValue="">
+           <select id="revFilter" aria-label="Reviews filter" defaultValue="">
             <option value="">all</option>
             <option value="true">recommend</option>
             <option value="false">not recommend</option>
@@ -1387,7 +1387,7 @@ export default function App() {
             style={{ maxWidth: 200 }}
           />
           <label htmlFor="offersPageSize" className="muted text-sm" style={{ display: 'none' }}>Offers page size</label>
-          <select id="offersPageSize" className="input" value={offersPageSize as any} onChange={(e) => {
+          <select id="offersPageSize" className="input" aria-label="Offers page size" value={offersPageSize as any} onChange={(e) => {
             const n = Number((e.target as HTMLSelectElement).value || 10);
             setOffersPageSize(n);
             setOffersPage(1);
@@ -1470,7 +1470,7 @@ export default function App() {
             style={{ maxWidth: 200 }}
           />
           <label htmlFor="couponsPageSize" className="muted text-sm" style={{ display: 'none' }}>Coupons page size</label>
-          <select id="couponsPageSize" className="input" value={couponsPageSize as any} onChange={(e) => {
+          <select id="couponsPageSize" className="input" aria-label="Coupons page size" value={couponsPageSize as any} onChange={(e) => {
             const n = Number((e.target as HTMLSelectElement).value || 10);
             setCouponsPageSize(n);
             setCouponsPage(1);
