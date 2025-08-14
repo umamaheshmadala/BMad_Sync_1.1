@@ -90,8 +90,9 @@ body {
   border-radius: 6px;
   box-shadow: 0 0 32px rgba(124, 92, 255, 0.25);
   transition: opacity 150ms ease-in-out;
+  text-decoration: none;
 }
-.btn:hover { opacity: 0.9; }
+.btn:hover { opacity: 1; }
 
 .input {
   width: 100%;
