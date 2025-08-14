@@ -171,7 +171,15 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
     const ttl = Math.min(300, Math.max(30, sinceDays * 5));
     const lastKey = keys[keys.length - 1];
     const lastModified = (() => { try { return new Date(`${lastKey}T23:59:59Z`).toUTCString(); } catch { return new Date().toUTCString(); } })();
-    return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified } });
+    const ifModifiedSince = new Headers((req as any).headers || {}).get('if-modified-since');
+    if (ifModifiedSince) {
+      const since = Date.parse(ifModifiedSince);
+      const lm = Date.parse(lastModified);
+      if (!Number.isNaN(since) && !Number.isNaN(lm) && lm <= since) {
+        return new Response(undefined, { status: 304, headers: { 'Last-Modified': lastModified, 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessIdFilter||''}` } });
+      }
+    }
+    return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization', 'Last-Modified': lastModified, 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessIdFilter||''}` } });
   }
   const etag = (() => {
     try {
@@ -194,6 +202,7 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
     headers.set('Last-Modified', lm);
   } catch { headers.set('Last-Modified', new Date().toUTCString()); }
   if (etag) headers.set('ETag', etag);
+  headers.set('X-Cache-Key-Parts', `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};group=${group||''};businessId=${businessIdFilter||''}`);
   const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
   const ifModifiedSince = new Headers((req as any).headers || {}).get('if-modified-since');
   if (etag && ifNoneMatch === etag) {

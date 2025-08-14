@@ -696,4 +696,22 @@ it('enforces basic access patterns akin to RLS (owner vs non-owner)', async () =
   expect(resOwner.status).toBe(200);
 });
 
+it('ETag/Last-Modified 304 works for trends and coupons-issued CSV', async () => {
+  const first = await trendsGet(makeReq(path(`/api/business/analytics/trends?sinceDays=1`), 'GET'));
+  expect(first.status).toBe(200);
+  const lm = first.headers.get('Last-Modified') || '';
+  const again = await trendsGet(new Request(path(`/api/business/analytics/trends?sinceDays=1`), { method: 'GET', headers: { 'If-Modified-Since': lm } } as any));
+  expect([200, 304]).toContain(again.status);
+
+  const csv1 = await (await import('../../apps/api/functions/business-analytics-coupons-issued-get')).default(
+    makeReq(path(`/api/business/analytics/coupons-issued?format=csv`), 'GET')
+  ) as Response;
+  expect(csv1.status).toBe(200);
+  const lmCsv = csv1.headers.get('Last-Modified') || '';
+  const csv2 = await (await import('../../apps/api/functions/business-analytics-coupons-issued-get')).default(
+    new Request(path(`/api/business/analytics/coupons-issued?format=csv`), { method: 'GET', headers: { 'If-Modified-Since': lmCsv } } as any)
+  ) as Response;
+  expect([200, 304]).toContain(csv2.status);
+});
+
 

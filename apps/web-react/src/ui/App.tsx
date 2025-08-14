@@ -2069,6 +2069,29 @@ export default function App() {
           <CopyCurlButton tag={'analytics:issued'} getCurl={getCurl} />
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
         </div>
+        {/* Tiny chart for issued per day using trends if available */}
+        {(() => {
+          const series = ((window as any).issuedResult?.byDay || []) as Array<{ day: string; issued: number }>;
+          if (!Array.isArray(series) || series.length === 0) return null;
+          const data = Object.fromEntries(series.map(r => [r.day, { issued: Number(r.issued||0) }]));
+          const entries = Object.entries(data) as Array<[string, any]>;
+          const maxY = entries.reduce((m, [, v]) => Math.max(m, Number((v as any).issued||0)), 1);
+          return (
+            <div style={{ marginTop: 12 }}>
+              <div className="muted text-sm" style={{ marginBottom: 4 }}>Issued per day</div>
+              <MiniBars
+                entries={entries}
+                maxY={maxY}
+                legend={<div className="muted text-xs"><span style={{ display: 'inline-block', width: 8, height: 8, background: '#8e24aa', marginRight: 4 }}></span>issued</div>}
+                renderBar={(day, v, scaled) => {
+                  const y = Number((v as any).issued || 0);
+                  const h = scaled(y);
+                  return (<div title={`${day}: ${y}`} style={{ width: 10, height: h, background: '#8e24aa' }}></div>);
+                }}
+              />
+            </div>
+          );
+        })()}
         <div className="muted text-xs" style={{ marginTop: 6 }}>Use an owner bearer token for group=business.</div>
         </>
         )}
