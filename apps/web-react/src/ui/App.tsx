@@ -750,7 +750,7 @@ export default function App() {
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-3" role="tablist" aria-label="Sections">
         {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','funnel','issued','pricing','ratelimit','health'].map((t) => (
-          <button key={t} onClick={() => { setActiveTab(t as any); try { localStorage.setItem('sync_active_tab', String(t)); } catch {} }} className={`btn ${activeTab===t ? 'opacity-100' : 'opacity-70'}`} role="tab" aria-selected={activeTab===t ? (true as any) : (false as any)}>{t}</button>
+          <button key={t} onClick={() => { setActiveTab(t as any); try { localStorage.setItem('sync_active_tab', String(t)); } catch {} }} className={`btn-tab`} role="tab" aria-selected={activeTab===t ? (true as any) : (false as any)}>{t}</button>
         ))}
       </div>
       {/* Theme selector */}
