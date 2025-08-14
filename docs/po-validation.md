@@ -7,7 +7,7 @@ Status: Passed with notes
 ## Checklist
 - PRD present: docs/prd.md — OK
 - Front-End Spec present: docs/front-end-spec.md — OK
-- Architecture present: docs/fullstack-architecture.md — OK
+- Architecture present: docs/architecture.md — OK
 - DB schema present: docs/supabase_schema.sql — OK
 - RLS policies present: docs/rls_policies.sql — OK
 - Notifications policy present: docs/notifications-policy.md — OK

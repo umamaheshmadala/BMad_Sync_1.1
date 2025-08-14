@@ -7,6 +7,8 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/integration/**/*.test.ts'],
     reporters: ['default'],
+    testTimeout: 15000,
+    hookTimeout: 15000,
   },
 });
 

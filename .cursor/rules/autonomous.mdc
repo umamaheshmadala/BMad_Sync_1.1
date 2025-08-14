@@ -13,3 +13,4 @@ alwaysApply: true
     * A major architectural decision needs to be made.
     * The task requires external information that cannot be found in the codebase or a search tool.
 5.  **Do not deviate from the BMad Structure:** Always stick to the BMad docs and files that are gaurdrails for this project. If there is a dire need to deviate, then mention those tasks explicity with "Deviation" remark and proceed with my consent.
+6. Never deviate a character from BMAD “Core Development Cycle (IDE) given in this https://github.com/bmad-code-org/BMAD-METHOD/blob/main/docs/user-guide.md#the-core-development-cycle-ide. these are your guard rails. if you are ever to deviate forcefully, mention it ahead and take my consent.
