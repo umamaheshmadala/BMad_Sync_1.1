@@ -87,6 +87,8 @@ export default function App() {
   const [compactRows, setCompactRows] = useState(initialCompact as boolean);
   const offersDebounceRef = useRef(null as any);
   const couponsDebounceRef = useRef(null as any);
+  const initialReviewsPct = (() => { try { return (localStorage.getItem('sync_reviews_pct') || '') === '1'; } catch { return false; } })();
+  const [reviewsPct, setReviewsPct] = useState(initialReviewsPct as boolean);
   useEffect(() => {
     // Prefill common ids
     try {
