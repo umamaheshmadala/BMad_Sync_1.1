@@ -175,7 +175,12 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
     };
     const displayHeaders = [t('day'),t('collected'),t('redeemed')];
     const keys = Object.keys(funnelByDay || {}).sort();
-    const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
+    const escape = (v: any) => {
+      const s = v == null ? '' : String(v);
+      const needsPrefix = /^[=+\-@]/.test(s);
+      const safe = needsPrefix ? `'${s}` : s;
+      return JSON.stringify(safe);
+    };
     const csv = [displayHeaders.join(',')].concat(keys.map(k => {
       const row = (funnelByDay as any)[k] || { collected: 0, redeemed: 0 };
       return [k, row.collected || 0, row.redeemed || 0].map(escape).join(',');

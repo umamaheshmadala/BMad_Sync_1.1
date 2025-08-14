@@ -18,6 +18,8 @@ jobs:
           node-version: 20
           cache: 'npm'
       - run: npm ci
+      - name: Dependency audit (non-blocking)
+        run: npm audit --audit-level=high || true
       - name: Typecheck
         run: npx tsc -p tsconfig.json --noEmit
       - name: Run tests
@@ -26,6 +28,10 @@ jobs:
         run: npm run build:web
       - name: Lint OpenAPI spec
         run: npx --yes @redocly/cli@latest lint docs/api/openapi.yaml
+      - name: Lighthouse CI (non-blocking)
+        run: npm run lhci || true
+      - name: Bundle size check (non-blocking)
+        run: npm run size-limit || true
 
   openapi-validate:
     runs-on: ubuntu-latest
@@ -74,12 +80,13 @@ jobs:
     if: github.event_name == 'pull_request'
     strategy:
       matrix:
-        locale: [en, es, fr, pt]
+        locale: [en, es, fr, pt, de, it]
     steps:
       - name: Smoke against preview URL (${{ matrix.locale }})
         env:
           BASE_URL: ${{ vars.DEPLOYED_BASE_URL }}
           ACCEPT_LANGUAGE: ${{ matrix.locale }}
+          TOKEN: ${{ secrets.OWNER_BEARER }}
         run: |
           if [ -z "$BASE_URL" ]; then echo "Skipping smoke (DEPLOYED_BASE_URL not set)"; exit 0; fi
           echo "BASE_URL=$BASE_URL  ACCEPT_LANGUAGE=${ACCEPT_LANGUAGE}"
@@ -92,6 +99,55 @@ jobs:
           path: |
             smoke-samples/**
           if-no-files-found: ignore
+
+  e2e-preview:
+    needs: [build-and-test]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Install Playwright
+        run: npm run e2e:install
+      - name: Run E2E (non-blocking)
+        continue-on-error: ${{ vars.E2E_ALLOW_FAILURE != 'false' }}
+        run: npm run e2e
+        env:
+          BASE_URL: ${{ vars.DEPLOYED_BASE_URL }}
+          OWNER_BEARER: ${{ secrets.OWNER_BEARER }}
+      - name: Upload E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: e2e-artifacts/**
+          if-no-files-found: ignore
+
+  a11y-axe:
+    needs: [build-and-test]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && vars.AXE_CI == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Install Playwright
+        run: npm run e2e:install
+      - name: Run Axe against preview URL
+        continue-on-error: ${{ vars.A11Y_FAIL != 'true' }}
+        run: |
+          if [ -z "${{ vars.DEPLOYED_BASE_URL }}" ]; then echo "Skipping Axe (DEPLOYED_BASE_URL not set)"; exit 0; fi
+          node tests/e2e/axe.mjs
+        env:
+          BASE_URL: ${{ vars.DEPLOYED_BASE_URL }}
+          A11Y_FAIL: ${{ vars.A11Y_FAIL }}
 
   nightly-load:
     runs-on: ubuntu-latest

@@ -2,6 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { MiniBars } from './components/MiniBars';
 import { AnalyticsControls } from './components/AnalyticsControls';
 import { AnalyticsCsvButton } from './components/AnalyticsCsvButton';
+import { t } from './i18n';
 import { createClient as createSupabaseBrowserClient } from '@supabase/supabase-js';
 
 function Section({ title, children }: { title: string; children: any }) {
@@ -234,8 +235,8 @@ export default function App() {
     const j = await res.json();
     setStorefront(j);
     if (j?.storefront?.business_id) setSessionBusinessId(String(j.storefront.business_id));
-    if (j?.ok) showToast('Storefront upserted', 'success');
-    else showToast(j?.error || 'Storefront error', 'error');
+    if (j?.ok) showToast(t('storefrontUpserted'), 'success');
+    else showToast(j?.error || t('storefrontError'), 'error');
   }
 
   async function signup() {
@@ -248,7 +249,7 @@ export default function App() {
     if (j?.bearer) {
       setToken(j.bearer);
       try { localStorage.setItem('sync_token', j.bearer); } catch {}
-      showToast('Signed up', 'success');
+      showToast(t('signedUp'), 'success');
     }
   }
 
@@ -262,7 +263,7 @@ export default function App() {
     if (j?.bearer) {
       setToken(j.bearer);
       try { localStorage.setItem('sync_token', j.bearer); } catch {}
-      showToast('Logged in', 'success');
+      showToast(t('loggedIn'), 'success');
     }
   }
 
@@ -296,7 +297,7 @@ export default function App() {
       try { localStorage.setItem('sync_token', bearer); } catch {}
     } catch (e: any) {
       setAuthResult({ ok: false, error: e?.message || 'Login error' });
-      showToast(e?.message || 'Login error');
+      showToast(e?.message || t('loginError'));
     }
   }
 
@@ -312,14 +313,14 @@ export default function App() {
     });
     const j = await res.json();
     setAdsResult(j);
-    if (j?.ok) showToast('Ad created', 'success');
-    else showToast(j?.error || 'Ads create error', 'error');
+    if (j?.ok) showToast(t('adCreated'), 'success');
+    else showToast(j?.error || t('adsCreateError'), 'error');
   }
 
   async function createOffer() {
     const title = (document.getElementById('offerTitle') as HTMLInputElement)?.value?.trim();
     const qtyStr = (document.getElementById('offerQty') as HTMLInputElement)?.value?.trim();
-    if (!title) { showToast('title required'); return; }
+    if (!title) { showToast(t('titleRequired')); return; }
     const total_quantity = qtyStr && !Number.isNaN(Number(qtyStr)) ? Number(qtyStr) : undefined;
     const res = await actionFetch('offers:create', '/api/business/offers', {
       method: 'POST',
@@ -328,14 +329,14 @@ export default function App() {
     });
     const j = await res.json();
     setOffersResult(j);
-    if (j?.ok) showToast('Offer created', 'success');
-    else showToast(j?.error || 'Offer create error', 'error');
+    if (j?.ok) showToast(t('offerCreated'), 'success');
+    else showToast(j?.error || t('offerCreateError'), 'error');
   }
 
   async function generateOfferCoupons() {
     const offerId = (document.getElementById('offerId') as HTMLInputElement)?.value?.trim();
     const qtyStr = (document.getElementById('offerGenQty') as HTMLInputElement)?.value?.trim();
-    if (!offerId) { showToast('offerId required'); return; }
+    if (!offerId) { showToast(t('offerIdRequired')); return; }
     const total_quantity = qtyStr && !Number.isNaN(Number(qtyStr)) ? Number(qtyStr) : undefined;
     const res = await actionFetch('offers:generate', `/api/business/offers/${offerId}/coupons`, {
       method: 'POST',
@@ -344,15 +345,15 @@ export default function App() {
     });
     const j = await res.json();
     setOffersResult(j);
-    if (j?.ok) showToast('Coupons generated', 'success');
-    else showToast(j?.error || 'Generate coupons error', 'error');
+    if (j?.ok) showToast(t('couponsGenerated'), 'success');
+    else showToast(j?.error || t('generateCouponsError'), 'error');
   }
 
   async function collectCoupon() {
     const couponId = (document.getElementById('collectCouponId') as HTMLInputElement)?.value?.trim();
     const userId = parseUserIdFromBearer();
-    if (!userId) { showToast('Set a valid Bearer token (Auth tab)'); return; }
-    if (!couponId) { showToast('coupon_id required'); return; }
+    if (!userId) { showToast(t('bearerRequired')); return; }
+    if (!couponId) { showToast(t('couponIdRequired')); return; }
     const res = await actionFetch('offers:collect', `/api/users/${userId}/coupons/collect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
@@ -360,14 +361,14 @@ export default function App() {
     });
     const j = await res.json();
     setOffersResult(j);
-    if (j?.ok) showToast('Collected to wallet', 'success');
-    else showToast(j?.error || 'Collect error', 'error');
+    if (j?.ok) showToast(t('collectedToWallet'), 'success');
+    else showToast(j?.error || t('collectError'), 'error');
   }
 
   async function redeemAtBusiness() {
     const unique = (document.getElementById('redeemCode') as HTMLInputElement)?.value?.trim();
     const biz = (document.getElementById('redeemBizId') as HTMLInputElement)?.value?.trim();
-    if (!unique || !biz) { showToast('unique_code and businessId required'); return; }
+    if (!unique || !biz) { showToast(t('uniqueAndBizRequired')); return; }
     const res = await actionFetch('offers:redeem', `/api/business/${biz}/redeem`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
@@ -375,8 +376,8 @@ export default function App() {
     });
     const j = await res.json();
     setRedeemResult(j);
-    if (j?.ok) showToast('Redeemed successfully', 'success');
-    else showToast(j?.error || 'Redeem error', 'error');
+    if (j?.ok) showToast(t('redeemedSuccessfully'), 'success');
+    else showToast(j?.error || t('redeemError'), 'error');
   }
 
   async function getRevenue() {
@@ -397,7 +398,7 @@ export default function App() {
       const res = await apiFetch(`/api/business/offers${qs}`, { headers: { ...authHeaders } });
       const j = await res.json();
       setOffersResult({ ...(offersResult||{}), offers_list: { ...(j||{}) } });
-    } catch (e: any) { showToast('offers list error', 'error'); }
+    } catch (e: any) { showToast(t('offersListError'), 'error'); }
     finally { setIsLoadingOffers(false); }
   }
 
@@ -416,13 +417,13 @@ export default function App() {
       const res = await apiFetch(`/api/business/offers/${id}/coupons${qs}`, { headers: { ...authHeaders } });
       const j = await res.json();
       setOffersResult({ ...(offersResult||{}), coupons_preview: { ...(j||{}) } });
-    } catch (e: any) { showToast('coupons preview error', 'error'); }
+    } catch (e: any) { showToast(t('couponsPreviewError'), 'error'); }
     finally { setIsLoadingCoupons(false); }
   }
 
   async function getCouponAnalytics() {
     const biz = (document.getElementById('redeemBizId') as HTMLInputElement)?.value?.trim();
-    if (!biz) { showToast('businessId required'); return; }
+    if (!biz) { showToast(t('businessIdRequired')); return; }
     const res = await actionFetch('analytics:coupons', `/api/business/${biz}/analytics/coupons`, { headers: { ...authHeaders } });
     const j = await res.json();
     setCouponAnalytics(j);
@@ -432,13 +433,13 @@ export default function App() {
     const res = await actionFetch('platform:ratelimit', '/api/platform/ratelimit', { headers: { ...authHeaders } });
     const j = await res.json();
     setRatelimitResult(j);
-    if (!j?.ok) showToast(j?.error || 'Rate limit diagnostics error');
+    if (!j?.ok) showToast(j?.error || t('ratelimitDiagnosticsError'));
   }
 
   function exportRateLimitCsv() {
     try {
       const rows: any[] = Array.isArray((ratelimitResult as any)?.top_counters) ? (ratelimitResult as any).top_counters : [];
-      if (!rows.length) { showToast('No counters to export'); return; }
+      if (!rows.length) { showToast(t('noCountersToExport')); return; }
       const headers = Object.keys(rows[0] || {});
       const escape = (v: any) => {
         const s = v == null ? '' : String(v);
@@ -454,9 +455,9 @@ export default function App() {
       a.download = `ratelimit_counters_${Date.now()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('Exported CSV', 'success');
+      showToast(t('exportedCsv'), 'success');
     } catch (e: any) {
-      showToast(e?.message || 'CSV export error');
+      showToast(e?.message || t('csvExportError'));
     }
   }
 
@@ -470,9 +471,9 @@ export default function App() {
       a.download = `ratelimit_${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('Exported JSON', 'success');
+      showToast(t('exportedJson'), 'success');
     } catch (e: any) {
-      showToast(e?.message || 'JSON export error');
+      showToast(e?.message || t('jsonExportError'));
     }
   }
 
@@ -503,16 +504,16 @@ export default function App() {
       recordHeaders(res);
       if (res.status === 400) {
         const err = await res.json().catch(() => ({}));
-        const msg = String(err?.error || 'Bad Request: adjust sinceDays or tz');
+        const msg = String(err?.error || t('badRequestAdjustSinceTz'));
         setTrendsError(msg);
         showToast(msg, 'error');
         return;
       }
       const j = await res.json();
       setTrendsResult(j);
-      if (!j?.ok) showToast(j?.error || 'Trends fetch error', 'error');
+      if (!j?.ok) showToast(j?.error || t('trendsFetchError'), 'error');
     } catch (e: any) {
-      showToast(e?.name === 'AbortError' ? 'Trends timeout' : (e?.message || 'Trends error'));
+      showToast(e?.name === 'AbortError' ? t('trendsTimeout') : (e?.message || t('trendsError')));
     } finally {
       clearTimeout(timer);
     }
@@ -536,14 +537,14 @@ export default function App() {
       recordHeaders(res);
       if (res.status === 400) {
         const err = await res.json().catch(() => ({}));
-        const msg = String(err?.error || 'Bad Request: adjust sinceDays or tz');
+        const msg = String(err?.error || t('badRequestAdjustSinceTz'));
         setFunnelError(msg);
         showToast(msg, 'error');
         return;
       }
       const j = await res.json();
       setFunnelResult(j);
-      if (!j?.ok) showToast(j?.error || 'Funnel fetch error', 'error');
+      if (!j?.ok) showToast(j?.error || t('funnelFetchError'), 'error');
       // Also refresh trends in background for mini chart (collected/redeemed by day)
       try {
         const tParams = new URLSearchParams();
@@ -555,7 +556,7 @@ export default function App() {
         setTrendsResult(tj);
       } catch {}
     } catch (e: any) {
-      showToast(e?.name === 'AbortError' ? 'Funnel timeout' : (e?.message || 'Funnel error'));
+      showToast(e?.name === 'AbortError' ? t('funnelTimeout') : (e?.message || t('funnelError')));
     } finally {
       clearTimeout(timer);
     }
@@ -573,8 +574,8 @@ export default function App() {
     });
     const j = await res.json();
     setPricingResult(j);
-    if (j?.ok) showToast('Pricing updated', 'success');
-    else showToast(j?.error || 'Pricing error', 'error');
+    if (j?.ok) showToast(t('pricingUpdated'), 'success');
+    else showToast(j?.error || t('pricingError'), 'error');
   }
 
   async function getStorefront() {
@@ -582,7 +583,7 @@ export default function App() {
     const j = await res.json();
     setStorefront(j);
     if (j?.storefront?.business_id) setSessionBusinessId(String(j.storefront.business_id));
-    if (!j?.ok) showToast(j?.error || 'Storefront fetch error', 'error');
+    if (!j?.ok) showToast(j?.error || t('storefrontFetchError'), 'error');
   }
 
   async function postReview(businessId: string) {
@@ -593,8 +594,8 @@ export default function App() {
     });
     const j = await res.json();
     setReviewResult(j);
-    if (j?.ok) showToast('Review submitted', 'success');
-    else showToast(j?.error || 'Review error', 'error');
+    if (j?.ok) showToast(t('reviewSubmitted'), 'success');
+    else showToast(j?.error || t('reviewError'), 'error');
   }
 
   async function getReviews(businessId: string) {
@@ -608,7 +609,7 @@ export default function App() {
     const res = await actionFetch('reviews:get', `/api/business/${businessId}/reviews${qs}`, { headers: { ...authHeaders } });
     const list = await res.json();
     setReviewsList(list);
-    if (!list?.ok) showToast(list?.error || 'Reviews fetch error', 'error');
+    if (!list?.ok) showToast(list?.error || t('reviewsFetchError'), 'error');
     // Fetch summary and trends for mini-chart
     const resSum = await actionFetch('analytics:reviews', `/api/business/${businessId}/analytics/reviews`, { headers: { ...authHeaders } });
     setReviewsSummary(await resSum.json());
@@ -626,14 +627,14 @@ export default function App() {
     const res = await actionFetch('wishlist:matches', `/api/users/${userId}/wishlist/matches`, { headers: { ...authHeaders } });
     const j = await res.json();
     setWishlistMatches(j);
-    if (!j?.ok) showToast(j?.error || 'Matches fetch error', 'error');
+    if (!j?.ok) showToast(j?.error || t('matchesFetchError'), 'error');
   }
 
   async function getProducts(storefrontId: string) {
     const res = await actionFetch('products:get', `/api/storefronts/${storefrontId}/products`, { headers: { ...authHeaders } });
     const j = await res.json();
     setProducts(j);
-    if (!j?.ok) showToast(j?.error || 'Products fetch error', 'error');
+    if (!j?.ok) showToast(j?.error || t('productsFetchError'), 'error');
   }
 
   async function getNotifications(userId: string) {
@@ -672,8 +673,8 @@ export default function App() {
     const j = await res.json();
     setNotifications(j);
     await refreshUnread(userId);
-    if (j?.ok) showToast('Marked all read', 'success');
-    else showToast(j?.error || 'Mark read error', 'error');
+    if (j?.ok) showToast(t('markedAllRead'), 'success');
+    else showToast(j?.error || t('markReadError'), 'error');
   }
 
   async function markItemRead(userId: string, notificationId: string) {
@@ -681,8 +682,8 @@ export default function App() {
     const j = await res.json();
     setNotifications(j);
     await refreshUnread(userId);
-    if (j?.ok) showToast('Marked read', 'success');
-    else showToast(j?.error || 'Mark item read error', 'error');
+    if (j?.ok) showToast(t('markedRead'), 'success');
+    else showToast(j?.error || t('markItemReadError'), 'error');
   }
 
   async function refreshUnread(userId: string) {
@@ -734,6 +735,7 @@ export default function App() {
     <div className={`min-h-screen mx-auto max-w-5xl p-6 theme-${theme}`}
       data-build="funnel-theme"
     >
+      <a href="#main" className="btn" style={{ position: 'absolute', left: -9999 }}>{t('skipToMain')}</a>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
         <h2 className="text-xl font-semibold" style={{ margin: 0 }}>SynC React UI (v0.1.8)</h2>
         <a href="/api-docs" target="_blank" rel="noreferrer" className="btn" title="Open API Docs">API Docs</a>
@@ -746,9 +748,9 @@ export default function App() {
         </label>
       </div>
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2 mb-3">
+      <div className="flex flex-wrap gap-2 mb-3" role="tablist" aria-label="Sections">
         {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','funnel','issued','pricing','ratelimit','health'].map((t) => (
-          <button key={t} onClick={() => { setActiveTab(t as any); try { localStorage.setItem('sync_active_tab', String(t)); } catch {} }} className={`btn ${activeTab===t ? 'opacity-100' : 'opacity-70'}`}>{t}</button>
+          <button key={t} onClick={() => { setActiveTab(t as any); try { localStorage.setItem('sync_active_tab', String(t)); } catch {} }} className={`btn ${activeTab===t ? 'opacity-100' : 'opacity-70'}`} role="tab" aria-selected={activeTab===t ? (true as any) : (false as any)}>{t}</button>
         ))}
       </div>
       {/* Theme selector */}
@@ -771,7 +773,7 @@ export default function App() {
       </div>
 
       {toast ? (
-        <div className={`toast ${toast.type === 'success' ? 'toast-success' : 'toast-error'}`}>
+        <div className={`toast ${toast.type === 'success' ? 'toast-success' : 'toast-error'}`} role="status" aria-live="polite">
           {toast.text}
         </div>
       ) : null}
@@ -806,7 +808,7 @@ export default function App() {
                 const bearer = makeUnsignedBearer(sub, role);
                 setToken(bearer);
                 try { localStorage.setItem('sync_token', bearer); } catch {}
-                showToast('Bearer built', 'success');
+                showToast(t('bearerBuilt'), 'success');
               }}>build owner bearer</button>
             )}
           </div>
@@ -853,7 +855,7 @@ export default function App() {
               </div>
             ) : null}
             <div className="flex gap-2" style={{ marginTop: 8 }}>
-              <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL'); } }} disabled={!lastCurl}>Copy last cURL</button>
+              <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast(t('copiedCurl')); } }} disabled={!lastCurl}>{t('copyLastCurl')}</button>
             </div>
             {lastCurl ? (
               <details style={{ marginTop: 8 }} open={curlOpen} onToggle={(e) => setCurlOpen((e.target as HTMLDetailsElement).open)}>
@@ -874,7 +876,7 @@ export default function App() {
           <CopyCurlButton tag={'storefront:post'} getCurl={getCurl} />
           <button onClick={getStorefront}>GET</button>
           <CopyCurlButton tag={'storefront:get'} getCurl={getCurl} />
-          <button className="btn" onClick={() => setStorefront(null as any)}>clear</button>
+          <button className="btn" onClick={() => setStorefront(null as any)}>{t('clear')}</button>
         </div>
         <CopyButton getText={() => JSON.stringify(storefront, null, 2)} />
         <pre>{JSON.stringify(storefront, null, 2)}</pre>
@@ -927,7 +929,7 @@ export default function App() {
           </div>
           {/* Go to page (reviews) */}
           <div className="flex" style={{ gap: 6, alignItems: 'center', marginTop: 6 }}>
-          <input id="reviewsGoto" className="input" placeholder="go to page" style={{ width: 110 }} onKeyDown={(e) => { const k=(e as any).key; if (k === 'Enter') { (document.getElementById('reviewsGoBtn') as HTMLButtonElement)?.click(); } if (kbShortcuts && k==='Escape'){ (document.getElementById('reviewsGoto') as HTMLInputElement).value=''; } }} />
+          <input id="reviewsGoto" className="input" placeholder={t('goToPage')} style={{ width: 110 }} onKeyDown={(e) => { const k=(e as any).key; if (k === 'Enter') { (document.getElementById('reviewsGoBtn') as HTMLButtonElement)?.click(); } if (kbShortcuts && k==='Escape'){ (document.getElementById('reviewsGoto') as HTMLInputElement).value=''; } }} />
             <button id="reviewsGoBtn" className="btn" title="go" onClick={() => {
               try {
                 const total = Number(reviewsList?.total || 0);
@@ -962,7 +964,7 @@ export default function App() {
             GET reviews
           </button>
           <CopyCurlButton tag={'reviews:get'} getCurl={getCurl} />
-          <button className="btn" onClick={() => { setReviewResult(null as any); setReviewsList(null as any); setReviewsSummary(null as any); }}>clear</button>
+          <button className="btn" onClick={() => { setReviewResult(null as any); setReviewsList(null as any); setReviewsSummary(null as any); }}>{t('clear')}</button>
         </div>
         <CopyButton getText={() => JSON.stringify(reviewResult, null, 2)} />
         <pre>{JSON.stringify(reviewResult, null, 2)}</pre>
@@ -970,13 +972,13 @@ export default function App() {
         {Array.isArray(reviewsList?.items) && (reviewsList.items as any[]).length ? (
           <div style={{ marginTop: 8 }}>
             <div className="flex gap-2" style={{ marginBottom: 6 }}>
-              <span className="muted text-sm" style={{ alignSelf: 'center' }}>click headers to sort</span>
-              <input className="input" placeholder="filter text" title={kbShortcuts ? 'Enter = re-fetch, Esc = clear' : ''} value={reviewsFilterText} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setReviewsFilterText(v); try { localStorage.setItem('sync_reviews_filter', v); } catch {} }} onKeyDown={(e) => { if (!kbShortcuts) return; const k=(e as any).key; if (k==='Escape'){ setReviewsFilterText(''); try { localStorage.setItem('sync_reviews_filter',''); } catch {} } if (k==='Enter'){ const id=(document.getElementById('bizId') as HTMLInputElement)?.value; if (id) getReviews(id); } }} style={{ maxWidth: 220 }} />
+              <span className="muted text-sm" style={{ alignSelf: 'center' }}>{t('clickToSort')}</span>
+              <input className="input" placeholder={t('filterText')} title={kbShortcuts ? t('enterReFetchEscClear') : ''} value={reviewsFilterText} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setReviewsFilterText(v); try { localStorage.setItem('sync_reviews_filter', v); } catch {} }} onKeyDown={(e) => { if (!kbShortcuts) return; const k=(e as any).key; if (k==='Escape'){ setReviewsFilterText(''); try { localStorage.setItem('sync_reviews_filter',''); } catch {} } if (k==='Enter'){ const id=(document.getElementById('bizId') as HTMLInputElement)?.value; if (id) getReviews(id); } }} style={{ maxWidth: 220 }} />
               <button className="btn" onClick={() => {
                 // CSV export for reviews table
                 try {
                   const rows: any[] = Array.isArray(reviewsList?.items) ? (reviewsList.items as any[]) : [];
-                  if (!rows.length) { showToast('No reviews to export'); return; }
+                  if (!rows.length) { showToast(t('noReviewsToExport')); return; }
                   const headers = ['id','user_id','created_at','recommend_status','review_text'];
                   const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
                   const onlyVisible = (document.getElementById('revExportVisible') as HTMLInputElement)?.checked;
@@ -997,10 +999,10 @@ export default function App() {
                   a.download = `reviews_${Date.now()}.csv`;
                   a.click();
                   URL.revokeObjectURL(url);
-                  showToast('Exported CSV', 'success');
-                } catch (e: any) { showToast(e?.message || 'CSV export error'); }
-              }}>export CSV</button>
-              <label className="muted text-xs" title="Export only current page after filtering"><input id="revExportVisible" type="checkbox" style={{ marginLeft: 6, marginRight: 4 }} /> visible only</label>
+                  showToast(t('exportedCsv'), 'success');
+                } catch (e: any) { showToast(e?.message || t('csvExportError')); }
+              }}>{t('exportCsv')}</button>
+              <label className="muted text-xs" title={t('exportOnlyVisible')}><input id="revExportVisible" type="checkbox" style={{ marginLeft: 6, marginRight: 4 }} /> {t('visibleOnly')}</label>
               <button className="btn" onClick={() => {
                 // JSON export for reviews
                 try {
@@ -1012,9 +1014,9 @@ export default function App() {
                   a.download = `reviews_${Date.now()}.json`;
                   a.click();
                   URL.revokeObjectURL(url);
-                  showToast('Exported JSON', 'success');
-                } catch (e: any) { showToast(e?.message || 'JSON export error'); }
-              }}>export JSON</button>
+                  showToast(t('exportedJson'), 'success');
+                } catch (e: any) { showToast(e?.message || t('jsonExportError')); }
+              }}>{t('exportJson')}</button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }} className={compactRows ? 'compact' : ''}>
@@ -1058,8 +1060,8 @@ export default function App() {
                       <td style={{ padding: '6px 8px', borderBottom: '1px solid #222', textAlign: 'center' }}>{r.recommend_status ? '✓' : '✗'}</td>
                       <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>{r.review_text || ''}</td>
                       <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>
-                        <button className="btn" onClick={() => { try { (navigator as any)?.clipboard?.writeText(String(r.id)); showToast('copied id','success'); } catch {} }}>copy id</button>
-                        <button className="btn" onClick={() => { try { (navigator as any)?.clipboard?.writeText(String(r.user_id)); showToast('copied user','success'); } catch {} }} style={{ marginLeft: 6 }}>copy user</button>
+                        <button className="btn" onClick={() => { try { (navigator as any)?.clipboard?.writeText(String(r.id)); showToast(t('copiedId'),'success'); } catch {} }}>{t('copyId')}</button>
+                        <button className="btn" onClick={() => { try { (navigator as any)?.clipboard?.writeText(String(r.user_id)); showToast(t('copiedUser'),'success'); } catch {} }} style={{ marginLeft: 6 }}>{t('copyUser')}</button>
                       </td>
                     </tr>
                     ));
@@ -1100,7 +1102,7 @@ export default function App() {
                   params.set('format', 'csv');
                   window.open(`/api/business/analytics/reviews-summary?${params.toString()}`, '_blank');
                 } catch {}
-              }}>export CSV</button>
+              }}>{t('exportCsv')}</button>
             </div>
             <div className="muted text-xs" style={{ marginBottom: 4 }}>
               <span style={{ display: 'inline-block', width: 8, height: 8, background: '#2e7d32', marginRight: 4 }}></span>recommend
@@ -1159,7 +1161,7 @@ export default function App() {
             GET matches
           </button>
           <CopyCurlButton tag={'wishlist:matches'} getCurl={getCurl} />
-          <button className="btn" onClick={() => setWishlistMatches(null as any)}>clear</button>
+          <button className="btn" onClick={() => setWishlistMatches(null as any)}>{t('clear')}</button>
         </div>
         <CopyButton getText={() => JSON.stringify(wishlistMatches, null, 2)} />
         <pre>{JSON.stringify(wishlistMatches, null, 2)}</pre>
@@ -1196,7 +1198,7 @@ export default function App() {
           >
             MARK ALL READ
           </button>
-          <button className="btn" onClick={() => { setNotifications(null as any); setUnreadCount(0 as any); }}>clear</button>
+          <button className="btn" onClick={() => { setNotifications(null as any); setUnreadCount(0 as any); }}>{t('clear')}</button>
         </div>
         <div>
           {Array.isArray(notifications?.items) ? (
@@ -1250,7 +1252,7 @@ export default function App() {
             GET products
           </button>
           <CopyCurlButton tag={'products:get'} getCurl={getCurl} />
-          <button className="btn" onClick={() => setProducts(null as any)}>clear</button>
+          <button className="btn" onClick={() => setProducts(null as any)}>{t('clear')}</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
           <input id="prodName" placeholder="product_name (min 2 chars)" />
@@ -1333,7 +1335,7 @@ export default function App() {
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button onClick={postAd}>POST ad</button>
           <CopyCurlButton tag={'ads:post'} getCurl={getCurl} />
-          <button className="btn" onClick={() => setAdsResult(null as any)}>clear</button>
+          <button className="btn" onClick={() => setAdsResult(null as any)}>{t('clear')}</button>
         </div>
         <CopyButton getText={() => JSON.stringify(adsResult, null, 2)} />
         <pre>{JSON.stringify(adsResult, null, 2)}</pre>
@@ -1428,7 +1430,7 @@ export default function App() {
           </div>
           {/* Go to page (offers) */}
           <div className="flex" style={{ gap: 6, alignItems: 'center', marginTop: 6 }}>
-          <input id="offersGoto" className="input" placeholder="go to page" style={{ width: 110 }} onKeyDown={(e) => { const k=(e as any).key; if (k === 'Enter') { (document.getElementById('offersGoBtn') as HTMLButtonElement)?.click(); } if (kbShortcuts && k==='Escape'){ (document.getElementById('offersGoto') as HTMLInputElement).value=''; } }} />
+          <input id="offersGoto" className="input" placeholder={t('goToPage')} style={{ width: 110 }} onKeyDown={(e) => { const k=(e as any).key; if (k === 'Enter') { (document.getElementById('offersGoBtn') as HTMLButtonElement)?.click(); } if (kbShortcuts && k==='Escape'){ (document.getElementById('offersGoto') as HTMLInputElement).value=''; } }} />
             <button id="offersGoBtn" className="btn" title="go" onClick={() => {
               try {
                 const total = Number(offersResult?.offers_list?.total || 0);
@@ -1551,7 +1553,7 @@ export default function App() {
         {Array.isArray(offersResult?.offers_list?.items) && (offersResult.offers_list.items as any[]).length ? (
           <div style={{ marginTop: 10 }}>
             <div className="flex gap-2" style={{ marginBottom: 6 }}>
-              <span className="muted text-sm" style={{ alignSelf: 'center' }}>{isLoadingOffers ? 'loading…' : 'click column headers to sort'}</span>
+              <span className="muted text-sm" style={{ alignSelf: 'center' }}>{isLoadingOffers ? t('loading') : t('clickToSort')}</span>
               <button className="btn" onClick={() => {
                 // CSV export for offers
                 try {
@@ -1570,7 +1572,7 @@ export default function App() {
                   URL.revokeObjectURL(url);
                   showToast('Exported CSV', 'success');
                 } catch (e: any) { showToast(e?.message || 'CSV export error'); }
-              }}>export CSV</button>
+              }}>{t('exportCsv')}</button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }} className={compactRows ? 'compact' : ''}>
@@ -1605,7 +1607,7 @@ export default function App() {
                       <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>{o.start_date || ''}</td>
                       <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>{o.end_date || ''}</td>
                       <td style={{ padding: '6px 8px', borderBottom: '1px solid #222' }}>
-                        <button className="btn" onClick={() => { try { (navigator as any)?.clipboard?.writeText(String(o.id)); showToast('copied offer id','success'); } catch {} }}>copy id</button>
+                        <button className="btn" onClick={() => { try { (navigator as any)?.clipboard?.writeText(String(o.id)); showToast(t('copiedOfferId'),'success'); } catch {} }}>{t('copyId')}</button>
                       </td>
                     </tr>
                   ))}
@@ -1618,7 +1620,7 @@ export default function App() {
         {Array.isArray(offersResult?.coupons_preview?.items) && (offersResult.coupons_preview.items as any[]).length ? (
           <div style={{ marginTop: 10 }}>
             <div className="flex gap-2" style={{ marginBottom: 6 }}>
-              <span className="muted text-sm" style={{ alignSelf: 'center' }}>{isLoadingCoupons ? 'loading…' : 'click column headers to sort'}</span>
+              <span className="muted text-sm" style={{ alignSelf: 'center' }}>{isLoadingCoupons ? t('loading') : t('clickToSort')}</span>
               <button className="btn" onClick={() => {
                 // CSV export for coupons preview
                 try {
@@ -1637,7 +1639,7 @@ export default function App() {
                   URL.revokeObjectURL(url);
                   showToast('Exported CSV', 'success');
                 } catch (e: any) { showToast(e?.message || 'CSV export error'); }
-              }}>export CSV</button>
+              }}>{t('exportCsv')}</button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }} className={compactRows ? 'compact' : ''}>
@@ -1685,13 +1687,13 @@ export default function App() {
         {activeTab !== 'trends' ? null : (
         <>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input id="trendBizId" placeholder="businessId (optional)" aria-label="Trends businessId" onChange={(e) => { try { localStorage.setItem('sync_trend_biz_id', (e.target as HTMLInputElement).value || ''); } catch {} }} />
+          <input id="trendBizId" placeholder={t('businessIdOptional')} aria-label="Trends businessId" onChange={(e) => { try { localStorage.setItem('sync_trend_biz_id', (e.target as HTMLInputElement).value || ''); } catch {} }} />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="checkbox" id="trendGroupBiz" aria-label="Group trends by business" onChange={(e) => { try { localStorage.setItem('sync_trend_group', (e.target as HTMLInputElement).checked ? '1' : ''); } catch {} }} /> group by business
+            <input type="checkbox" id="trendGroupBiz" aria-label="Group trends by business" onChange={(e) => { try { localStorage.setItem('sync_trend_group', (e.target as HTMLInputElement).checked ? '1' : ''); } catch {} }} /> {t('groupByBusiness')}
           </label>
           <AnalyticsControls sinceDays={analyticsSinceDays} setSinceDays={setAnalyticsSinceDays} tz={analyticsTz} setTz={setAnalyticsTz} fill={analyticsFill} setFill={setAnalyticsFill} locale={(() => { try { const p=new URL(window.location.href).searchParams.get('locale'); return p || localStorage.getItem('sync_analytics_locale') || 'en'; } catch { return 'en'; } })()} setLocale={(v) => { try { localStorage.setItem('sync_analytics_locale', v); const u=new URL(window.location.href); if (v) u.searchParams.set('locale', v); else u.searchParams.delete('locale'); window.history.replaceState(null, '', u.toString()); } catch {} }} onReset={() => { /* no-op additional */ }} />
           <label className="muted text-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="checkbox" checked={showTooltips} onChange={(e) => { const v=(e.target as HTMLInputElement).checked; setShowTooltips(v); try { localStorage.setItem('sync_tooltips', v ? '1' : ''); } catch {} }} /> tooltips
+            <input type="checkbox" checked={showTooltips} onChange={(e) => { const v=(e.target as HTMLInputElement).checked; setShowTooltips(v); try { localStorage.setItem('sync_tooltips', v ? '1' : ''); } catch {} }} /> {t('tooltips')}
           </label>
           <button onClick={getTrends}>GET trends</button>
           {trendsError ? (
@@ -1704,8 +1706,8 @@ export default function App() {
           {/* Reset now handled by AnalyticsControls */}
           <AnalyticsCsvButton endpoint={'/api/business/analytics/trends'} params={{ businessId: (document.getElementById('trendBizId') as HTMLInputElement)?.value?.trim() || '', group: (document.getElementById('trendGroupBiz') as HTMLInputElement)?.checked ? 'business' : '', sinceDays: analyticsSinceDays, tz: analyticsTz, fill: analyticsFill }} acceptLanguage={(() => { try { const p=new URL(window.location.href).searchParams.get('locale'); return p || localStorage.getItem('sync_analytics_locale') || 'en'; } catch { return 'en'; } })()} />
           <CopyCurlButton tag={'analytics:trends'} getCurl={getCurl} />
-          <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
-          <button className="btn" onClick={() => setTrendsResult(null as any)}>clear</button>
+          <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>{t('copyLastCurl')}</button>
+          <button className="btn" onClick={() => setTrendsResult(null as any)}>{t('clear')}</button>
         </div>
         {isLoadingTrends ? (
           <div className="muted text-sm" style={{ marginTop: 8 }}>Loading trends…</div>
@@ -1782,7 +1784,7 @@ export default function App() {
             <input type="checkbox" id="funnelGroupBiz" aria-label="Group funnel by business" onChange={(e) => { try { localStorage.setItem('sync_funnel_group', (e.target as HTMLInputElement).checked ? '1' : ''); } catch {} }} /> group by business
           </label>
           <AnalyticsControls sinceDays={analyticsSinceDays} setSinceDays={setAnalyticsSinceDays} tz={analyticsTz} setTz={setAnalyticsTz} fill={analyticsFill} setFill={setAnalyticsFill} locale={(() => { try { const p=new URL(window.location.href).searchParams.get('locale'); return p || localStorage.getItem('sync_analytics_locale') || 'en'; } catch { return 'en'; } })()} setLocale={(v) => { try { localStorage.setItem('sync_analytics_locale', v); const u=new URL(window.location.href); if (v) u.searchParams.set('locale', v); else u.searchParams.delete('locale'); window.history.replaceState(null, '', u.toString()); } catch {} }} onReset={() => { /* no-op */ }} />
-          <button className="btn" onClick={getFunnel}>GET funnel</button>
+          <button className="btn" onClick={getFunnel}>{t('getFunnel')}</button>
           {funnelError ? (
             <div className="badge" style={{ background: 'var(--error-bg)', color: 'var(--error-fg)' }}>
               {funnelError}
@@ -1793,8 +1795,8 @@ export default function App() {
           <button className="btn" title="Reset analytics controls" onClick={() => { setAnalyticsSinceDays(7); setAnalyticsTz(''); setAnalyticsFill(true); try { localStorage.setItem('sync_analytics_since_days','7'); localStorage.setItem('sync_analytics_tz',''); localStorage.setItem('sync_analytics_fill','1'); } catch {} }}>reset</button>
           <AnalyticsCsvButton endpoint={'/api/business/analytics/funnel'} params={{ businessId: (document.getElementById('funnelBizId') as HTMLInputElement)?.value?.trim() || '', group: (document.getElementById('funnelGroupBiz') as HTMLInputElement)?.checked ? 'business' : '', sinceDays: analyticsSinceDays, tz: analyticsTz, fill: analyticsFill }} acceptLanguage={(() => { try { const p=new URL(window.location.href).searchParams.get('locale'); return p || localStorage.getItem('sync_analytics_locale') || 'en'; } catch { return 'en'; } })()} />
           <CopyCurlButton tag={'analytics:funnel'} getCurl={getCurl} />
-          <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
-          <button className="btn" onClick={() => setFunnelResult(null as any)}>clear</button>
+          <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>{t('copyLastCurl')}</button>
+          <button className="btn" onClick={() => setFunnelResult(null as any)}>{t('clear')}</button>
         </div>
         {isLoadingFunnel ? (
           <div className="muted text-sm" style={{ marginTop: 8 }}>Loading funnel…</div>
@@ -2004,8 +2006,8 @@ export default function App() {
                   <button className="btn" disabled={!maxPage || !canNext} aria-disabled={!maxPage || !canNext} onClick={() => { try { const el = (document.getElementById('issuedOffset') as HTMLInputElement); const lastPage = Math.max(1, Number(maxPage||1)); const lastOffset = (lastPage - 1) * lim; el.value = String(lastOffset); localStorage.setItem('sync_issued_offset', String(lastOffset)); } catch {} }}>Last</button>
                   <span className="muted text-sm" role="status" aria-live="polite" style={{ marginLeft: 6 }}>{maxPage ? `Page ${curPage} of ${maxPage}` : `Page ${curPage}`}{total ? ` • Total ${total}` : ''}</span>
                   <label className="muted text-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
-                    <span>Go to</span>
-                    <input id="issuedGoPage" className="input" type="number" min={1 as any} style={{ width: 80 }} aria-label="Go to page" defaultValue={curPage as any} />
+                    <span>{t('goTo')}</span>
+                    <input id="issuedGoPage" className="input" type="number" min={1 as any} style={{ width: 80 }} aria-label={t('goToPage')} defaultValue={curPage as any} />
                     <button className="btn" onClick={() => {
                       try {
                         const total = Number(((window as any).issuedResult?.total) || 0);
@@ -2047,7 +2049,7 @@ export default function App() {
               (window as any).issuedResult = j; // for quick inspection
               showToast(j?.ok ? 'Loaded' : (j?.error || 'Error'));
             } catch (e: any) { showToast(e?.message || 'Error', 'error'); }
-          }}>GET issued</button>
+          }}>{t('getIssued')}</button>
           <AnalyticsCsvButton endpoint={'/api/business/analytics/coupons-issued'} params={{ businessId: (document.getElementById('issuedBizId') as HTMLInputElement)?.value?.trim() || '', group: (document.getElementById('issuedGroupBiz') as HTMLInputElement)?.checked ? 'business' : '', order: (document.getElementById('issuedOrder') as HTMLSelectElement)?.value || '', limit: (document.getElementById('issuedLimit') as HTMLInputElement)?.value || '', offset: (document.getElementById('issuedOffset') as HTMLInputElement)?.value || '', sinceDays: analyticsSinceDays, tz: analyticsTz, fill: analyticsFill }} acceptLanguage={(() => { try { const p=new URL(window.location.href).searchParams.get('locale'); return p || localStorage.getItem('sync_analytics_locale') || 'en'; } catch { return 'en'; } })()} />
           <CopyCurlButton tag={'analytics:issued'} getCurl={getCurl} />
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
@@ -2202,8 +2204,8 @@ export default function App() {
           <div className="flex gap-2">
             <button className="btn" onClick={getRateLimitDiagnostics}>GET ratelimit</button>
             <CopyCurlButton tag={'platform:ratelimit'} getCurl={getCurl} />
-            <button className="btn" onClick={exportRateLimitJson} disabled={!ratelimitResult}>export JSON</button>
-            <button className="btn" onClick={exportRateLimitCsv} disabled={!Array.isArray((ratelimitResult as any)?.top_counters) || !(ratelimitResult as any)?.top_counters?.length}>export CSV</button>
+          <button className="btn" onClick={exportRateLimitJson} disabled={!ratelimitResult}>{t('exportJson')}</button>
+          <button className="btn" onClick={exportRateLimitCsv} disabled={!Array.isArray((ratelimitResult as any)?.top_counters) || !(ratelimitResult as any)?.top_counters?.length}>{t('exportCsv')}</button>
             <button className="btn" onClick={() => setRatelimitResult(null as any)}>clear</button>
           </div>
           <div className="muted text-sm" style={{ marginTop: 6 }}>Shared limiter requires table <code>public.rate_limits</code> and <code>FEATURE_SHARED_RATELIMIT=true</code>. When disabled, diagnostics run in memory mode.</div>

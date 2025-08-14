@@ -18,6 +18,8 @@
 - Manual smoke (PowerShell):
   - $env:BASE_URL="https://<site>.netlify.app"; node scripts/smoke.mjs
 - CI: hourly Smoke Tests (uses DEPLOYED_BASE_URL secret)
+ - Nightly load test respects `LOAD_BUDGET_STRICT` (fail on SLO breach when true)
+ - Optional Axe CI: set `AXE_CI=true` to run placeholder accessibility checks against preview
 - /api-docs should return 200
 
 #### Cache/CDN

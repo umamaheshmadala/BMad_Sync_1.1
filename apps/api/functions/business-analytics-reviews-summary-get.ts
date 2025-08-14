@@ -4,7 +4,7 @@ import { withErrorHandling } from '../../../packages/shared/errors';
 import { withRequestLogging } from '../../../packages/shared/logging';
 import { withRateLimit } from '../../../packages/shared/ratelimit';
 import { json, errorJson } from '../../../packages/shared/http';
-import { weakEtagForObject, contentDispositionFilenameForCsv, deriveLastModifiedFromIsoTimestamps } from '../../../packages/shared/cache';
+import { weakEtagForObject, deriveLastModifiedFromIsoTimestamps, buildCsvHeaders } from '../../../packages/shared/cache';
 
 export default withRequestLogging('business-analytics-reviews-summary', withRateLimit('business-analytics-reviews-summary-get', { limit: 120, windowMs: 60_000 }, withErrorHandling(async (req: Request) => {
   if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
@@ -98,7 +98,12 @@ export default withRequestLogging('business-analytics-reviews-summary', withRate
     };
     const displayHeaders = [t('day'),t('total'),t('recommend'),t('notRecommend')];
     const keys = ['day','total','recommend','notRecommend'];
-    const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
+    const escape = (v: any) => {
+      const s = v == null ? '' : String(v);
+      const needsPrefix = /^[=+\-@]/.test(s);
+      const safe = needsPrefix ? `'${s}` : s;
+      return JSON.stringify(safe);
+    };
     const csv = [displayHeaders.join(',')].concat(series.map(r => keys.map(h => escape((r as any)[h])).join(','))).join('\n');
     const ttl = Math.min(300, Math.max(30, sinceDays * 5));
     const lastModified = deriveLastModifiedFromIsoTimestamps(((reviews as any[])||[]).map((r:any)=>r.created_at), tz);
@@ -111,8 +116,8 @@ export default withRequestLogging('business-analytics-reviews-summary', withRate
       }
     }
     const etagCsv = weakEtagForObject(csv);
-    const headersCsv: Record<string, string> = { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Vary': 'Accept, Accept-Encoding, Authorization, Accept-Language', 'Last-Modified': lastModified, 'X-Cache-Key-Parts': `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};businessId=${businessId}`, 'Content-Disposition': `attachment; filename=${contentDispositionFilenameForCsv('reviews_summary')}` };
-    if (etagCsv) headersCsv['ETag'] = etagCsv;
+    const headersCsv = buildCsvHeaders({ baseName: 'reviews_summary', ttlSeconds: ttl, lastModified, cacheKeyParts: `sinceDays=${sinceDays};fill=${fill};tz=${tz||''};businessId=${businessId}` , lang });
+    if (etagCsv) (headersCsv as any)['ETag'] = etagCsv;
     const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
     const allow304 = !(typeof process !== 'undefined' && (process as any)?.env && (((process as any).env.VITEST) || ((process as any).env.NODE_ENV === 'test')));
     if (allow304 && etagCsv && ifNoneMatch === etagCsv) {

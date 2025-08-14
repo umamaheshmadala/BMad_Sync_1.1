@@ -163,7 +163,12 @@ export default withRequestLogging('business-analytics-coupons-issued', withRateL
       const end = limit != null ? start + limit : undefined;
       const page = sorted.slice(start, end);
       const headersSummary = expand.includes('business') ? [t('businessId'),t('businessName'),t('total'),t('avgPerDay'),t('firstDay'),t('lastDay')] : [t('businessId'),t('total'),t('avgPerDay'),t('firstDay'),t('lastDay')];
-      const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
+      const escape = (v: any) => {
+        const s = v == null ? '' : String(v);
+        const needsPrefix = /^[=+\-@]/.test(s);
+        const safe = needsPrefix ? `'${s}` : s;
+        return JSON.stringify(safe);
+      };
       let lines: string[] = [headersSummary.join(',')];
       for (const r of page) {
         const row = expand.includes('business') ? [r.businessId, bizNames[r.businessId] || '', r.total, r.avgPerDay, r.firstDay || '', r.lastDay || ''] : [r.businessId, r.total, r.avgPerDay, r.firstDay || '', r.lastDay || ''];
@@ -188,7 +193,12 @@ export default withRequestLogging('business-analytics-coupons-issued', withRateL
       return new Response(csv, { status: 200, headers: headersCsv });
     }
     const headers = group === 'business' ? (expand.includes('business') ? [t('businessId'),t('businessName'),t('day'),t('issued')] : [t('businessId'),t('day'),t('issued')]) : [t('day'),t('issued')];
-    const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
+    const escape = (v: any) => {
+      const s = v == null ? '' : String(v);
+      const needsPrefix = /^[=+\-@]/.test(s);
+      const safe = needsPrefix ? `'${s}` : s;
+      return JSON.stringify(safe);
+    };
     let lines: string[] = [headers.join(',')];
     if (group === 'business') {
       let bizNames: Record<string, string> = {};

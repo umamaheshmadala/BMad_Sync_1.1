@@ -3,6 +3,9 @@ info:
   title: SynC API (MVP Skeleton)
   version: 0.1.8
   description: REST-ish endpoints implemented via Netlify Functions with Supabase Auth.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
 servers:
   - url: https://tiny-bombolone-8f8acf.netlify.app
     description: Production
@@ -112,6 +115,8 @@ components:
 paths:
   /api/auth/signup:
     post:
+      security: []
+      operationId: authSignup
       summary: User signup (proxy to Supabase)
       requestBody:
         required: true
@@ -140,6 +145,12 @@ paths:
             RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
             RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
             RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '429':
           description: Too Many Requests
           content:
@@ -155,6 +166,8 @@ paths:
               schema: { type: integer }
   /api/auth/login:
     post:
+      security: []
+      operationId: authLogin
       summary: User login (proxy to Supabase)
       requestBody:
         required: true
@@ -168,6 +181,12 @@ paths:
       responses:
         '200':
           description: OK
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           headers:
             RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
             RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
@@ -380,6 +399,7 @@ paths:
         '200': { description: OK }
   /api/business/signup:
     post:
+      security: []
       summary: Business owner signup (proxy to Supabase)
       requestBody:
         required: true
@@ -394,6 +414,7 @@ paths:
         '200': { description: OK }
   /api/business/login:
     post:
+      security: []
       summary: Business owner login (proxy to Supabase)
       requestBody:
         required: true
@@ -771,6 +792,7 @@ paths:
   /api/business/analytics/trends:
     get:
       security: [ { bearerAuth: [] } ]
+      operationId: getBusinessAnalyticsTrends
       summary: Peer and marketing trends
       parameters:
         - in: query
@@ -801,16 +823,51 @@ paths:
           required: false
           schema: { type: string, enum: ["true","false"] }
           description: When `false`, disables zero-fill of missing days for smaller payloads (default `true`).
+        - in: query
+          name: format
+          required: false
+          schema: { type: string, enum: [csv] }
+          description: When `csv`, returns `text/csv` with localized headers; response includes `Content-Language` and RFC5987 filename.
       responses:
         '400':
           description: Bad Request (range exceeds cap when fill=true or invalid tz)
-      responses:
         '200':
           description: OK
           headers:
+            ETag: { description: Weak ETag for cache revalidation, schema: { type: string } }
+            Last-Modified: { description: Last modified time derived from newest series day, schema: { type: string } }
+            Vary: { description: 'Accept, Accept-Encoding, Authorization, Accept-Language', schema: { type: string } }
+            Content-Language: { $ref: '#/components/headers/Content-Language' }
             RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
             RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
             RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+          content:
+            text/csv:
+              examples:
+                curl_en:
+                  summary: cURL (English CSV)
+                  description: |
+                    curl -sS -D - "$BASE_URL/api/business/analytics/trends?sinceDays=7&format=csv" -H "Authorization: $OWNER_BEARER" -o trends_en.csv
+                en:
+                  summary: CSV (English headers)
+                  value: |
+                    day,review_total,review_recommend,coupon_collected,coupon_redeemed
+                    2025-08-10,5,3,8,4
+                es:
+                  summary: CSV (Español)
+                  value: |
+                    día,reseñas_total,reseñas_recomiendan,cupones_colectados,cupones_canjeados
+                    2025-08-10,5,3,8,4
+                fr:
+                  summary: CSV (Français)
+                  value: |
+                    jour,avis_total,avis_recommandent,coupons_collectés,coupons_utilisés
+                    2025-08-10,5,3,8,4
+                pt:
+                  summary: CSV (Português)
+                  value: |
+                    dia,avaliacoes_total,avaliacoes_recomendam,cupons_coletados,cupons_resgatados
+                    2025-08-10,5,3,8,4
         '401':
           description: Unauthorized
           content:
@@ -839,6 +896,7 @@ paths:
   /api/business/analytics/funnel:
     get:
       security: [ { bearerAuth: [] } ]
+      operationId: getBusinessAnalyticsFunnel
       summary: Coupon conversion funnel
       parameters:
         - in: query
@@ -869,16 +927,51 @@ paths:
           required: false
           schema: { type: string, enum: ["true","false"] }
           description: When `false`, disables zero-fill of missing days in `funnelByDay` (default `true`).
+        - in: query
+          name: format
+          required: false
+          schema: { type: string, enum: [csv] }
+          description: When `csv`, returns `text/csv` with localized headers; response includes `Content-Language` and RFC5987 filename.
       responses:
         '400':
           description: Bad Request (range exceeds cap when fill=true)
-      responses:
         '200':
           description: OK
           headers:
+            ETag: { description: Weak ETag for cache revalidation, schema: { type: string } }
+            Last-Modified: { description: Last modified time derived from newest series day, schema: { type: string } }
+            Vary: { description: 'Accept, Accept-Encoding, Authorization, Accept-Language', schema: { type: string } }
+            Content-Language: { $ref: '#/components/headers/Content-Language' }
             RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
             RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
             RateLimit-Reset: { $ref: '#/components/headers/RateLimit-Reset' }
+          content:
+            text/csv:
+              examples:
+                curl_es:
+                  summary: cURL (Spanish CSV)
+                  description: |
+                    curl -sS -D - "$BASE_URL/api/business/analytics/funnel?sinceDays=7&format=csv" -H "Authorization: $OWNER_BEARER" -H "Accept-Language: es" -o funnel_es.csv
+                en:
+                  summary: CSV (English headers)
+                  value: |
+                    day,collected,redeemed
+                    2025-08-10,8,4
+                es:
+                  summary: CSV (Español)
+                  value: |
+                    día,colectados,canjeados
+                    2025-08-10,8,4
+                fr:
+                  summary: CSV (Français)
+                  value: |
+                    jour,collectés,utilisés
+                    2025-08-10,8,4
+                pt:
+                  summary: CSV (Português)
+                  value: |
+                    dia,coletados,resgatados
+                    2025-08-10,8,4
         '401':
           description: Unauthorized
           content:
@@ -919,10 +1012,10 @@ paths:
                 target_parameters: { type: object }
       responses:
         '200': { description: OK }
-  /api/business/ads:
   /api/business/analytics/reviews-summary:
     get:
       security: [ { bearerAuth: [] } ]
+      operationId: getReviewsSummary
       summary: Reviews summary by day
       parameters:
         - in: query
@@ -956,6 +1049,14 @@ paths:
             ETag: { description: Weak ETag for cache revalidation, schema: { type: string } }
             Last-Modified: { description: Last modified time derived from newest series day, schema: { type: string } }
             Vary: { description: 'Accept, Accept-Encoding, Authorization, Accept-Language', schema: { type: string } }
+            Content-Language: { $ref: '#/components/headers/Content-Language' }
+          content:
+            text/csv:
+              examples:
+                curl_pt:
+                  summary: cURL (Portuguese CSV)
+                  description: |
+                    curl -sS -D - "$BASE_URL/api/business/analytics/reviews-summary?businessId=test-biz-1&sinceDays=7&format=csv" -H "Authorization: $OWNER_BEARER" -H "Accept-Language: pt" -o reviews_summary_pt.csv
         '400':
           description: Bad Request (range exceeds cap when fill=true or invalid tz)
         '401':
@@ -976,6 +1077,7 @@ paths:
   /api/business/analytics/coupons-issued:
     get:
       security: [ { bearerAuth: [] } ]
+      operationId: getCouponsIssued
       summary: Coupons issued by day
       parameters:
         - in: query
@@ -1037,7 +1139,8 @@ paths:
           headers:
             ETag: { description: Weak ETag for cache revalidation, schema: { type: string } }
             Last-Modified: { description: Last modified time derived from newest series day, schema: { type: string } }
-            Vary: { description: 'Accept, Accept-Encoding, Authorization', schema: { type: string } }
+            Vary: { description: 'Accept, Accept-Encoding, Authorization, Accept-Language', schema: { type: string } }
+            Content-Language: { $ref: '#/components/headers/Content-Language' }
           content:
             application/json:
               examples:
@@ -1066,6 +1169,30 @@ paths:
                       biz-2: { business_name: 'Books Beta' }
             text/csv:
               examples:
+                curl_owner_en:
+                  summary: cURL (Owner grouped CSV)
+                  description: |
+                    curl -sS -D - "$BASE_URL/api/business/analytics/coupons-issued?group=business&sinceDays=30&order=total.desc&limit=10&format=csv" -H "Authorization: $OWNER_BEARER" -o coupons_issued_en.csv
+                en:
+                  summary: CSV (English headers)
+                  value: |
+                    businessId,businessName,total,avgPerDay,firstDay,lastDay
+                    biz-1,Cafe Alpha,3,1.5,2025-08-10,2025-08-11
+                es:
+                  summary: CSV (Español)
+                  value: |
+                    negocioId,nombreNegocio,total,promedioDiario,primero,último
+                    biz-1,Cafe Alpha,3,1.5,2025-08-10,2025-08-11
+                fr:
+                  summary: CSV (Français)
+                  value: |
+                    entrepriseId,nomD'Entreprise,total,moyenneParJour,premier,dernier
+                    biz-1,Cafe Alpha,3,1.5,2025-08-10,2025-08-11
+                pt:
+                  summary: CSV (Português)
+                  value: |
+                    empresaId,nomeEmpresa,total,mediaPorDia,primeiro,ultimo
+                    biz-1,Cafe Alpha,3,1.5,2025-08-10,2025-08-11
                 groupedCsvPerDay:
                   summary: Grouped CSV per-day rows with businessName
                   value: |
@@ -1079,9 +1206,16 @@ paths:
                     businessId,businessName,total,avgPerDay,firstDay,lastDay
                     biz-1,Cafe Alpha,3,1.5,2025-08-10,2025-08-11
                     biz-2,Books Beta,4,4,2025-08-11,2025-08-11
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/platform/revenue:
     get:
       security: [ { bearerAuth: [] } ]
+      operationId: getPlatformRevenue
       summary: Platform revenue summary
       responses:
         '200':
@@ -1105,6 +1239,7 @@ paths:
   /api/platform/ratelimit:
     get:
       security: [ { bearerAuth: [] } ]
+      operationId: getPlatformRateLimit
       summary: Inspect shared rate limit counters (owner only)
       description: |
         Returns top rate limit counters when FEATURE_SHARED_RATELIMIT is enabled; otherwise returns a message indicating the feature is disabled.
@@ -1129,6 +1264,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   /api/platform/health:
     get:
+      security: []
+      operationId: getPlatformHealth
       summary: Platform health and feature flags
       responses:
         '200':
@@ -1147,6 +1284,12 @@ paths:
                       FEATURE_SUPABASE_AUTH: { type: boolean }
                       FEATURE_DEV_AUTH: { type: boolean }
                       FEATURE_SHARED_RATELIMIT: { type: boolean }
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/platform/config/pricing:
     put:
       security: [ { bearerAuth: [] } ]
@@ -1169,6 +1312,7 @@ paths:
 
   /api/platform/config:
     get:
+      security: []
       summary: Read platform configuration (merged with defaults)
       responses:
         '200': { description: OK }

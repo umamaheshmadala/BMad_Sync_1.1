@@ -11,7 +11,14 @@
     "build:web": "vite build apps/web-react",
     "preview:web": "vite preview apps/web-react --port 5173",
     "load:test": "node scripts/load-test.mjs",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "a11y:ci": "node scripts/axe-ci.mjs",
+    "e2e:install": "npx --yes playwright install --with-deps",
+    "e2e": "node tests/e2e/run.mjs",
+    "prepare": "husky install",
+    "lhci:install": "npx --yes @lhci/cli@0.13.x autorun --help >/dev/null 2>&1 || true",
+    "lhci": "npx --yes @lhci/cli@0.13.x autorun --collect.staticDistDir=apps/web-react/dist || true",
+    "size-limit": "npx --yes size-limit || true"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",
@@ -27,7 +34,22 @@
     "tailwindcss": "^4.1.11",
     "typescript": "^5.4.5",
     "vite": "^5.4.1",
-    "vitest": "^1.6.0"
+    "vitest": "^1.6.0",
+    "axe-core": "^4.9.1",
+    "jsdom": "^24.1.0",
+    "@playwright/test": "^1.47.1",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.9",
+    "conventional-changelog-cli": "^5.0.0",
+    "@lhci/cli": "^0.13.0",
+    "size-limit": "^11.1.4",
+    "@size-limit/file": "^11.1.4"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "tsc -p tsconfig.json --noEmit",
+      "git add"
+    ]
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

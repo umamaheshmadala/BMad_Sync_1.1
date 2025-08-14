@@ -75,7 +75,14 @@ async function main() {
       if (!cd.includes('filename')) failures.push('trends: CSV missing Content-Disposition filename');
       const cl = resCsv.res.headers.get('Content-Language') || '';
       if (ACCEPT_LANGUAGE && !cl) failures.push('trends: CSV missing Content-Language');
+      if (cd && !cd.toLowerCase().includes("filename*=")) failures.push('trends: CSV missing RFC5987 filename*');
       await saveSample('trends.csv', resCsv.text);
+      // 304 revalidation check (ETag)
+      const et = resCsv.res.headers.get('ETag');
+      if (et) {
+        const r2 = await fetch(url('/api/business/analytics/trends?sinceDays=1&format=csv'), { headers: Object.assign({}, (TOKEN?{Authorization:TOKEN}:{}), (ACCEPT_LANGUAGE?{'Accept-Language':ACCEPT_LANGUAGE}:{}), {'If-None-Match': et}) });
+        if (r2.status !== 304) failures.push('trends: expected 304 on ETag revalidation');
+      }
     }
   }
 
@@ -100,7 +107,13 @@ async function main() {
       if (!cd.includes('filename')) failures.push('funnel: CSV missing Content-Disposition filename');
       const cl = resCsv.res.headers.get('Content-Language') || '';
       if (ACCEPT_LANGUAGE && !cl) failures.push('funnel: CSV missing Content-Language');
+      if (cd && !cd.toLowerCase().includes("filename*=")) failures.push('funnel: CSV missing RFC5987 filename*');
       await saveSample('funnel.csv', resCsv.text);
+      const et = resCsv.res.headers.get('ETag');
+      if (et) {
+        const r2 = await fetch(url('/api/business/analytics/funnel?sinceDays=1&format=csv'), { headers: Object.assign({}, (TOKEN?{Authorization:TOKEN}:{}), (ACCEPT_LANGUAGE?{'Accept-Language':ACCEPT_LANGUAGE}:{}), {'If-None-Match': et}) });
+        if (r2.status !== 304) failures.push('funnel: expected 304 on ETag revalidation');
+      }
     }
   }
 
@@ -124,6 +137,7 @@ async function main() {
       if (!cd.toLowerCase().includes('attachment') || !cd.toLowerCase().includes('.csv')) {
         failures.push('coupons-issued: missing Content-Disposition for CSV');
       }
+      if (cd && !cd.toLowerCase().includes("filename*=")) failures.push('coupons-issued: CSV missing RFC5987 filename*');
       await saveSample('coupons-issued.csv', csv.text);
     }
   }
@@ -139,7 +153,13 @@ async function main() {
       if (!cd.toLowerCase().includes('attachment') || !cd.toLowerCase().includes('.csv')) {
         failures.push('reviews-summary: missing Content-Disposition for CSV');
       }
+      if (cd && !cd.toLowerCase().includes("filename*=")) failures.push('reviews-summary: CSV missing RFC5987 filename*');
       await saveSample('reviews-summary.csv', csv.text);
+      const et = csv.res.headers.get('ETag');
+      if (et) {
+        const r2 = await fetch(url('/api/business/analytics/reviews-summary?businessId=test-biz-1&sinceDays=3&format=csv'), { headers: Object.assign({}, (TOKEN?{Authorization:TOKEN}:{}), (ACCEPT_LANGUAGE?{'Accept-Language':ACCEPT_LANGUAGE}:{}), {'If-None-Match': et}) });
+        if (r2.status !== 304) failures.push('reviews-summary: expected 304 on ETag revalidation');
+      }
     }
   }
 

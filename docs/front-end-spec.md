@@ -71,10 +71,13 @@ Owner: UX Expert
 
 ## Accessibility
 - Keyboard-first; focus rings; semantic landmarks
+- Toasts use `aria-live="polite"` for announcements
+- Axe runs in CI against preview (gated by `AXE_CI=true`)
 - Contrast AA; prefers-reduced-motion
 
 ## Performance
 - Route code splitting; image lazy loading; skeletons
+- Bundle size budgets enforced in CI; Lighthouse runs on preview URL (/react) with perf > 90
 - Debounced search; minimized layout shift
 
 ## Error & Empty States
@@ -142,6 +145,45 @@ const a = document.createElement('a');
  a.click();
  URL.revokeObjectURL(url);
 ```
+
+### cURL recipes (JSON/CSV with Accept-Language)
+
+```bash
+# Trends JSON (English)
+curl -sS \
+  -H "Authorization: $OWNER_BEARER" \
+  "$BASE_URL/api/business/analytics/trends?sinceDays=7"
+
+# Trends CSV (French)
+curl -sS -D - \
+  -H "Authorization: $OWNER_BEARER" \
+  -H "Accept-Language: fr" \
+  "$BASE_URL/api/business/analytics/trends?sinceDays=7&format=csv" -o trends_fr.csv
+
+# Funnel CSV (Spanish)
+curl -sS -D - \
+  -H "Authorization: $OWNER_BEARER" \
+  -H "Accept-Language: es" \
+  "$BASE_URL/api/business/analytics/funnel?sinceDays=7&format=csv" -o funnel_es.csv
+
+# Reviews Summary CSV (Portuguese)
+curl -sS -D - \
+  -H "Authorization: $OWNER_BEARER" \
+  -H "Accept-Language: pt" \
+  "$BASE_URL/api/business/analytics/reviews-summary?businessId=test-biz-1&sinceDays=7&format=csv" -o reviews_summary_pt.csv
+
+# Coupons Issued CSV grouped (Owner; English)
+curl -sS -D - \
+  -H "Authorization: $OWNER_BEARER" \
+  "$BASE_URL/api/business/analytics/coupons-issued?group=business&sinceDays=30&order=total.desc&limit=10&format=csv" -o coupons_issued_en.csv
+```
+
+### UI i18n and accessibility
+
+- Strings centralized in `apps/web-react/src/ui/i18n.ts`; prefer a future `LocaleProvider` + `useLocale()` for component access.
+- Locale source of truth is URL `?locale=`; keep `localStorage` in sync for persistence.
+- Provide explicit roles/aria for tables and paginator; use `aria-live="polite"` for status.
+- Tooltips should be available on focus and dismissible via ESC.
 
 ## ETag Revalidation Examples (JS)
 

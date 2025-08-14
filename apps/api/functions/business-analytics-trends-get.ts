@@ -194,7 +194,12 @@ export default withRequestLogging('business-analytics-trends', withRateLimit('an
     }
     const displayHeaders = [t('day'),t('review_total'),t('review_recommend'),t('coupon_collected'),t('coupon_redeemed')];
     const fieldKeys = ['day','review_total','review_recommend','coupon_collected','coupon_redeemed'];
-    const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
+    const escape = (v: any) => {
+      const s = v == null ? '' : String(v);
+      const needsPrefix = /^[=+\-@]/.test(s);
+      const safe = needsPrefix ? `'${s}` : s;
+      return JSON.stringify(safe);
+    };
     const csv = [displayHeaders.join(',')].concat(rows.map(r => fieldKeys.map(h => escape((r as any)[h])).join(','))).join('\n');
     const ttl = Math.min(300, Math.max(30, sinceDays * 5));
     const lastModified = deriveLastModifiedFromIsoTimestamps([

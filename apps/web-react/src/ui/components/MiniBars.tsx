@@ -34,6 +34,37 @@ export function MiniBars({
           </div>
         ))}
       </div>
+      {/* Screen reader summary table for non-visual users */}
+      <div
+        style={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: 0,
+        }}
+      >
+        <table>
+          <thead>
+            <tr>
+              <th>day</th>
+              <th>value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map(([day, v]) => (
+              <tr key={`sr-${day}`}>
+                <td>{String(day)}</td>
+                <td>{String((v as any)?.total ?? (v as any)?.collected ?? (v as any)?.redeemed ?? v)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

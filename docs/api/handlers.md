@@ -1,3 +1,24 @@
+# API Handlers Notes
+
+## Security Headers
+
+Responses are served behind Netlify; additional headers applied via `netlify.toml`:
+- Content-Security-Policy (CSP)
+- X-Frame-Options: DENY
+- X-Content-Type-Options: nosniff
+- Referrer-Policy: no-referrer
+
+## Analytics CSV Localization
+
+For Trends, Funnel, Reviews Summary, and Coupons Issued CSV:
+- Send `Accept-Language` to localize header row and set `Content-Language`.
+- `Vary` includes `Accept-Language`.
+- Filenames include RFC5987 `filename*` parameter.
+
+## Caching / Revalidation
+
+- `ETag` and `Last-Modified` are provided when possible; clients may revalidate via `If-None-Match` or `If-Modified-Since`.
+
 # API Handlers Mapping — SynC MVP
 
 This maps `docs/api/openapi.yaml` routes to serverless function names and expected IO. Implement using Netlify Functions or Supabase Edge Functions.

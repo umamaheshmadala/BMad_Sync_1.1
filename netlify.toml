@@ -78,6 +78,7 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "no-referrer"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=(), interest-cohort=(), payment=()"
 
 [[headers]]
   for = "/api-docs.html"

@@ -2,6 +2,7 @@ import React from 'react';
 import * as Sentry from '@sentry/react';
 import { createRoot } from 'react-dom/client';
 import App from './ui/App';
+import { LocaleProvider } from './ui/i18n';
 // Sentry init (no-op if DSN not provided)
 try {
   // @ts-ignore
@@ -38,7 +39,9 @@ import './index.css';
 const container = document.getElementById('root')!;
 createRoot(container).render(
   <React.StrictMode>
-    <App />
+    <LocaleProvider>
+      <App />
+    </LocaleProvider>
   </React.StrictMode>
 );
 
