@@ -891,7 +891,8 @@ export default function App() {
         <>
         <div style={{ display: 'flex', gap: 8 }}>
           <input id="bizId" placeholder="businessId" onChange={(e) => { try { localStorage.setItem('sync_reviews_biz_id', (e.target as HTMLInputElement).value || ''); } catch {} }} />
-          <select className="input" value={reviewsPageSize as any} onChange={(e) => {
+          <label htmlFor="reviewsPageSize" className="muted text-sm" style={{ display: 'none' }}>Reviews page size</label>
+          <select id="reviewsPageSize" className="input" value={reviewsPageSize as any} onChange={(e) => {
             const n = Number((e.target as HTMLSelectElement).value || 10);
             setReviewsPageSize(n);
             setReviewsPage(1);
