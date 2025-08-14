@@ -2,7 +2,7 @@ import { createSupabaseClient } from '../../../packages/shared/supabaseClient';
 import { isPlatformOwner, getUserIdFromRequest } from '../../../packages/shared/auth';
 import { withRequestLogging } from '../../../packages/shared/logging';
 import { withRateLimit } from '../../../packages/shared/ratelimit';
-import { json } from '../../../packages/shared/http';
+import { json, errorJson } from '../../../packages/shared/http';
 import { withErrorHandling } from '../../../packages/shared/errors';
 
 type FunnelCounts = { issued: number; collected: number; shared: number; redeemed: number };
@@ -92,6 +92,14 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
   const tz = (url.searchParams.get('tz') || '').trim();
   const fillParam = url.searchParams.get('fill');
   const fill = fillParam == null ? true : String(fillParam).toLowerCase() !== 'false';
+  const MAX_FILL_SINCE_DAYS = 180;
+  if (fill && sinceDays > MAX_FILL_SINCE_DAYS) {
+    return errorJson(`sinceDays cannot exceed ${MAX_FILL_SINCE_DAYS} when fill=true`, 400, 'range_exceeds_cap', { maxSinceDays: MAX_FILL_SINCE_DAYS });
+  }
+  if (tz) {
+    try { new Intl.DateTimeFormat('en-CA', { timeZone: tz }); }
+    catch { return errorJson('Invalid IANA time zone', 400, 'invalid_tz'); }
+  }
   const keyFor = (iso?: string) => {
     try {
       if (!iso) return '';
@@ -150,12 +158,38 @@ export default withRequestLogging('business-analytics-funnel', withRateLimit('an
 
   const payload: any = { ok: true, funnel: totals, funnelByDay };
   if (group === 'business') payload.funnelByBusiness = byBusiness;
-  return json(payload, {
-    headers: {
-      'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=120',
-      'Netlify-CDN-Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=120',
-    },
+  // CSV output support
+  const fmt = (url.searchParams.get('format') || '').toLowerCase();
+  if (fmt === 'csv') {
+    const headers = ['day','collected','redeemed'];
+    const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
+    const keys = Object.keys(funnelByDay || {}).sort();
+    const csv = [headers.join(',')].concat(keys.map(k => {
+      const row = (funnelByDay as any)[k] || { collected: 0, redeemed: 0 };
+      return [k, row.collected || 0, row.redeemed || 0].map(escape).join(',');
+    })).join('\n');
+    const ttl = Math.min(300, Math.max(30, sinceDays * 5));
+    return new Response(csv, { status: 200, headers: { 'Content-Type': 'text/csv', 'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`, 'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120` } });
+  }
+  const etag = (() => {
+    try {
+      const key = JSON.stringify({ businessIdFilter, group, tz, fill, sinceDays, funnelByDay, totals });
+      let h = 2166136261 >>> 0;
+      for (let i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619); }
+      return 'W/"' + (h >>> 0).toString(16) + '"';
+    } catch { return undefined; }
+  })();
+  const ttl = Math.min(300, Math.max(30, sinceDays * 5));
+  const headers = new Headers({
+    'Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`,
+    'Netlify-CDN-Cache-Control': `public, max-age=0, s-maxage=${ttl}, stale-while-revalidate=120`,
   });
+  if (etag) headers.set('ETag', etag);
+  const ifNoneMatch = new Headers((req as any).headers || {}).get('if-none-match');
+  if (etag && ifNoneMatch === etag) {
+    return new Response(undefined, { status: 304, headers });
+  }
+  return json(payload, { headers });
 })));
 
 export const config = {

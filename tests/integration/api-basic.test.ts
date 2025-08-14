@@ -21,6 +21,8 @@ import notificationsGet from '../../apps/api/functions/users-notifications-get';
 import notificationReadItem from '../../apps/api/functions/users-notifications-read-item-put';
 import adsPost from '../../apps/api/functions/business-ads-post';
 import trendsGet from '../../apps/api/functions/business-analytics-trends-get';
+import reviewsSummaryGet from '../../apps/api/functions/business-analytics-reviews-summary-get';
+import couponsIssuedGet from '../../apps/api/functions/business-analytics-coupons-issued-get';
 import pricingPut from '../../apps/api/functions/platform-config-pricing-put';
 import authSignup from '../../apps/api/functions/auth-signup';
 import authLogin from '../../apps/api/functions/auth-login';
@@ -507,6 +509,72 @@ it('trends zero-fill and sinceDays clamping', async () => {
   expect(j.ok).toBe(true);
   // Expect at least 1 day present
   expect(Object.keys(j.trends.reviews).length).toBeGreaterThanOrEqual(1);
+});
+
+it('rejects large sinceDays when fill=true for trends', async () => {
+  const res = await trendsGet(makeReq(path(`/api/business/analytics/trends?sinceDays=1000`), 'GET'));
+  expect(res.status).toBe(400);
+});
+
+it('rejects invalid tz and supports CSV for trends', async () => {
+  const bad = await trendsGet(makeReq(path(`/api/business/analytics/trends?tz=Invalid/TZ`), 'GET'));
+  expect(bad.status).toBe(400);
+  const csv = await trendsGet(makeReq(path(`/api/business/analytics/trends?format=csv`), 'GET'));
+  expect(csv.headers.get('Content-Type')).toContain('text/csv');
+  expect(csv.headers.get('Cache-Control')).toMatch(/s-maxage=/);
+});
+
+it('reviews summary by day returns zero-filled series and enforces guard', async () => {
+  // Seed a few reviews with timestamps
+  const now = Date.now();
+  db.business_reviews.insert({ business_id: TEST_BIZ_1, recommend_status: true, created_at: new Date(now - 24*60*60*1000).toISOString() });
+  db.business_reviews.insert({ business_id: TEST_BIZ_1, recommend_status: false, created_at: new Date(now - 2*24*60*60*1000).toISOString() });
+
+  const ok = await reviewsSummaryGet(
+    makeReq(path(`/api/business/analytics/reviews-summary?businessId=${TEST_BIZ_1}&sinceDays=3`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(ok.status).toBe(200);
+  const j = await ok.json();
+  expect(j.ok).toBe(true);
+  expect(Array.isArray(j.byDay)).toBe(true);
+  // CSV variant returns cache headers
+  const okCsv = await reviewsSummaryGet(
+    makeReq(path(`/api/business/analytics/reviews-summary?businessId=${TEST_BIZ_1}&sinceDays=3&format=csv`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(okCsv.headers.get('Content-Type')).toContain('text/csv');
+  expect(okCsv.headers.get('Cache-Control')).toMatch(/s-maxage=/);
+  // Guard
+  const bad = await reviewsSummaryGet(
+    makeReq(path(`/api/business/analytics/reviews-summary?businessId=${TEST_BIZ_1}&sinceDays=1000`), 'GET', undefined, {
+      Authorization: bearer(TEST_USER_1, 'owner'),
+    })
+  );
+  expect(bad.status).toBe(400);
+});
+
+it('coupons issued grouped by business returns JSON and CSV', async () => {
+  // Seed a second business and coupons with recent start_date
+  db.businesses.insert({ id: 'biz-2', owner_user_id: TEST_USER_1 });
+  db.coupons.insert({ id: 'ci-1', business_id: TEST_BIZ_1, start_date: new Date().toISOString() });
+  db.coupons.insert({ id: 'ci-2', business_id: 'biz-2', start_date: new Date().toISOString() });
+
+  const owner = { Authorization: bearer(TEST_USER_1, 'owner') };
+  const resJson = await couponsIssuedGet(
+    makeReq(path(`/api/business/analytics/coupons-issued?group=business&sinceDays=2`), 'GET', undefined, owner)
+  );
+  expect(resJson.status).toBe(200);
+  const j = await resJson.json();
+  expect(j.ok).toBe(true);
+  expect(j.byBusiness).toBeTruthy();
+
+  const resCsv = await couponsIssuedGet(
+    makeReq(path(`/api/business/analytics/coupons-issued?group=business&sinceDays=2&format=csv`), 'GET', undefined, owner)
+  );
+  expect(resCsv.headers.get('Content-Type')).toContain('text/csv');
 });
 
 it('filters reviews by created_at date range', async () => {

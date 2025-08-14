@@ -110,6 +110,14 @@ Owner: UX Expert
 - Funnel: collected vs redeemed daily double bars using coupons series
 - Reviews: daily recommend vs not‑recommend bars using `trendsResult.trends.reviews`
 
+## Analytics Controls (UI)
+- Persisted controls via localStorage:
+  - `sync_analytics_since_days` (number)
+  - `sync_analytics_tz` (string)
+  - `sync_analytics_fill` (boolean as '1' or '')
+- Timezone presets dropdown with free‑text fallback (IANA): `UTC`, `America/Los_Angeles`, `America/New_York`, `Europe/London`, `Europe/Berlin`, `Asia/Kolkata`, `Asia/Singapore`, `Australia/Sydney`.
+- CSV exports open endpoints with `?format=csv` for Trends, Funnel, Reviews Summary; Reviews table provides client‑side CSV export of the current list.
+
 ## Acceptance Notes per Story (UI)
 - 1.2: Auth pages → `/dashboard` on success
 - 2.3: Onboarding only if interests missing

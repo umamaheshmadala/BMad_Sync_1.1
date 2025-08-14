@@ -64,8 +64,14 @@ export default function App() {
   const [funnelResult, setFunnelResult] = useState(null as any);
   const initialSinceDays = (() => { try { const v = Number(localStorage.getItem('sync_analytics_since_days') || '7'); return Math.max(1, Math.min(365, isFinite(v) ? v : 7)); } catch { return 7; } })();
   const [analyticsSinceDays, setAnalyticsSinceDays] = useState(initialSinceDays as number);
+  const initialAnalyticsTz = (() => { try { return localStorage.getItem('sync_analytics_tz') || ''; } catch { return ''; } })();
+  const [analyticsTz, setAnalyticsTz] = useState(initialAnalyticsTz as string);
+  const initialAnalyticsFill = (() => { try { return (localStorage.getItem('sync_analytics_fill') || '1') === '1'; } catch { return true; } })();
+  const [analyticsFill, setAnalyticsFill] = useState(initialAnalyticsFill as boolean);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false as boolean);
   const [isLoadingFunnel, setIsLoadingFunnel] = useState(false as boolean);
+  const [trendsError, setTrendsError] = useState('' as string);
+  const [funnelError, setFunnelError] = useState('' as string);
   const [isLoadingOffers, setIsLoadingOffers] = useState(false as boolean);
   const [isLoadingCoupons, setIsLoadingCoupons] = useState(false as boolean);
 	const [lastMeta, setLastMeta] = useState(null as any);
@@ -155,6 +161,8 @@ export default function App() {
   const [couponAnalytics, setCouponAnalytics] = useState(null as any);
   const [healthResult, setHealthResult] = useState(null as any);
   const [features, setFeatures] = useState({} as any);
+  const initialKbShortcuts = (() => { try { return (localStorage.getItem('sync_kb_shortcuts') || '1') === '1'; } catch { return true; } })();
+  const [kbShortcuts, setKbShortcuts] = useState(initialKbShortcuts as boolean);
   const [authResult, setAuthResult] = useState(null as any);
   const initialOffersSearch = (() => { try { return localStorage.getItem('sync_offers_search') || ''; } catch { return ''; } })();
   const [offersSearch, setOffersSearch] = useState(initialOffersSearch as string);
@@ -472,21 +480,33 @@ export default function App() {
 
   async function getTrends() {
     setIsLoadingTrends(true);
+    setTrendsError('');
     const bizId = (document.getElementById('trendBizId') as HTMLInputElement)?.value?.trim();
     const group = (document.getElementById('trendGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
     const params = new URLSearchParams();
     if (bizId) params.set('businessId', bizId);
     if (group) params.set('group', group);
     if (!params.has('sinceDays')) params.set('sinceDays', String(analyticsSinceDays || 7));
+    if (analyticsTz) params.set('tz', analyticsTz);
+    if (!analyticsFill) params.set('fill', 'false');
+    if (analyticsTz) params.set('tz', analyticsTz);
+    if (!analyticsFill) params.set('fill', 'false');
     const qs = params.toString() ? `?${params.toString()}` : '';
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10000);
     try {
       const res = await actionFetch('analytics:trends', `/api/business/analytics/trends${qs}`, { headers: { ...authHeaders }, signal: controller.signal } as any);
       recordHeaders(res);
+      if (res.status === 400) {
+        const err = await res.json().catch(() => ({}));
+        const msg = String(err?.error || 'Bad Request: adjust sinceDays or tz');
+        setTrendsError(msg);
+        showToast(msg, 'error');
+        return;
+      }
       const j = await res.json();
       setTrendsResult(j);
-      if (!j?.ok) showToast(j?.error || 'Trends fetch error');
+      if (!j?.ok) showToast(j?.error || 'Trends fetch error', 'error');
     } catch (e: any) {
       showToast(e?.name === 'AbortError' ? 'Trends timeout' : (e?.message || 'Trends error'));
     } finally {
@@ -497,6 +517,7 @@ export default function App() {
 
   async function getFunnel() {
     setIsLoadingFunnel(true);
+    setFunnelError('');
     const bizId = (document.getElementById('funnelBizId') as HTMLInputElement)?.value?.trim();
     const group = (document.getElementById('funnelGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
     const params = new URLSearchParams();
@@ -509,9 +530,16 @@ export default function App() {
     try {
       const res = await actionFetch('analytics:funnel', `/api/business/analytics/funnel${qs}`, { headers: { ...authHeaders }, signal: controller.signal } as any);
       recordHeaders(res);
+      if (res.status === 400) {
+        const err = await res.json().catch(() => ({}));
+        const msg = String(err?.error || 'Bad Request: adjust sinceDays or tz');
+        setFunnelError(msg);
+        showToast(msg, 'error');
+        return;
+      }
       const j = await res.json();
       setFunnelResult(j);
-      if (!j?.ok) showToast(j?.error || 'Funnel fetch error');
+      if (!j?.ok) showToast(j?.error || 'Funnel fetch error', 'error');
       // Also refresh trends in background for mini chart (collected/redeemed by day)
       try {
         const tParams = new URLSearchParams();
@@ -706,6 +734,13 @@ export default function App() {
         <h2 className="text-xl font-semibold" style={{ margin: 0 }}>SynC React UI (v0.1.8)</h2>
         <a href="/api-docs" target="_blank" rel="noreferrer" className="btn" title="Open API Docs">API Docs</a>
       </div>
+      {/* Keyboard shortcuts toggle */}
+      <div className="mb-2" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input type="checkbox" checked={kbShortcuts} onChange={(e) => { const v = (e.target as HTMLInputElement).checked; setKbShortcuts(v); try { localStorage.setItem('sync_kb_shortcuts', v ? '1' : ''); } catch {} }} />
+          <span className="muted text-sm">Keyboard shortcuts: Enter=apply, Esc=clear</span>
+        </label>
+      </div>
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-3">
         {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','funnel','pricing','ratelimit','health'].map((t) => (
@@ -888,7 +923,7 @@ export default function App() {
           </div>
           {/* Go to page (reviews) */}
           <div className="flex" style={{ gap: 6, alignItems: 'center', marginTop: 6 }}>
-            <input id="reviewsGoto" className="input" placeholder="go to page" style={{ width: 110 }} onKeyDown={(e) => { if ((e as any).key === 'Enter') { (document.getElementById('reviewsGoBtn') as HTMLButtonElement)?.click(); } }} />
+          <input id="reviewsGoto" className="input" placeholder="go to page" style={{ width: 110 }} onKeyDown={(e) => { const k=(e as any).key; if (k === 'Enter') { (document.getElementById('reviewsGoBtn') as HTMLButtonElement)?.click(); } if (kbShortcuts && k==='Escape'){ (document.getElementById('reviewsGoto') as HTMLInputElement).value=''; } }} />
             <button id="reviewsGoBtn" className="btn" title="go" onClick={() => {
               try {
                 const total = Number(reviewsList?.total || 0);
@@ -932,7 +967,7 @@ export default function App() {
           <div style={{ marginTop: 8 }}>
             <div className="flex gap-2" style={{ marginBottom: 6 }}>
               <span className="muted text-sm" style={{ alignSelf: 'center' }}>click headers to sort</span>
-              <input className="input" placeholder="filter text" value={reviewsFilterText} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setReviewsFilterText(v); try { localStorage.setItem('sync_reviews_filter', v); } catch {} }} style={{ maxWidth: 220 }} />
+              <input className="input" placeholder="filter text" title={kbShortcuts ? 'Enter = re-fetch, Esc = clear' : ''} value={reviewsFilterText} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setReviewsFilterText(v); try { localStorage.setItem('sync_reviews_filter', v); } catch {} }} onKeyDown={(e) => { if (!kbShortcuts) return; const k=(e as any).key; if (k==='Escape'){ setReviewsFilterText(''); try { localStorage.setItem('sync_reviews_filter',''); } catch {} } if (k==='Enter'){ const id=(document.getElementById('bizId') as HTMLInputElement)?.value; if (id) getReviews(id); } }} style={{ maxWidth: 220 }} />
               <button className="btn" onClick={() => {
                 // CSV export for reviews table
                 try {
@@ -940,13 +975,16 @@ export default function App() {
                   if (!rows.length) { showToast('No reviews to export'); return; }
                   const headers = ['id','user_id','created_at','recommend_status','review_text'];
                   const escape = (v: any) => JSON.stringify(v == null ? '' : String(v));
-                  const lines = [headers.join(',')].concat(rows
-                    .filter((r: any) => {
-                      const q = (reviewsFilterText || '').trim().toLowerCase();
-                      if (!q) return true;
-                      try { const hay = `${r?.review_text||''} ${r?.user_id||''} ${r?.id||''}`.toLowerCase(); return hay.includes(q); } catch { return true; }
-                    })
-                    .map(r => headers.map(h => escape((r as any)[h])).join(',')));
+                  const onlyVisible = (document.getElementById('revExportVisible') as HTMLInputElement)?.checked;
+                  const filtered = rows.filter((r: any) => {
+                    const q = (reviewsFilterText || '').trim().toLowerCase();
+                    if (!q) return true;
+                    try { const hay = `${r?.review_text||''} ${r?.user_id||''} ${r?.id||''}`.toLowerCase(); return hay.includes(q); } catch { return true; }
+                  });
+                  const pageStart = (reviewsPage - 1) * reviewsPageSize;
+                  const pageEnd = pageStart + reviewsPageSize;
+                  const source = onlyVisible ? filtered.slice(pageStart, pageEnd) : filtered;
+                  const lines = [headers.join(',')].concat(source.map(r => headers.map(h => escape((r as any)[h])).join(',')));
                   const csv = lines.join('\n');
                   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                   const url = URL.createObjectURL(blob);
@@ -958,6 +996,7 @@ export default function App() {
                   showToast('Exported CSV', 'success');
                 } catch (e: any) { showToast(e?.message || 'CSV export error'); }
               }}>export CSV</button>
+              <label className="muted text-xs" title="Export only current page after filtering"><input id="revExportVisible" type="checkbox" style={{ marginLeft: 6, marginRight: 4 }} /> visible only</label>
               <button className="btn" onClick={() => {
                 // JSON export for reviews
                 try {
@@ -1042,6 +1081,27 @@ export default function App() {
         {trendsResult?.trends ? (
           <div style={{ marginTop: 12 }}>
             <div className="muted text-sm" style={{ marginBottom: 4 }}>Reviews by day (recommend vs not)</div>
+            <div className="muted text-xs" style={{ marginBottom: 4 }}>
+              <span style={{ display: 'inline-block', width: 8, height: 8, background: '#2e7d32', marginRight: 4 }}></span>recommend
+              <span style={{ display: 'inline-block', width: 8, height: 8, background: '#c62828', margin: '0 4px 0 8px' }}></span>not
+              <button className="btn" style={{ marginLeft: 8 }} onClick={async () => {
+                try {
+                  const bizId = (document.getElementById('bizId') as HTMLInputElement)?.value?.trim();
+                  if (!bizId) { showToast('set businessId'); return; }
+                  const params = new URLSearchParams();
+                  if (analyticsSinceDays) params.set('sinceDays', String(analyticsSinceDays));
+                  if (analyticsTz) params.set('tz', analyticsTz);
+                  if (!analyticsFill) params.set('fill', 'false');
+                  params.set('businessId', bizId);
+                  params.set('format', 'csv');
+                  window.open(`/api/business/analytics/reviews-summary?${params.toString()}`, '_blank');
+                } catch {}
+              }}>export CSV</button>
+            </div>
+            <div className="muted text-xs" style={{ marginBottom: 4 }}>
+              <span style={{ display: 'inline-block', width: 8, height: 8, background: '#2e7d32', marginRight: 4 }}></span>recommend
+              <span style={{ display: 'inline-block', width: 8, height: 8, background: '#c62828', margin: '0 4px 0 8px' }}></span>not
+            </div>
             {(() => {
               const entries = Object.entries((trendsResult.trends as any).reviews || {}) as Array<[string, any]>;
               if (!entries.length) return (<div className="muted text-sm">(no data)</div>);
@@ -1057,8 +1117,11 @@ export default function App() {
                     const nrec = Math.max(0, Number((v as any).total || 0) - rec);
                     const rh = Math.max(2, Math.round((rec / (maxY || 1)) * 110));
                     const nh = Math.max(2, Math.round((nrec / (maxY || 1)) * 110));
+                    const total = rec + nrec;
+                    const pr = total > 0 ? Math.round((rec / total) * 100) : 0;
+                    const pn = total > 0 ? Math.round((nrec / total) * 100) : 0;
                     return (
-                      <div key={day} title={`${day}: ✓=${rec} ✗=${nrec}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 16 }}>
+                      <div key={day} title={`${day}: ${reviewsPct ? `✓=${pr}% ✗=${pn}%` : `✓=${rec} ✗=${nrec}`}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 16 }}>
                         <div style={{ width: 6, height: nh, background: '#c62828', marginBottom: 2 }}></div>
                         <div style={{ width: 6, height: rh, background: '#2e7d32' }}></div>
                       </div>
@@ -1069,6 +1132,11 @@ export default function App() {
             })()}
           </div>
         ) : null}
+        <div className="muted text-xs" style={{ marginTop: 4 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input type="checkbox" checked={reviewsPct} onChange={(e) => { const v=(e.target as HTMLInputElement).checked; setReviewsPct(v); try { localStorage.setItem('sync_reviews_pct', v ? '1' : ''); } catch {} }} /> show percentages
+          </label>
+        </div>
         </>
         )}
       </Section>
@@ -1300,6 +1368,12 @@ export default function App() {
                 offersDebounceRef.current = window.setTimeout(() => { fetchOffers(); }, 400);
               } catch {}
             }}
+            onKeyDown={(e) => {
+              if (!kbShortcuts) return;
+              const k = (e as any).key;
+              if (k === 'Enter') { e.preventDefault(); fetchOffers(); }
+              if (k === 'Escape') { setOffersSearch(''); try { localStorage.setItem('sync_offers_search', ''); } catch {}; fetchOffers(); }
+            }}
             style={{ maxWidth: 200 }}
           />
           <select className="input" value={offersPageSize as any} onChange={(e) => {
@@ -1350,7 +1424,7 @@ export default function App() {
           </div>
           {/* Go to page (offers) */}
           <div className="flex" style={{ gap: 6, alignItems: 'center', marginTop: 6 }}>
-            <input id="offersGoto" className="input" placeholder="go to page" style={{ width: 110 }} onKeyDown={(e) => { if ((e as any).key === 'Enter') { (document.getElementById('offersGoBtn') as HTMLButtonElement)?.click(); } }} />
+          <input id="offersGoto" className="input" placeholder="go to page" style={{ width: 110 }} onKeyDown={(e) => { const k=(e as any).key; if (k === 'Enter') { (document.getElementById('offersGoBtn') as HTMLButtonElement)?.click(); } if (kbShortcuts && k==='Escape'){ (document.getElementById('offersGoto') as HTMLInputElement).value=''; } }} />
             <button id="offersGoBtn" className="btn" title="go" onClick={() => {
               try {
                 const total = Number(offersResult?.offers_list?.total || 0);
@@ -1375,6 +1449,12 @@ export default function App() {
                 if (couponsDebounceRef.current) window.clearTimeout(couponsDebounceRef.current as any);
                 couponsDebounceRef.current = window.setTimeout(() => { fetchCoupons(); }, 400);
               } catch {}
+            }}
+            onKeyDown={(e) => {
+              if (!kbShortcuts) return;
+              const k = (e as any).key;
+              if (k === 'Enter') { e.preventDefault(); fetchCoupons(); }
+              if (k === 'Escape') { setCouponsSearch(''); try { localStorage.setItem('sync_coupons_search', ''); } catch {}; fetchCoupons(); }
             }}
             style={{ maxWidth: 200 }}
           />
@@ -1618,7 +1698,43 @@ export default function App() {
               aria-label="Trends sinceDays"
             />
           </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="muted text-sm">tz</span>
+            <select className="input" value={analyticsTz || ''} onChange={(e) => { const v=(e.target as HTMLSelectElement).value; setAnalyticsTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 220 }} aria-label="Timezone preset">
+              {(() => {
+                const tzs = ['', 'UTC', 'America/Los_Angeles', 'America/New_York', 'Europe/London', 'Europe/Berlin', 'Asia/Kolkata', 'Asia/Singapore', 'Australia/Sydney'];
+                return tzs.map((z) => (<option key={z || 'none'} value={z}>{z ? z : '— none —'}</option>));
+              })()}
+            </select>
+            <input className="input" placeholder="custom tz (IANA)" value={analyticsTz} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setAnalyticsTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 180 }} aria-label="Custom timezone" />
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Zero-fill missing days">
+            <input type="checkbox" checked={analyticsFill} onChange={(e) => { const v=(e.target as HTMLInputElement).checked; setAnalyticsFill(v); try { localStorage.setItem('sync_analytics_fill', v ? '1' : ''); } catch {} }} /> fill
+          </label>
           <button onClick={getTrends}>GET trends</button>
+          {trendsError ? (
+            <div className="badge" style={{ background: 'var(--error-bg)', color: 'var(--error-fg)' }}>
+              {trendsError}
+              <button className="btn" style={{ marginLeft: 6 }} onClick={() => { setAnalyticsSinceDays(180); try { localStorage.setItem('sync_analytics_since_days', '180'); } catch {}; }}>use 180</button>
+              <button className="btn" style={{ marginLeft: 6 }} onClick={() => { setAnalyticsTz(''); try { localStorage.setItem('sync_analytics_tz', ''); } catch {}; }}>clear tz</button>
+            </div>
+          ) : null}
+          <button className="btn" title="Reset analytics controls" onClick={() => { setAnalyticsSinceDays(7); setAnalyticsTz(''); setAnalyticsFill(true); try { localStorage.setItem('sync_analytics_since_days','7'); localStorage.setItem('sync_analytics_tz',''); localStorage.setItem('sync_analytics_fill','1'); } catch {} }}>reset</button>
+          <button className="btn" onClick={async () => {
+            try {
+              const bizId = (document.getElementById('trendBizId') as HTMLInputElement)?.value?.trim();
+              const group = (document.getElementById('trendGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
+              const params = new URLSearchParams();
+              if (bizId) params.set('businessId', bizId);
+              if (group) params.set('group', group);
+              if (analyticsSinceDays) params.set('sinceDays', String(analyticsSinceDays));
+              if (analyticsTz) params.set('tz', analyticsTz);
+              if (!analyticsFill) params.set('fill', 'false');
+              params.set('format', 'csv');
+              const qs = params.toString() ? `?${params.toString()}` : '';
+              window.open(`/api/business/analytics/trends${qs}`, '_blank');
+            } catch {}
+          }}>export CSV</button>
           <CopyCurlButton tag={'analytics:trends'} getCurl={getCurl} />
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
           <button className="btn" onClick={() => setTrendsResult(null as any)}>clear</button>
@@ -1709,7 +1825,43 @@ export default function App() {
               aria-label="Funnel sinceDays"
             />
           </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="muted text-sm">tz</span>
+            <select className="input" value={analyticsTz || ''} onChange={(e) => { const v=(e.target as HTMLSelectElement).value; setAnalyticsTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 220 }} aria-label="Timezone preset">
+              {(() => {
+                const tzs = ['', 'UTC', 'America/Los_Angeles', 'America/New_York', 'Europe/London', 'Europe/Berlin', 'Asia/Kolkata', 'Asia/Singapore', 'Australia/Sydney'];
+                return tzs.map((z) => (<option key={z || 'none'} value={z}>{z ? z : '— none —'}</option>));
+              })()}
+            </select>
+            <input className="input" placeholder="custom tz (IANA)" value={analyticsTz} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setAnalyticsTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 180 }} aria-label="Custom timezone" />
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Zero-fill missing days">
+            <input type="checkbox" checked={analyticsFill} onChange={(e) => { const v=(e.target as HTMLInputElement).checked; setAnalyticsFill(v); try { localStorage.setItem('sync_analytics_fill', v ? '1' : ''); } catch {} }} /> fill
+          </label>
           <button className="btn" onClick={getFunnel}>GET funnel</button>
+          {funnelError ? (
+            <div className="badge" style={{ background: 'var(--error-bg)', color: 'var(--error-fg)' }}>
+              {funnelError}
+              <button className="btn" style={{ marginLeft: 6 }} onClick={() => { setAnalyticsSinceDays(180); try { localStorage.setItem('sync_analytics_since_days', '180'); } catch {}; }}>use 180</button>
+              <button className="btn" style={{ marginLeft: 6 }} onClick={() => { setAnalyticsTz(''); try { localStorage.setItem('sync_analytics_tz', ''); } catch {}; }}>clear tz</button>
+            </div>
+          ) : null}
+          <button className="btn" title="Reset analytics controls" onClick={() => { setAnalyticsSinceDays(7); setAnalyticsTz(''); setAnalyticsFill(true); try { localStorage.setItem('sync_analytics_since_days','7'); localStorage.setItem('sync_analytics_tz',''); localStorage.setItem('sync_analytics_fill','1'); } catch {} }}>reset</button>
+          <button className="btn" onClick={async () => {
+            try {
+              const bizId = (document.getElementById('funnelBizId') as HTMLInputElement)?.value?.trim();
+              const group = (document.getElementById('funnelGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
+              const params = new URLSearchParams();
+              if (bizId) params.set('businessId', bizId);
+              if (group) params.set('group', group);
+              if (analyticsSinceDays) params.set('sinceDays', String(analyticsSinceDays));
+              if (analyticsTz) params.set('tz', analyticsTz);
+              if (!analyticsFill) params.set('fill', 'false');
+              params.set('format', 'csv');
+              const qs = params.toString() ? `?${params.toString()}` : '';
+              window.open(`/api/business/analytics/funnel${qs}`, '_blank');
+            } catch {}
+          }}>export CSV</button>
           <CopyCurlButton tag={'analytics:funnel'} getCurl={getCurl} />
           <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
           <button className="btn" onClick={() => setFunnelResult(null as any)}>clear</button>
@@ -1752,6 +1904,10 @@ export default function App() {
             {trendsResult?.trends ? (
               <div style={{ marginTop: 12 }}>
                 <div className="muted text-sm" style={{ marginBottom: 4 }}>Funnel by day (collected vs redeemed)</div>
+                <div className="muted text-xs" style={{ marginBottom: 4 }}>
+                  <span style={{ display: 'inline-block', width: 8, height: 8, background: '#7c4dff', marginRight: 4 }}></span>collected
+                  <span style={{ display: 'inline-block', width: 8, height: 8, background: '#26a69a', margin: '0 4px 0 8px' }}></span>redeemed
+                </div>
                 {(() => {
                   const entries = Object.entries((trendsResult.trends as any).coupons || {}) as Array<[string, any]>;
                   if (!entries.length) return (<div className="muted text-sm">(no data)</div>);

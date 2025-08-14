@@ -44,6 +44,22 @@ it('gets platform revenue summary', async () => {
   expect(json.coupon_revenue).toBe(7); // 2 (c1 redeemed once) + 5 (c2 redeemed once)
 });
 
+it('funnel guard rejects too-large sinceDays when fill=true', async () => {
+  const { default: funnelGet } = await import('../../apps/api/functions/business-analytics-funnel-get');
+  const res = await funnelGet(makeReq(path('/api/business/analytics/funnel?sinceDays=1000'), 'GET')) as Response;
+  expect(res.status).toBe(400);
+});
+
+it('funnel invalid tz rejected and CSV returned', async () => {
+  const { default: funnelGet } = await import('../../apps/api/functions/business-analytics-funnel-get');
+  const bad = await funnelGet(makeReq(path('/api/business/analytics/funnel?tz=Invalid/TZ'), 'GET')) as Response;
+  expect(bad.status).toBe(400);
+  const ok = await funnelGet(makeReq(path('/api/business/analytics/funnel?format=csv'), 'GET')) as Response;
+  expect((ok.headers as any).get('Content-Type')).toContain('text/csv');
+  // Should include cache headers
+  expect((ok.headers as any).get('Cache-Control')).toMatch(/s-maxage=/);
+});
+
 it('gets platform ratelimit diagnostics for owner and forbids non-owner', async () => {
   const makeBearer = (role?: string) => {
     const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');

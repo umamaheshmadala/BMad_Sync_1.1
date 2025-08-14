@@ -31,6 +31,7 @@ This maps `docs/api/openapi.yaml` routes to serverless function names and expect
 - GET /api/business/{businessId}/analytics/coupons → `business-analytics-coupons-get.ts`
 - GET /api/business/analytics/trends → `business-analytics-trends-get.ts`
 - GET /api/business/analytics/funnel → `business-analytics-funnel-get.ts`
+- (Add) GET /api/business/analytics/reviews-summary → `business-analytics-reviews-summary-get.ts`
 - POST /api/business/coupons/issue-targeted → `business-coupons-issue-targeted-post.ts`
 - POST /api/business/ads → `business-ads-post.ts`
 - GET /api/platform/revenue → `platform-revenue-get.ts`
