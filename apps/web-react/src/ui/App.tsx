@@ -743,7 +743,7 @@ export default function App() {
       </div>
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-3">
-        {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','funnel','pricing','ratelimit','health'].map((t) => (
+        {['auth','session','storefront','reviews','wishlist','notifications','products','ads','offers','trends','funnel','issued','pricing','ratelimit','health'].map((t) => (
           <button key={t} onClick={() => { setActiveTab(t as any); try { localStorage.setItem('sync_active_tab', String(t)); } catch {} }} className={`btn ${activeTab===t ? 'opacity-100' : 'opacity-70'}`}>{t}</button>
         ))}
       </div>
@@ -2013,8 +2013,65 @@ export default function App() {
       </Section>
 
       <Section title="Coupons Issued (owner)">
-        {activeTab !== 'funnel' ? null : null}
-        {activeTab !== 'funnel' ? null : null}
+        {activeTab !== 'issued' ? null : (
+        <>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input id="issuedBizId" className="input" placeholder="businessId (optional)" aria-label="Issued businessId" />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input type="checkbox" id="issuedGroupBiz" aria-label="Group issued by business" /> group by business
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="muted text-sm">sinceDays</span>
+            <input type="number" className="input" style={{ width: 90 }} min={1 as any} max={365 as any} value={analyticsSinceDays as any} onChange={(e) => { const n=Math.max(1,Math.min(365,Number((e.target as HTMLInputElement).value||7))); setAnalyticsSinceDays(n); try { localStorage.setItem('sync_analytics_since_days', String(n)); } catch {} }} />
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="muted text-sm">tz</span>
+            <select className="input" value={analyticsTz || ''} onChange={(e) => { const v=(e.target as HTMLSelectElement).value; setAnalyticsTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 220 }} aria-label="Timezone preset">
+              {(() => { const tzs=['','UTC','America/Los_Angeles','America/New_York','Europe/London','Europe/Berlin','Asia/Kolkata','Asia/Singapore','Australia/Sydney']; return tzs.map(z=>(<option key={z||'none'} value={z}>{z?z:'— none —'}</option>)); })()}
+            </select>
+            <input className="input" placeholder="custom tz (IANA)" value={analyticsTz} onChange={(e) => { const v=(e.target as HTMLInputElement).value; setAnalyticsTz(v); try { localStorage.setItem('sync_analytics_tz', v); } catch {} }} style={{ width: 180 }} aria-label="Custom timezone" />
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Zero-fill missing days">
+            <input type="checkbox" checked={analyticsFill} onChange={(e) => { const v=(e.target as HTMLInputElement).checked; setAnalyticsFill(v); try { localStorage.setItem('sync_analytics_fill', v ? '1' : ''); } catch {} }} /> fill
+          </label>
+          <button className="btn" onClick={async () => {
+            try {
+              const bizId = (document.getElementById('issuedBizId') as HTMLInputElement)?.value?.trim();
+              const group = (document.getElementById('issuedGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
+              const params = new URLSearchParams();
+              if (bizId) params.set('businessId', bizId);
+              if (group) params.set('group', group);
+              if (analyticsSinceDays) params.set('sinceDays', String(analyticsSinceDays));
+              if (analyticsTz) params.set('tz', analyticsTz);
+              if (!analyticsFill) params.set('fill', 'false');
+              const qs = params.toString() ? `?${params.toString()}` : '';
+              const res = await actionFetch('analytics:issued', `/api/business/analytics/coupons-issued${qs}`, { headers: { ...authHeaders } });
+              const j = await res.json();
+              (window as any).issuedResult = j; // for quick inspection
+              showToast(j?.ok ? 'Loaded' : (j?.error || 'Error'));
+            } catch (e: any) { showToast(e?.message || 'Error', 'error'); }
+          }}>GET issued</button>
+          <button className="btn" onClick={async () => {
+            try {
+              const bizId = (document.getElementById('issuedBizId') as HTMLInputElement)?.value?.trim();
+              const group = (document.getElementById('issuedGroupBiz') as HTMLInputElement)?.checked ? 'business' : '';
+              const params = new URLSearchParams();
+              if (bizId) params.set('businessId', bizId);
+              if (group) params.set('group', group);
+              if (analyticsSinceDays) params.set('sinceDays', String(analyticsSinceDays));
+              if (analyticsTz) params.set('tz', analyticsTz);
+              if (!analyticsFill) params.set('fill', 'false');
+              params.set('format','csv');
+              const qs = params.toString() ? `?${params.toString()}` : '';
+              window.open(`/api/business/analytics/coupons-issued${qs}`, '_blank');
+            } catch {}
+          }}>export CSV</button>
+          <CopyCurlButton tag={'analytics:issued'} getCurl={getCurl} />
+          <button className="btn" onClick={() => { if (lastCurl) { (navigator as any)?.clipboard?.writeText(lastCurl); showToast('Copied cURL', 'success'); } }} disabled={!lastCurl}>copy last cURL</button>
+        </div>
+        <div className="muted text-xs" style={{ marginTop: 6 }}>Use an owner bearer token for group=business.</div>
+        </>
+        )}
       </Section>
 
       <Section title="Platform Pricing (owner)">

@@ -60,9 +60,14 @@ async function runLoad(label, path) {
   // Funnel requires auth; run only if token present
   if (TOKEN) {
     await runLoad('GET /api/business/analytics/funnel', '/api/business/analytics/funnel');
+    await sleep(200);
+    await runLoad('GET /api/business/analytics/coupons-issued?group=business', '/api/business/analytics/coupons-issued?group=business');
   } else {
     console.log('Skipping /api/business/analytics/funnel (no TOKEN provided)');
+    console.log('Skipping /api/business/analytics/coupons-issued?group=business (no TOKEN provided)');
   }
+  await sleep(200);
+  await runLoad('GET /api/business/analytics/coupons-issued', '/api/business/analytics/coupons-issued');
 })();
 
 
