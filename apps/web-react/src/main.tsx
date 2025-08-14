@@ -8,6 +8,7 @@ import Signup from './ui/auth/Signup';
 import Reset from './ui/auth/Reset';
 import RequireAuth from './ui/auth/RequireAuth';
 import ProfilePage from './ui/auth/Profile';
+import CityInterestsPage from './ui/auth/CityInterests';
 import BusinessPortal from './ui/business/Portal';
 import BusinessProfilePage from './ui/business/BusinessProfile';
 import StorefrontPage from './ui/business/Storefront';
@@ -103,6 +104,14 @@ createRoot(container).render(
             element={
               <RequireAuth>
                 <ProfilePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard/profile/city-interests"
+            element={
+              <RequireAuth>
+                <CityInterestsPage />
               </RequireAuth>
             }
           />
