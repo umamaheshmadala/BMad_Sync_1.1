@@ -953,7 +953,8 @@ export default function App() {
             POST review
           </button>
           <CopyCurlButton tag={'reviews:post'} getCurl={getCurl} />
-          <select id="revFilter" defaultValue="">
+           <label htmlFor="revFilter" className="muted text-sm" style={{ display: 'none' }}>Reviews filter</label>
+           <select id="revFilter" defaultValue="">
             <option value="">all</option>
             <option value="true">recommend</option>
             <option value="false">not recommend</option>
@@ -1385,7 +1386,8 @@ export default function App() {
             }}
             style={{ maxWidth: 200 }}
           />
-          <select className="input" value={offersPageSize as any} onChange={(e) => {
+          <label htmlFor="offersPageSize" className="muted text-sm" style={{ display: 'none' }}>Offers page size</label>
+          <select id="offersPageSize" className="input" value={offersPageSize as any} onChange={(e) => {
             const n = Number((e.target as HTMLSelectElement).value || 10);
             setOffersPageSize(n);
             setOffersPage(1);
@@ -1467,7 +1469,8 @@ export default function App() {
             }}
             style={{ maxWidth: 200 }}
           />
-          <select className="input" value={couponsPageSize as any} onChange={(e) => {
+          <label htmlFor="couponsPageSize" className="muted text-sm" style={{ display: 'none' }}>Coupons page size</label>
+          <select id="couponsPageSize" className="input" value={couponsPageSize as any} onChange={(e) => {
             const n = Number((e.target as HTMLSelectElement).value || 10);
             setCouponsPageSize(n);
             setCouponsPage(1);
